@@ -4,7 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lifeos_kupler/app.dart';
 import 'package:lifeos_kupler/audio/audio_service.dart';
 import 'package:lifeos_kupler/l10n/strings.dart';
+import 'package:lifeos_kupler/game/game_controller.dart';
 import 'package:lifeos_kupler/settings/settings.dart';
+import 'package:lifeos_kupler/ui/game_screen.dart';
+import 'package:lifeos_kupler/ui/widgets.dart';
 
 void main() {
   Future<void> pumpApp(WidgetTester tester, Size size, {AppLanguage language = AppLanguage.tr}) async {
@@ -46,8 +49,11 @@ void main() {
   testWidgets('about page shows the developer', (tester) async {
     await pumpApp(tester, const Size(390, 844));
     await tester.tap(find.text('Hakkında'));
-    await tester.pumpAndSettle();
+    // The About hero animates forever, so pump a fixed time instead of settling.
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.scrollUntilVisible(find.text('Erkan ÖZ'), 300, scrollable: find.byType(Scrollable).last);
     expect(find.text('Erkan ÖZ'), findsOneWidget);
+    expect(find.text('erkanoz.com'), findsOneWidget);
     expect(find.text('lifeos.com.tr'), findsOneWidget);
   });
 
@@ -60,5 +66,26 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Klasik'), findsOneWidget);
     expect(find.text('Hakkında'), findsOneWidget);
+  });
+
+  testWidgets('buttons can be hidden and the hold card holds a piece', (tester) async {
+    final settings = Settings.memory()
+      ..language = AppLanguage.tr
+      ..showButtons = false;
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(KuplerApp(settings: settings, audio: AudioService(enabled: false)));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.byKey(const ValueKey('start-classic')));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 33));
+    }
+    expect(find.byType(ControlButton), findsNothing);
+
+    await tester.tap(find.text('TUT'));
+    await tester.pump(const Duration(milliseconds: 33));
+    final state = tester.state(find.byType(GameScreen)) as dynamic;
+    expect((state.controller as GameController).game.held, isNotNull);
   });
 }

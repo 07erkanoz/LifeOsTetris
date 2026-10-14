@@ -3,16 +3,18 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'audio/audio_service.dart';
+import 'audio/haptics.dart';
 import 'l10n/strings.dart';
 import 'settings/settings.dart';
 import 'theme/palette.dart';
 import 'ui/game_screen.dart';
 
 class KuplerApp extends StatelessWidget {
-  const KuplerApp({super.key, required this.settings, required this.audio});
+  const KuplerApp({super.key, required this.settings, required this.audio, this.haptics});
 
   final Settings settings;
   final AudioService audio;
+  final Haptics? haptics;
 
   @override
   Widget build(BuildContext context) {
@@ -38,10 +40,12 @@ class KuplerApp extends StatelessWidget {
               statusBarColor: Colors.transparent,
               systemNavigationBarColor: Colors.transparent,
             ),
-            child: child!,
+            // Large system font sizes broke button layouts; keep text within
+            // a range the game's fixed-size HUD can hold.
+            child: MediaQuery.withClampedTextScaling(minScaleFactor: 0.85, maxScaleFactor: 1.1, child: child!),
           );
         },
-        home: GameScreen(settings: settings, audio: audio),
+        home: GameScreen(settings: settings, audio: audio, haptics: haptics),
       ),
     );
   }

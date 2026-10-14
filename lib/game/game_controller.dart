@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/painting.dart' show Offset;
 
 import '../audio/audio_service.dart';
+import '../audio/haptics.dart';
 import '../core/tetris_game.dart';
 import '../settings/settings.dart';
 import '../l10n/strings.dart';
@@ -13,13 +14,16 @@ import 'motivation.dart';
 /// [frame] ticks every frame for the painters; listeners of the controller
 /// itself are only notified when HUD values change.
 class GameController extends ChangeNotifier {
-  GameController({required this.settings, required this.audio}) {
+  GameController({required this.settings, required this.audio, Haptics? haptics}) : haptics = haptics ?? Haptics() {
+    _vibrationWasOn = settings.vibration;
     settings.addListener(_applySettings);
     _applySettings();
   }
 
   final Settings settings;
   final AudioService audio;
+  final Haptics haptics;
+  bool _vibrationWasOn = true;
   final TetrisGame game = TetrisGame();
   final EffectsEngine fx = EffectsEngine();
   final ValueNotifier<int> frame = ValueNotifier(0);
@@ -57,12 +61,15 @@ class GameController extends ChangeNotifier {
     audio.sfxOn = settings.sfx;
     audio.musicOn = settings.music;
     audio.musicVolume = settings.musicVolume;
+    // A short buzz confirms that vibration was switched on.
+    if (settings.vibration && !_vibrationWasOn) haptics.medium();
+    _vibrationWasOn = settings.vibration;
   }
 
   void start([GameMode? mode]) {
     if (mode != null) this.mode = mode;
     fx.reset();
-    motivation.reset(bestScore: settings.bestScore);
+    motivation.reset(bestScore: settings.bestScore(this.mode));
     newRecord = false;
     playTime = 0;
     _leftHeld = _rightHeld = false;
@@ -108,7 +115,7 @@ class GameController extends ChangeNotifier {
   void toMenu() {
     game.abandon();
     fx.reset();
-    motivation.reset(bestScore: settings.bestScore);
+    motivation.reset(bestScore: settings.bestScore(mode));
     audio.duck = 1;
     _releaseAll();
     notifyListeners();
@@ -139,9 +146,15 @@ class GameController extends ChangeNotifier {
       audio.play(Sfx.combo4, volume: 0.35);
     }
     fx.update(game.paused ? 0 : dt, game);
-    frame.value++;
+    // Nothing moves behind the pause / menu / results screens, so stop
+    // repainting the board and background there: it keeps those screens
+    // smooth and saves battery.
+    if (!_idle) frame.value++;
     _notifyHudIfChanged();
   }
+
+  bool get _idle =>
+      game.paused || game.status == GameStatus.ready || (game.status == GameStatus.over && fx.gameOverAge > 3 && fx.particles.isEmpty);
 
   void _notifyHudIfChanged() {
     final snapshot = (
@@ -173,7 +186,7 @@ class GameController extends ChangeNotifier {
       _sound(e);
       _haptic(e);
       if (e is GameOver) {
-        newRecord = settings.submitScore(game.score);
+        newRecord = settings.recordGame(mode: mode, score: game.score, lines: game.lines, seconds: playTime);
         audio.duck = 0.4;
       }
     }
@@ -219,11 +232,13 @@ class GameController extends ChangeNotifier {
     if (!settings.vibration) return;
     switch (e) {
       case HardDropped():
-        HapticFeedback.lightImpact();
+        haptics.light();
       case LinesCleared(:final count, :final perfectClear):
-        count >= 4 || perfectClear ? HapticFeedback.heavyImpact() : HapticFeedback.mediumImpact();
-      case LevelUp() || GameOver():
-        HapticFeedback.heavyImpact();
+        count >= 4 || perfectClear ? haptics.celebrate() : haptics.medium();
+      case LevelUp():
+        haptics.celebrate();
+      case GameOver():
+        haptics.heavy();
       default:
         break;
     }

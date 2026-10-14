@@ -331,7 +331,7 @@ class GradientButton extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: width,
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+        padding: EdgeInsets.symmetric(horizontal: subtitle == null ? 14 : 20, vertical: 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
           gradient: secondary ? null : LinearGradient(colors: [p.accent1, p.accent2]),
@@ -345,20 +345,32 @@ class GradientButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (icon != null) ...[Icon(icon, color: fg, size: 22), const SizedBox(width: 10)],
+            if (icon != null) ...[Icon(icon, color: fg, size: 22), const SizedBox(width: 8)],
             Flexible(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: icon == null ? CrossAxisAlignment.center : CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    label,
-                    style: TextStyle(color: fg, fontSize: 17, fontWeight: FontWeight.w800),
+                  // Labels shrink instead of wrapping so buttons keep their
+                  // shape with long translations or large system fonts.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: TextStyle(color: fg, fontSize: 17, fontWeight: FontWeight.w800),
+                    ),
                   ),
                   if (subtitle != null)
-                    Text(
-                      subtitle!,
-                      style: TextStyle(color: fg.withValues(alpha: 0.75), fontSize: 12, fontWeight: FontWeight.w600),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        subtitle!,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(color: fg.withValues(alpha: 0.75), fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
                     ),
                 ],
               ),

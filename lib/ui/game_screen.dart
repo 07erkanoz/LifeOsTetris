@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 import '../audio/audio_service.dart';
+import '../audio/haptics.dart';
 import '../core/tetris_game.dart';
 import '../game/game_controller.dart';
 import '../game/motivation.dart';
@@ -24,17 +25,18 @@ String formatTime(double seconds) {
 }
 
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key, required this.settings, required this.audio});
+  const GameScreen({super.key, required this.settings, required this.audio, this.haptics});
 
   final Settings settings;
   final AudioService audio;
+  final Haptics? haptics;
 
   @override
   State<GameScreen> createState() => _GameScreenState();
 }
 
 class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  late final GameController controller = GameController(settings: widget.settings, audio: widget.audio);
+  late final GameController controller = GameController(settings: widget.settings, audio: widget.audio, haptics: widget.haptics);
   late final Ticker _ticker = createTicker(controller.tick);
   final FocusNode _focus = FocusNode(debugLabel: 'game');
 
@@ -186,16 +188,32 @@ class _HoldCard extends StatelessWidget {
   final Size size;
 
   @override
-  Widget build(BuildContext context) => GlassCard(
-    glow: c.fx.holdPulse,
-    padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        CardLabel(AppStrings.of(context).hold),
-        const SizedBox(height: 4),
-        PieceView(type: c.game.held, cell: cell, size: size, dimmed: !c.game.canHold, pop: c.fx.holdPulse),
-      ],
+  Widget build(BuildContext context) => Tooltip(
+    message: AppStrings.of(context).holdTapHint,
+    child: GestureDetector(
+      // Tapping the card holds the current piece, so the game is fully
+      // playable without the on-screen buttons.
+      behavior: HitTestBehavior.opaque,
+      onTap: c.hold,
+      child: GlassCard(
+        glow: c.fx.holdPulse,
+        padding: const EdgeInsets.fromLTRB(8, 10, 8, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(child: CardLabel(AppStrings.of(context).hold)),
+                const SizedBox(width: 3),
+                Icon(Icons.touch_app_rounded, size: 11, color: GamePalette.of(context).label),
+              ],
+            ),
+            const SizedBox(height: 4),
+            PieceView(type: c.game.held, cell: cell, size: size, dimmed: !c.game.canHold, pop: c.fx.holdPulse),
+          ],
+        ),
+      ),
     ),
   );
 }
@@ -393,25 +411,31 @@ class _PhoneLayout extends StatelessWidget {
           ),
         ),
         Expanded(child: _BoardArea(c: c, padding: 10)),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
-          child: LayoutBuilder(
-            builder: (context, box) {
-              // Four regular buttons, one larger primary one, even gaps.
-              final size = ((box.maxWidth - 4 * 10) / 5.25).clamp(44.0, 62.0);
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ControlButton(glyph: ControlGlyph.hold, size: size, onDown: c.hold),
-                  ControlButton(glyph: ControlGlyph.left, size: size, onDown: c.pressLeft, onUp: c.releaseLeft),
-                  ControlButton(glyph: ControlGlyph.rotate, size: size * 1.22, onDown: c.rotateCw, primary: true),
-                  ControlButton(glyph: ControlGlyph.right, size: size, onDown: c.pressRight, onUp: c.releaseRight),
-                  ControlButton(glyph: ControlGlyph.drop, size: size, onDown: c.hardDrop),
-                ],
-              );
-            },
-          ),
-        ),
+        if (settings.showButtons)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
+            child: Opacity(
+              opacity: settings.buttonOpacity,
+              child: LayoutBuilder(
+                builder: (context, box) {
+                  // Four regular buttons, one larger primary one, even gaps.
+                  final size = ((box.maxWidth - 4 * 10) / 5.25).clamp(44.0, 62.0);
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ControlButton(glyph: ControlGlyph.hold, size: size, onDown: c.hold),
+                      ControlButton(glyph: ControlGlyph.left, size: size, onDown: c.pressLeft, onUp: c.releaseLeft),
+                      ControlButton(glyph: ControlGlyph.rotate, size: size * 1.22, onDown: c.rotateCw, primary: true),
+                      ControlButton(glyph: ControlGlyph.right, size: size, onDown: c.pressRight, onUp: c.releaseRight),
+                      ControlButton(glyph: ControlGlyph.drop, size: size, onDown: c.hardDrop),
+                    ],
+                  );
+                },
+              ),
+            ),
+          )
+        else
+          const SizedBox(height: 8),
       ],
     );
   }
@@ -492,7 +516,7 @@ class _DesktopLayout extends StatelessWidget {
                         stat(s.level, '${game.level}'),
                         stat(s.lines, '${game.lines}'),
                         stat(s.time, formatTime(c.playTime)),
-                        stat(s.best, s.score(settings.bestScore), accent: true),
+                        stat(s.best, s.score(settings.bestScore(c.mode)), accent: true),
                         stat(s.mode, c.mode == GameMode.classic ? s.classic : s.relaxed),
                       ],
                     ),
@@ -579,6 +603,16 @@ class _SettingsPanel extends StatelessWidget {
     final p = GamePalette.of(context);
     final s = AppStrings.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    Widget slider(double value, double min, double max, ValueChanged<double>? onChanged) => SliderTheme(
+      data: SliderTheme.of(context).copyWith(
+        trackHeight: 5,
+        activeTrackColor: p.accent1,
+        inactiveTrackColor: p.track,
+        thumbColor: Colors.white,
+        overlayShape: SliderComponentShape.noOverlay,
+      ),
+      child: Slider(value: value.clamp(min, max), min: min, max: max, onChanged: onChanged),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -600,16 +634,7 @@ class _SettingsPanel extends StatelessWidget {
           value: settings.music,
           onChanged: (v) => settings.music = v,
         ),
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            trackHeight: 5,
-            activeTrackColor: p.accent1,
-            inactiveTrackColor: p.track,
-            thumbColor: Colors.white,
-            overlayShape: SliderComponentShape.noOverlay,
-          ),
-          child: Slider(value: settings.musicVolume, onChanged: settings.music ? (v) => settings.musicVolume = v : null),
-        ),
+        slider(settings.musicVolume, 0, 1, settings.music ? (v) => settings.musicVolume = v : null),
         ToggleRow(
           label: s.soundEffects,
           icon: compact ? null : Icons.volume_up_rounded,
@@ -634,6 +659,24 @@ class _SettingsPanel extends StatelessWidget {
           value: settings.vibration,
           onChanged: (v) => settings.vibration = v,
         ),
+        if (!compact) ...[
+          ToggleRow(
+            label: s.onScreenButtons,
+            icon: Icons.gamepad_rounded,
+            value: settings.showButtons,
+            onChanged: (v) => settings.showButtons = v,
+          ),
+          if (settings.showButtons) ...[
+            Padding(
+              padding: const EdgeInsets.only(left: 28, top: 2),
+              child: Text(
+                s.buttonOpacity,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: p.label),
+              ),
+            ),
+            slider(settings.buttonOpacity, 0.2, 1, (v) => settings.buttonOpacity = v),
+          ],
+        ],
       ],
     );
   }
@@ -651,11 +694,10 @@ class _OverlayShell extends StatelessWidget {
     final p = GamePalette.of(context);
     return Stack(
       children: [
+        // A plain scrim instead of a backdrop blur: blurring the animated
+        // game every frame made these screens stutter on phones.
         Positioned.fill(
-          child: BackdropFilter(
-            filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: ColoredBox(color: p.background.first.withValues(alpha: p.isDark ? 0.62 : 0.55)),
-          ),
+          child: ColoredBox(color: p.background.first.withValues(alpha: p.isDark ? 0.84 : 0.8)),
         ),
         SafeArea(
           child: Center(
@@ -699,7 +741,7 @@ class _StartOverlay extends StatelessWidget {
           style: TextStyle(fontSize: 14, color: p.muted, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 18),
-        if (c.settings.bestScore > 0) ...[
+        if (c.settings.topScore > 0) ...[
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -709,7 +751,7 @@ class _StartOverlay extends StatelessWidget {
                 s.bestPrefix,
                 style: TextStyle(color: p.muted, fontWeight: FontWeight.w600),
               ),
-              GradientText(s.score(c.settings.bestScore), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+              GradientText(s.score(c.settings.topScore), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
             ],
           ),
           const SizedBox(height: 18),
@@ -739,7 +781,7 @@ class _StartOverlay extends StatelessWidget {
         LanguageSegment(isTurkish: s.isTurkish, onChanged: (tr) => c.settings.language = tr ? AppLanguage.tr : AppLanguage.en),
         const SizedBox(height: 4),
         TextButton.icon(
-          onPressed: () => AboutPage.open(context),
+          onPressed: () => AboutPage.open(context, c.settings),
           icon: Icon(Icons.info_outline_rounded, size: 16, color: p.muted),
           label: Text(
             s.about,
@@ -785,7 +827,7 @@ class _PauseOverlay extends StatelessWidget {
         _SettingsPanel(settings: c.settings),
         const SizedBox(height: 6),
         TextButton.icon(
-          onPressed: () => AboutPage.open(context),
+          onPressed: () => AboutPage.open(context, c.settings),
           icon: Icon(Icons.info_outline_rounded, size: 16, color: p.muted),
           label: Text(
             s.about,
@@ -845,7 +887,7 @@ class _GameOverOverlay extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          '${s.bestPrefix}${s.score(c.settings.bestScore)}',
+          '${s.bestPrefix}${s.score(c.settings.bestScore(c.mode))}',
           textAlign: TextAlign.center,
           style: TextStyle(color: p.muted, fontWeight: FontWeight.w600),
         ),

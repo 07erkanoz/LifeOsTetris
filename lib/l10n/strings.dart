@@ -84,6 +84,9 @@ class AppStrings {
   String get visualEffects => _t('Görsel efektler', 'Visual effects');
   String get screenShake => _t('Ekran sarsıntısı', 'Screen shake');
   String get vibration => _t('Titreşim', 'Vibration');
+  String get onScreenButtons => _t('Ekran butonları', 'On-screen buttons');
+  String get buttonOpacity => _t('Buton görünürlüğü', 'Button visibility');
+  String get holdTapHint => _t('Dokun: tut', 'Tap: hold');
 
   // ------------------------------------------------------------ menus
 
@@ -110,7 +113,35 @@ class AppStrings {
     'LifeOS Küpler is a 2.5D block puzzle full of effects: stack the falling blocks and blast full lines. '
         'In Classic mode the speed rises gently; in Relaxed mode you play forever at a calm pace.',
   );
+  String get statsLabel => _t('İSTATİSTİKLERİN', 'YOUR STATS');
+  String get gamesPlayed => _t('Oyun', 'Games');
+  String get totalLines => _t('Toplam satır', 'Total lines');
+  String get playTime => _t('Oynama süresi', 'Play time');
+  String get bestScore => _t('En iyi skor', 'Best score');
+  String duration(int seconds) {
+    final h = seconds ~/ 3600, m = (seconds % 3600) ~/ 60;
+    if (h > 0) return _t('$h sa $m dk', '${h}h ${m}m');
+    return _t('$m dk', '${m}m');
+  }
+
+  String get featuresLabel => _t('ÖNE ÇIKANLAR', 'HIGHLIGHTS');
+  List<(String, String)> get features => isTurkish
+      ? const [
+          ('2 oyun modu', 'Klasik ve Rahat'),
+          ('Bol efekt', 'Parçacık, ışık, sarsıntı'),
+          ('Koyu & açık tema', 'Göz yormayan renkler'),
+          ('Türkçe & İngilizce', 'Tek dokunuşla değiştir'),
+        ]
+      : const [
+          ('2 game modes', 'Classic and Relaxed'),
+          ('Packed with effects', 'Particles, light, shake'),
+          ('Dark & light themes', 'Easy on the eyes'),
+          ('Turkish & English', 'Switch with one tap'),
+        ];
   String get developerLabel => _t('GELİŞTİRİCİ', 'DEVELOPER');
+  String get personalSite => _t('Kişisel site', 'Personal site');
+  String get lifeosFamily => _t('LifeOS ailesinin bir parçası', 'Part of the LifeOS family');
+  String get madeWith => _t('Sevgiyle tasarlandı ve geliştirildi', 'Designed and built with love');
   String get developerRole => _t('Tasarım ve geliştirme', 'Design & development');
   String get musicLabel => _t('MÜZİK', 'MUSIC');
   String get fontAndSoundsLabel => _t('YAZI TİPİ VE SESLER', 'FONT & SOUNDS');

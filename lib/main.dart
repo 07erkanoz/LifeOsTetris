@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'app.dart';
 import 'audio/audio_service.dart';
+import 'audio/haptics.dart';
 import 'settings/settings.dart';
 
 Future<void> main() async {
@@ -13,5 +14,7 @@ Future<void> main() async {
   final settings = await Settings.load();
   final audio = AudioService();
   unawaited(audio.init());
-  runApp(KuplerApp(settings: settings, audio: audio));
+  final haptics = Haptics();
+  unawaited(haptics.init());
+  runApp(KuplerApp(settings: settings, audio: audio, haptics: haptics));
 }

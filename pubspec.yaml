@@ -16,6 +16,7 @@ dependencies:
   audioplayers: ^6.8.1
   shared_preferences: ^2.5.6
   url_launcher: ^6.3.3
+  vibration: ^3.2.1
 
 dev_dependencies:
   flutter_test:

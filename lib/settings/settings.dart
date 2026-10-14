@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/scoring.dart';
 import '../l10n/strings.dart';
 
-/// User preferences plus the best score, persisted with shared_preferences.
+/// User preferences, best scores and lifetime stats, persisted with
+/// shared_preferences.
 class Settings extends ChangeNotifier {
   Settings._(this._prefs);
 
@@ -17,7 +19,12 @@ class Settings extends ChangeNotifier {
   bool _effects = true;
   bool _shake = true;
   bool _vibration = true;
-  int _bestScore = 0;
+  bool _showButtons = true;
+  double _buttonOpacity = 0.9;
+  final Map<GameMode, int> _best = {for (final m in GameMode.values) m: 0};
+  int _gamesPlayed = 0;
+  int _totalLines = 0;
+  int _totalSeconds = 0;
 
   static Future<Settings> load() async {
     SharedPreferences? prefs;
@@ -36,7 +43,17 @@ class Settings extends ChangeNotifier {
       s._effects = prefs.getBool('effects') ?? true;
       s._shake = prefs.getBool('shake') ?? true;
       s._vibration = prefs.getBool('vibration') ?? true;
-      s._bestScore = prefs.getInt('bestScore') ?? 0;
+      s._showButtons = prefs.getBool('showButtons') ?? true;
+      s._buttonOpacity = prefs.getDouble('buttonOpacity') ?? 0.9;
+      for (final m in GameMode.values) {
+        s._best[m] = prefs.getInt('best_${m.name}') ?? 0;
+      }
+      // Scores from the first test builds were stored without a mode.
+      final legacy = prefs.getInt('bestScore');
+      if (legacy != null && legacy > s._best[GameMode.classic]!) s._best[GameMode.classic] = legacy;
+      s._gamesPlayed = prefs.getInt('gamesPlayed') ?? 0;
+      s._totalLines = prefs.getInt('totalLines') ?? 0;
+      s._totalSeconds = prefs.getInt('totalSeconds') ?? 0;
     }
     return s;
   }
@@ -52,7 +69,16 @@ class Settings extends ChangeNotifier {
   bool get effects => _effects;
   bool get shake => _shake;
   bool get vibration => _vibration;
-  int get bestScore => _bestScore;
+  bool get showButtons => _showButtons;
+  double get buttonOpacity => _buttonOpacity;
+  int get gamesPlayed => _gamesPlayed;
+  int get totalLines => _totalLines;
+  int get totalSeconds => _totalSeconds;
+
+  int bestScore(GameMode mode) => _best[mode]!;
+
+  /// Highest score across all modes.
+  int get topScore => _best.values.fold(0, (a, b) => a > b ? a : b);
 
   set themeMode(ThemeMode v) => _set(() => _themeMode = v, () => _prefs?.setInt('themeMode', v.index));
   set language(AppLanguage v) => _set(() => _language = v, () => _prefs?.setInt('language', v.index));
@@ -62,12 +88,28 @@ class Settings extends ChangeNotifier {
   set effects(bool v) => _set(() => _effects = v, () => _prefs?.setBool('effects', v));
   set shake(bool v) => _set(() => _shake = v, () => _prefs?.setBool('shake', v));
   set vibration(bool v) => _set(() => _vibration = v, () => _prefs?.setBool('vibration', v));
+  set showButtons(bool v) => _set(() => _showButtons = v, () => _prefs?.setBool('showButtons', v));
+  set buttonOpacity(double v) => _set(() => _buttonOpacity = v, () => _prefs?.setDouble('buttonOpacity', v));
 
-  /// Stores [score] if it beats the record. Returns true for a new record.
-  bool submitScore(int score) {
-    if (score <= _bestScore) return false;
-    _set(() => _bestScore = score, () => _prefs?.setInt('bestScore', score));
-    return true;
+  /// Records a finished game. Returns true when [score] is a new best for
+  /// [mode].
+  bool recordGame({required GameMode mode, required int score, required int lines, required double seconds}) {
+    final record = score > _best[mode]!;
+    _set(
+      () {
+        if (record) _best[mode] = score;
+        _gamesPlayed++;
+        _totalLines += lines;
+        _totalSeconds += seconds.round();
+      },
+      () {
+        if (record) _prefs?.setInt('best_${mode.name}', score);
+        _prefs?.setInt('gamesPlayed', _gamesPlayed);
+        _prefs?.setInt('totalLines', _totalLines);
+        _prefs?.setInt('totalSeconds', _totalSeconds);
+      },
+    );
+    return record;
   }
 
   void toggleTheme(Brightness current) => themeMode = current == Brightness.dark ? ThemeMode.light : ThemeMode.dark;
