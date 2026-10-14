@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -210,10 +212,125 @@ class _GlyphPainter extends CustomPainter {
   bool shouldRepaint(covariant _GlyphPainter old) => old.glyph != glyph || old.color != color;
 }
 
-/// Round on-screen control with a glossy glass body. Supports press-and-hold
-/// through [onDown]/[onUp].
+/// Paints a 2.5D "jelly keycap" in [rect]: a darker base for depth, a
+/// glossy top face, a soft rim and highlight, matching the game's blocks.
+/// When [pressed] the top face sinks onto its base.
+void paintKeycap(Canvas canvas, Rect rect, Color color, {required bool pressed, required bool dark, double glow = 0}) {
+  final depth = rect.height * 0.09;
+  final radius = Radius.circular(min(rect.width, rect.height) * 0.32);
+  final sink = pressed ? depth * 0.75 : 0.0;
+  final base = RRect.fromRectAndRadius(Rect.fromLTRB(rect.left, rect.top + depth, rect.right, rect.bottom), radius);
+  final face = RRect.fromRectAndRadius(Rect.fromLTRB(rect.left, rect.top + sink, rect.right, rect.bottom - depth + sink), radius);
+
+  canvas.drawRRect(
+    base.shift(Offset(0, depth * 0.8)),
+    Paint()
+      ..color = (dark ? Colors.black : const Color(0xFF1E2850)).withValues(alpha: dark ? 0.55 : 0.18)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, rect.height * 0.12),
+  );
+  if (glow > 0) {
+    canvas.drawRRect(
+      face,
+      Paint()
+        ..color = color.withValues(alpha: 0.55 * glow)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, rect.height * 0.25),
+    );
+  }
+  canvas.drawRRect(base, Paint()..color = Color.lerp(color, Colors.black, dark ? 0.5 : 0.28)!);
+  canvas.drawRRect(
+    face,
+    Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [lighten(color, 0.28), color, Color.lerp(color, Colors.black, 0.12)!],
+        stops: const [0, 0.55, 1],
+      ).createShader(face.outerRect),
+  );
+  final inset = rect.height * 0.045;
+  canvas.drawRRect(
+    face.deflate(inset),
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = max(1, rect.height * 0.03)
+      ..color = Colors.white.withValues(alpha: dark ? 0.22 : 0.5),
+  );
+  final gloss = Rect.fromLTWH(face.left + face.width * 0.16, face.top + face.height * 0.08, face.width * 0.68, face.height * 0.32);
+  canvas.drawRRect(
+    RRect.fromRectAndRadius(gloss, Radius.circular(gloss.height / 2)),
+    Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.white.withValues(alpha: dark ? 0.3 : 0.6),
+          Colors.white.withValues(alpha: 0),
+        ],
+      ).createShader(gloss),
+  );
+}
+
+/// The face of a keycap painted by [paintKeycap] (for placing its glyph).
+Rect keycapFace(Rect rect, {required bool pressed}) {
+  final depth = rect.height * 0.09;
+  final sink = pressed ? depth * 0.75 : 0.0;
+  return Rect.fromLTRB(rect.left, rect.top + sink, rect.right, rect.bottom - depth + sink);
+}
+
+class _KeycapPainter extends CustomPainter {
+  _KeycapPainter({
+    required this.color,
+    required this.pressed,
+    required this.dark,
+    this.glyph,
+    this.glyphColor = Colors.white,
+    this.glyphScale = 0.42,
+  });
+
+  final Color color;
+  final bool pressed;
+  final bool dark;
+  final ControlGlyph? glyph;
+  final Color glyphColor;
+  final double glyphScale;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    paintKeycap(canvas, rect, color, pressed: pressed, dark: dark, glow: pressed ? 1 : 0);
+    final glyph = this.glyph;
+    if (glyph == null) return;
+    final face = keycapFace(rect, pressed: pressed);
+    final g = min(face.width, face.height) * glyphScale;
+    canvas.save();
+    canvas.translate(face.center.dx - g / 2, face.center.dy - g / 2);
+    // A soft drop shadow lifts the glyph off the face.
+    canvas.save();
+    canvas.translate(0, g * 0.05);
+    _GlyphPainter(glyph, Colors.black.withValues(alpha: 0.22)).paint(canvas, Size.square(g));
+    canvas.restore();
+    _GlyphPainter(glyph, glyphColor).paint(canvas, Size.square(g));
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _KeycapPainter old) =>
+      old.color != color || old.pressed != pressed || old.dark != dark || old.glyph != glyph || old.glyphColor != glyphColor;
+}
+
+/// On-screen control drawn as a jelly keycap that sinks when pressed.
+/// Supports press-and-hold through [onDown]/[onUp].
 class ControlButton extends StatefulWidget {
-  const ControlButton({super.key, required this.glyph, this.onDown, this.onUp, this.size = 58, this.primary = false, this.tooltip});
+  const ControlButton({
+    super.key,
+    required this.glyph,
+    this.onDown,
+    this.onUp,
+    this.size = 58,
+    this.primary = false,
+    this.tooltip,
+    this.label,
+  });
 
   final ControlGlyph glyph;
   final VoidCallback? onDown;
@@ -221,6 +338,9 @@ class ControlButton extends StatefulWidget {
   final double size;
   final bool primary;
   final String? tooltip;
+
+  /// Optional text next to the glyph: makes a wide pill-shaped key.
+  final String? label;
 
   @override
   State<ControlButton> createState() => _ControlButtonState();
@@ -245,72 +365,53 @@ class _ControlButtonState extends State<ControlButton> {
     final p = GamePalette.of(context);
     final s = widget.size;
     final primary = widget.primary;
-    final iconColor = primary ? Colors.white : (p.isDark ? const Color(0xFFDDE5F7) : const Color(0xFF3B4663));
+    final color = primary ? const Color(0xFF3B82F6) : (p.isDark ? const Color(0xFF3A4370) : const Color(0xFFE4E9F4));
+    final glyphColor = primary || p.isDark ? Colors.white : const Color(0xFF3B4663);
+    final label = widget.label;
 
-    final body = Container(
-      width: s,
-      height: s,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: primary
-            ? LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [lighten(p.accent1, 0.1), p.accent2])
-            : LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: p.isDark ? [const Color(0xFF2A3150), const Color(0xFF161B32)] : [Colors.white, const Color(0xFFE6EAF2)],
-              ),
-        boxShadow: [
-          BoxShadow(
-            color: primary
-                ? p.accent1.withValues(alpha: _pressed ? 0.75 : 0.45)
-                : (p.isDark ? const Color(0x99000000) : const Color(0x331E2850)),
-            blurRadius: primary ? 24 : 14,
-            offset: Offset(0, _pressed ? 3 : 7),
-          ),
-          if (_pressed && !primary) BoxShadow(color: p.accent1.withValues(alpha: 0.45), blurRadius: 18),
-        ],
-      ),
-      foregroundDecoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: _pressed
-              ? p.accent1.withValues(alpha: 0.9)
-              : (primary ? Colors.white.withValues(alpha: 0.35) : (p.isDark ? const Color(0x2EFFFFFF) : Colors.white)),
-          width: _pressed ? 2 : 1.2,
+    Widget body;
+    if (label == null) {
+      body = CustomPaint(
+        size: Size.square(s),
+        painter: _KeycapPainter(
+          color: color,
+          pressed: _pressed,
+          dark: p.isDark,
+          glyph: widget.glyph,
+          glyphColor: glyphColor,
+          glyphScale: primary ? 0.46 : 0.42,
         ),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Glossy top highlight.
-          Positioned(
-            top: s * 0.06,
-            child: Container(
-              width: s * 0.62,
-              height: s * 0.32,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.all(Radius.elliptical(s * 0.31, s * 0.16)),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.white.withValues(alpha: primary ? 0.35 : (p.isDark ? 0.12 : 0.8)),
-                    Colors.white.withValues(alpha: 0),
-                  ],
+      );
+    } else {
+      final face = keycapFace(Rect.fromLTWH(0, 0, 1, s), pressed: _pressed);
+      body = SizedBox(
+        height: s,
+        child: CustomPaint(
+          painter: _KeycapPainter(color: color, pressed: _pressed, dark: p.isDark),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(s * 0.32, face.top, s * 0.4, s - face.bottom),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CustomPaint(size: Size.square(s * 0.4), painter: _GlyphPainter(widget.glyph, glyphColor)),
+                SizedBox(width: s * 0.18),
+                Text(
+                  label,
+                  style: TextStyle(fontSize: s * 0.3, fontWeight: FontWeight.w900, letterSpacing: 1, color: glyphColor),
                 ),
-              ),
+              ],
             ),
           ),
-          CustomPaint(size: Size.square(s * (primary ? 0.44 : 0.4)), painter: _GlyphPainter(widget.glyph, iconColor)),
-        ],
-      ),
-    );
+        ),
+      );
+    }
 
     final button = Listener(
+      behavior: HitTestBehavior.opaque,
       onPointerDown: (_) => _down(),
       onPointerUp: (_) => _up(),
       onPointerCancel: (_) => _up(),
-      child: AnimatedScale(scale: _pressed ? 0.92 : 1, duration: const Duration(milliseconds: 70), child: body),
+      child: body,
     );
     return widget.tooltip == null ? button : Tooltip(message: widget.tooltip!, child: button);
   }

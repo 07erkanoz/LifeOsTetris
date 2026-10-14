@@ -179,27 +179,14 @@ class _PowerTile extends StatelessWidget {
     final colors = powerColors[type]!;
     final owned = count > 0;
     final active = owned && usable;
-    final circle = Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: owned ? LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors) : null,
-        color: owned ? null : p.track,
-        border: Border.all(color: owned ? Colors.white.withValues(alpha: 0.55) : p.glassBorder, width: 1.5),
-        boxShadow: active
-            ? [
-                BoxShadow(
-                  color: colors.last.withValues(alpha: 0.5 + 0.4 * pop),
-                  blurRadius: 12 + 18 * pop,
-                  offset: const Offset(0, 3),
-                ),
-              ]
-            : null,
-      ),
-      child: Opacity(
-        opacity: owned ? 1 : 0.35,
-        child: CustomPaint(painter: PowerGlyphPainter(type, color: owned ? Colors.white : p.icon)),
+    final circle = CustomPaint(
+      size: Size.square(size),
+      painter: _PowerKeyPainter(
+        type: type,
+        color: owned ? Color.lerp(colors.first, colors.last, 0.55)! : (p.isDark ? const Color(0xFF2B3152) : const Color(0xFFD9DEEA)),
+        glyphColor: owned ? Colors.white : p.icon.withValues(alpha: 0.55),
+        dark: p.isDark,
+        glow: active ? 0.35 + 0.65 * pop : 0,
       ),
     );
     final hint = !owned ? s.powerNone : (!usable && type == PowerType.gravity ? s.gravityNothing : null);
@@ -222,8 +209,8 @@ class _PowerTile extends StatelessWidget {
                     circle,
                     if (owned)
                       Positioned(
-                        right: -5,
-                        top: -5,
+                        right: -7,
+                        bottom: -3,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                           decoration: BoxDecoration(
@@ -275,6 +262,37 @@ class _PowerTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A power drawn as a jelly keycap in its colours with its glyph on top.
+class _PowerKeyPainter extends CustomPainter {
+  _PowerKeyPainter({required this.type, required this.color, required this.glyphColor, required this.dark, this.glow = 0});
+
+  final PowerType type;
+  final Color color;
+  final Color glyphColor;
+  final bool dark;
+  final double glow;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    paintKeycap(canvas, rect, color, pressed: false, dark: dark, glow: glow);
+    final face = keycapFace(rect, pressed: false);
+    final g = min(face.width, face.height) * 1.3;
+    canvas.save();
+    canvas.translate(face.center.dx - g / 2, face.center.dy - g / 2 + g * 0.04);
+    PowerGlyphPainter(type, color: Colors.black.withValues(alpha: 0.25)).paint(canvas, Size.square(g));
+    canvas.restore();
+    canvas.save();
+    canvas.translate(face.center.dx - g / 2, face.center.dy - g / 2);
+    PowerGlyphPainter(type, color: glyphColor).paint(canvas, Size.square(g));
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _PowerKeyPainter old) =>
+      old.type != type || old.color != color || old.glyphColor != glyphColor || old.dark != dark || old.glow != glow;
 }
 
 /// Three arcs around the energy count, lit one per cleared line.

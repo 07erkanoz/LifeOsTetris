@@ -91,6 +91,8 @@ class AppStrings {
   String get noVibrator => _t('Bu cihazda titreşim motoru bulunamadı', 'No vibration motor found on this device');
   String get audioProblem => _t('Ses sorunu', 'Audio problem');
   String get vibrationStrength => _t('Titreşim gücü', 'Vibration strength');
+  String get quickButtons => _t('Tut ve düşür butonları', 'Hold and drop buttons');
+  String get dropShort => _t('DÜŞÜR', 'DROP');
   String get onScreenButtons => _t('Ekran butonları', 'On-screen buttons');
   String get buttonOpacity => _t('Buton görünürlüğü', 'Button visibility');
   String get fullScreen => _t('Tam ekran (F11)', 'Full screen (F11)');
