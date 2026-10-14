@@ -56,10 +56,9 @@ flutter_launcher_icons:
     image_path: assets/icon/icon.png
     background_color: "#0A0D1A"
     theme_color: "#0A0D1A"
+  # Windows needs every size in its .ico: see tool/make_windows_icon.py.
   windows:
-    generate: true
-    image_path: assets/icon/icon.png
-    icon_size: 256
+    generate: false
   macos:
     generate: true
     image_path: assets/icon/icon.png

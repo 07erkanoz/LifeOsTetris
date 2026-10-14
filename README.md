@@ -120,6 +120,7 @@ flutter build apk --release  # Android
 |---|---|
 | `python3 tool/generate_sfx.py` | Efekt seslerini yeniden üretir (numpy gerekir) |
 | `dart run flutter_launcher_icons` | `assets/icon/` içindeki kaynaktan tüm platform ikonlarını üretir |
+| `python3 tool/make_windows_icon.py` | Windows ikonunu tüm boyutlarıyla üretir (Pillow gerekir) |
 | `--dart-define=KUPLER_DEMO=true` | Oyunu neredeyse dolu tahtayla başlatır (efekt demosu) |
 | `--dart-define=KUPLER_DEMO_SUPER=true` | Süper Küpler'i güç yuvaları dolu başlatır |
 | `--dart-define=KUPLER_DEMO_PUZZLE=<n>` | Enter'a basınca n. bulmacayı açar |
