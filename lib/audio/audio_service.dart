@@ -203,7 +203,7 @@ class AudioService {
     if (!enabled || _musicStarted) return;
     _musicStarted = true;
     try {
-      _music = AudioPlayer();
+      _music = AudioPlayer()..positionUpdater = null;
       await _music!.setAudioContext(_musicContext);
       await _music!.setReleaseMode(ReleaseMode.stop);
       _musicDone = _music!.onPlayerComplete.listen((_) => _playNext());
@@ -257,6 +257,12 @@ class AudioService {
 
 /// A fixed set of pre-loaded players for one effect, used round-robin.
 /// Unlike AudioPool it never creates players while the game runs.
+///
+/// Every player has its position updater removed: by default audioplayers
+/// asks the platform for the playback position on every frame while a sound
+/// plays, and when the same sound restarts quickly those per-frame loops
+/// pile up and never all stop. The game slowed down more and more over a
+/// session (and phones heated up). The game never needs the position.
 class _SfxChannel {
   _SfxChannel(this._players);
 
@@ -266,7 +272,7 @@ class _SfxChannel {
   static Future<_SfxChannel> create(String asset, {required int voices, required bool lowLatency, required AudioContext context}) async {
     final players = <AudioPlayer>[];
     for (var i = 0; i < voices; i++) {
-      final player = AudioPlayer();
+      final player = AudioPlayer()..positionUpdater = null;
       await player.setAudioContext(context);
       if (lowLatency) await player.setPlayerMode(PlayerMode.lowLatency);
       await player.setReleaseMode(ReleaseMode.stop);

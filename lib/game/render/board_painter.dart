@@ -96,7 +96,7 @@ class BoardPainter extends CustomPainter {
     final key = '${geometry.cell}/${palette.isDark}/$dpr';
     final hit = _chromeCache[key];
     if (hit != null) return hit;
-    if (_chromeCache.length >= 4) _chromeCache.remove(_chromeCache.keys.first);
+    if (_chromeCache.length >= 4) _chromeCache.remove(_chromeCache.keys.first)?.dispose();
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder)
       ..scale(dpr)
@@ -574,6 +574,19 @@ class FloaterPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final c = cell;
+    final layouts = _layouts[floaters] ??= {};
+    // Free the text of callouts that have finished.
+    if (layouts.length > floaters.length) {
+      final live = floaters.toSet();
+      layouts.removeWhere((f, cached) {
+        if (live.contains(f)) return false;
+        for (final (stroke, fill) in cached.$2) {
+          stroke.dispose();
+          fill.dispose();
+        }
+        return true;
+      });
+    }
     for (final f in floaters) {
       final appear = Curves.easeOutBack.transform((f.age / 0.32).clamp(0.0, 1.0));
       final scale = 0.35 + 0.65 * appear;
@@ -583,10 +596,14 @@ class FloaterPainter extends CustomPainter {
       if (alpha <= 0) continue;
 
       // Text layout is expensive: do it once per floater and cell size.
-      var cached = _layouts[f];
+      var cached = layouts[f];
       if (cached == null || cached.$1 != c) {
+        for (final (stroke, fill) in cached?.$2 ?? const <(TextPainter, TextPainter)>[]) {
+          stroke.dispose();
+          fill.dispose();
+        }
         cached = (c, [for (final line in f.lines) _layout(line, c)]);
-        _layouts[f] = cached;
+        layouts[f] = cached;
       }
       final painters = cached.$2;
       final total = painters.fold<double>(0, (sum, p) => sum + p.$1.height * 0.92);
@@ -618,7 +635,9 @@ class FloaterPainter extends CustomPainter {
     }
   }
 
-  static final Expando<(double, List<(TextPainter, TextPainter)>)> _layouts = Expando();
+  /// Laid-out text per floater, kept per effects engine (keyed by its live
+  /// floater list) and disposed once a floater is gone.
+  static final Expando<Map<Floater, (double, List<(TextPainter, TextPainter)>)>> _layouts = Expando();
 
   (TextPainter, TextPainter) _layout(FloaterLine line, double c) {
     final fontSize = line.size * c;

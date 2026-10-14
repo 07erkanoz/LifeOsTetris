@@ -83,7 +83,7 @@ class BlocksBoardPainter extends CustomPainter {
     final key = '${geometry.cell}/${palette.isDark}/$dpr';
     final hit = _chromeCache[key];
     if (hit != null) return hit;
-    if (_chromeCache.length >= 4) _chromeCache.remove(_chromeCache.keys.first);
+    if (_chromeCache.length >= 4) _chromeCache.remove(_chromeCache.keys.first)?.dispose();
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder)..scale(dpr);
     _paintFrame(canvas);
