@@ -85,6 +85,9 @@ class AppStrings {
   String get visualEffects => _t('Görsel efektler', 'Visual effects');
   String get screenShake => _t('Ekran sarsıntısı', 'Screen shake');
   String get vibration => _t('Titreşim', 'Vibration');
+  String highRefreshRate(double? hz) => hz == null || hz < 61
+      ? _t('Yüksek kare hızı', 'High frame rate')
+      : _t('Yüksek kare hızı (${hz.round()} Hz)', 'High frame rate (${hz.round()} Hz)');
   String get vibrationStrength => _t('Titreşim gücü', 'Vibration strength');
   String get onScreenButtons => _t('Ekran butonları', 'On-screen buttons');
   String get buttonOpacity => _t('Buton görünürlüğü', 'Button visibility');

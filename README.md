@@ -166,8 +166,9 @@ tool/              Ses ve Windows ikonu üreticileri
 
 ## Lisans
 
-Kod, ses efektleri ve ikon [MIT lisansı](LICENSE) ile dağıtılır. Müzikler ve yazı tipi
-kendi lisanslarına tabidir ve MIT kapsamında değildir.
+© 2026 Erkan ÖZ. **Tüm hakları saklıdır.** Kaynak kodu, grafikler, ikon, ses efektleri ve
+oyun tasarımı izinsiz kopyalanamaz, değiştirilemez, dağıtılamaz veya satılamaz. Ayrıntılar
+için [LICENSE](LICENSE) dosyasına bakın. Müzikler ve yazı tipi kendi lisanslarına tabidir.
 
 ## Geliştirici
 

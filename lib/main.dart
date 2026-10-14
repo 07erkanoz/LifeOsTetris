@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'app.dart';
 import 'audio/audio_service.dart';
 import 'audio/haptics.dart';
+import 'platform/display_mode.dart';
 import 'platform/window_mode.dart';
 import 'settings/settings.dart';
 
@@ -22,6 +23,11 @@ Future<void> main() async {
   final haptics = Haptics();
   unawaited(haptics.init());
   unawaited(WindowMode.setFullScreen(settings.fullScreen));
-  settings.addListener(() => WindowMode.setFullScreen(settings.fullScreen));
+  unawaited(DisplayMode.init());
+  unawaited(DisplayMode.setHighRefreshRate(settings.highRefreshRate));
+  settings.addListener(() {
+    WindowMode.setFullScreen(settings.fullScreen);
+    DisplayMode.setHighRefreshRate(settings.highRefreshRate);
+  });
   runApp(KuplerApp(settings: settings, audio: audio, haptics: haptics));
 }

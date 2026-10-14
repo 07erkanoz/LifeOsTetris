@@ -35,6 +35,7 @@ void main() {
       ..showButtons = false
       ..buttonOpacity = 0.4
       ..fullScreen = false
+      ..highRefreshRate = true
       ..lastTrack = 3;
     first.recordBlockLevel(1, 2);
     first.recordBlocksGame(endless: true, score: 1234, lines: 5, seconds: 60);
@@ -52,6 +53,7 @@ void main() {
     expect(again.showButtons, isFalse);
     expect(again.buttonOpacity, 0.4);
     expect(again.fullScreen, isFalse);
+    expect(again.highRefreshRate, isTrue);
     expect(again.lastTrack, 3);
     expect(again.blockStars(1), 2);
     expect(again.blocksBest, 1234);

@@ -6,7 +6,7 @@ pkgrel=1
 pkgdesc="LifeOS Küpler: bol efektli blok bulmaca oyunu"
 arch=('x86_64')
 url="https://github.com/07erkanoz/LifeOsTetris"
-license=('MIT')
+license=('LicenseRef-LifeOS-Kupler')
 depends=('gtk3' 'gstreamer' 'gst-plugins-base' 'gst-plugins-good')
 options=('!strip')
 # The test build is replaced on every release, so there is no fixed checksum.

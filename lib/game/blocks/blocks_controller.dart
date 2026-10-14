@@ -159,8 +159,9 @@ class BlocksController extends ChangeNotifier {
     fx.update(running ? dt : 0);
 
     _sinceRepaint += dt;
-    if (!_idle && _sinceRepaint >= 1 / 60 - 0.004) {
-      _sinceRepaint = (_sinceRepaint - 1 / 60).clamp(0.0, 1 / 60);
+    final interval = settings.highRefreshRate ? 0.0 : 1 / 60;
+    if (!_idle && _sinceRepaint >= interval - 0.004) {
+      _sinceRepaint = (_sinceRepaint - interval).clamp(0.0, 1 / 60);
       frame.value++;
       _paintCount++;
       if (_paintCount.isEven) backgroundFrame.value++;

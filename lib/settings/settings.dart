@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -23,6 +24,15 @@ class Settings extends ChangeNotifier {
   double _buttonOpacity = 0.9;
   bool _fullScreen = true;
   double _vibrationStrength = 0.5;
+  bool _highRefreshRate = _desktop;
+
+  /// Desktops draw at the monitor's rate by default; phones stay at 60 fps
+  /// (cooler, longer battery) unless the player turns it on.
+  static bool get _desktop =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.macOS);
   final Map<GameMode, int> _best = {for (final m in GameMode.values) m: 0};
   int _gamesPlayed = 0;
   int _totalLines = 0;
@@ -52,6 +62,7 @@ class Settings extends ChangeNotifier {
       s._buttonOpacity = prefs.getDouble('buttonOpacity') ?? 0.9;
       s._fullScreen = prefs.getBool('fullScreen') ?? true;
       s._vibrationStrength = prefs.getDouble('vibrationStrength') ?? 0.5;
+      s._highRefreshRate = prefs.getBool('highRefreshRate') ?? _desktop;
       for (final m in GameMode.values) {
         s._best[m] = prefs.getInt('best_${m.name}') ?? 0;
       }
@@ -89,6 +100,9 @@ class Settings extends ChangeNotifier {
 
   /// Desktop: borderless full screen (Windows), on by default.
   bool get fullScreen => _fullScreen;
+
+  /// Draw at the screen's full refresh rate (120/144/165 Hz) instead of 60.
+  bool get highRefreshRate => _highRefreshRate;
 
   /// Vibration strength, 0..1.
   double get vibrationStrength => _vibrationStrength;
@@ -162,6 +176,7 @@ class Settings extends ChangeNotifier {
   set vibration(bool v) => _set(() => _vibration = v, () => _prefs?.setBool('vibration', v));
   set showButtons(bool v) => _set(() => _showButtons = v, () => _prefs?.setBool('showButtons', v));
   set buttonOpacity(double v) => _set(() => _buttonOpacity = v, () => _prefs?.setDouble('buttonOpacity', v));
+  set highRefreshRate(bool v) => _set(() => _highRefreshRate = v, () => _prefs?.setBool('highRefreshRate', v));
   set vibrationStrength(double v) => _set(() => _vibrationStrength = v, () => _prefs?.setDouble('vibrationStrength', v));
   set fullScreen(bool v) => _set(() => _fullScreen = v, () => _prefs?.setBool('fullScreen', v));
 

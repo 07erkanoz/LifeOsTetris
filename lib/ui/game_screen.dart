@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +13,7 @@ import '../game/blocks/blocks_controller.dart';
 import '../game/game_controller.dart';
 import '../game/motivation.dart';
 import '../l10n/strings.dart';
+import '../platform/display_mode.dart';
 import '../platform/window_mode.dart';
 import '../game/render/background_painter.dart';
 import '../game/render/block_sprites.dart';
@@ -690,6 +692,16 @@ class SettingsPanel extends StatelessWidget {
           value: settings.shake,
           onChanged: (v) => settings.shake = v,
         ),
+        if (!kIsWeb)
+          ValueListenableBuilder<double?>(
+            valueListenable: DisplayMode.maxRefreshRate,
+            builder: (context, hz, _) => ToggleRow(
+              label: s.highRefreshRate(hz),
+              icon: compact ? null : Icons.speed_rounded,
+              value: settings.highRefreshRate,
+              onChanged: (v) => settings.highRefreshRate = v,
+            ),
+          ),
         if (WindowMode.supported)
           ToggleRow(
             label: s.fullScreen,
