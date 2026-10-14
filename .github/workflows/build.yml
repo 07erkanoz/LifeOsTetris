@@ -48,14 +48,48 @@ jobs:
         with:
           name: LifeOS-Kupler-android
           path: LifeOS-Kupler.apk
+
+  windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build windows --release
+      - name: Zip the game folder
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "LifeOS-Kupler" | Out-Null
+          Copy-Item -Recurse -Path "build/windows/x64/runner/Release/*" -Destination "LifeOS-Kupler"
+          Compress-Archive -Path "LifeOS-Kupler" -DestinationPath "LifeOS-Kupler-Windows.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LifeOS-Kupler-windows
+          path: LifeOS-Kupler-Windows.zip
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [android, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
       - name: Publish test release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           gh release delete test-build --yes --cleanup-tag || true
-          gh release create test-build LifeOS-Kupler.apk \
+          gh release create test-build LifeOS-Kupler.apk LifeOS-Kupler-Windows.zip \
             --target "$GITHUB_SHA" \
             --prerelease \
             --title "Test sürümü (${GITHUB_SHA::7})" \
-            --notes "Telefonda denemek için LifeOS-Kupler.apk dosyasını indirip kurun. Bilinmeyen kaynaklardan yüklemeye izin vermeniz gerekebilir. Bu derleme hata ayıklama anahtarıyla imzalanmıştır; mağazaya yüklenemez."
+            --notes "Android: LifeOS-Kupler.apk dosyasını telefona indirip kurun (bilinmeyen kaynaklara izin vermeniz gerekebilir).
+          Windows: LifeOS-Kupler-Windows.zip dosyasını indirip bir klasöre çıkarın ve lifeos_kupler.exe dosyasını çalıştırın. Windows SmartScreen uyarı verirse 'Ek bilgi' > 'Yine de çalıştır' deyin.
+          Bu derlemeler test içindir; mağazaya yüklenemez."
