@@ -10,6 +10,7 @@ import '../audio/haptics.dart';
 import '../core/blocks/block_puzzle.dart';
 import '../core/blocks/level_generator.dart';
 import '../core/tetromino.dart';
+import '../platform/orientation_lock.dart';
 import '../game/blocks/blocks_controller.dart';
 import '../game/blocks/blocks_painters.dart';
 import '../game/render/background_painter.dart';
@@ -57,6 +58,8 @@ class _BlocksScreenState extends State<BlocksScreen> with SingleTickerProviderSt
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _ticker.start();
+    // The square board works sideways too.
+    OrientationLock.any();
   }
 
   @override
@@ -64,8 +67,18 @@ class _BlocksScreenState extends State<BlocksScreen> with SingleTickerProviderSt
     if (state != AppLifecycleState.resumed) c.pauseIfRunning();
   }
 
+  bool _phone = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _phone = OrientationLock.isPhone(context);
+  }
+
   @override
   void dispose() {
+    // Back to the upright-only main screen.
+    OrientationLock.portraitIf(_phone);
     WidgetsBinding.instance.removeObserver(this);
     _ticker.dispose();
     _focus.dispose();

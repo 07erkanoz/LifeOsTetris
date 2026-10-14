@@ -14,6 +14,7 @@ import '../game/game_controller.dart';
 import '../game/motivation.dart';
 import '../l10n/strings.dart';
 import '../platform/display_mode.dart';
+import '../platform/orientation_lock.dart';
 import '../platform/window_mode.dart';
 import '../game/render/background_painter.dart';
 import '../game/render/block_sprites.dart';
@@ -56,6 +57,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     // Compile the effects' GPU shaders now rather than at the first blast.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      OrientationLock.portrait(context);
       EffectsWarmUp.run(GamePalette.of(context), MediaQuery.devicePixelRatioOf(context));
     });
     if (BlocksController.demo) {
