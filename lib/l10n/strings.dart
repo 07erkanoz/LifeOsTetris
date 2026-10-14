@@ -88,6 +88,8 @@ class AppStrings {
   String highRefreshRate(double? hz) => hz == null || hz < 61
       ? _t('Yüksek kare hızı', 'High frame rate')
       : _t('Yüksek kare hızı (${hz.round()} Hz)', 'High frame rate (${hz.round()} Hz)');
+  String get noVibrator => _t('Bu cihazda titreşim motoru bulunamadı', 'No vibration motor found on this device');
+  String get audioProblem => _t('Ses sorunu', 'Audio problem');
   String get vibrationStrength => _t('Titreşim gücü', 'Vibration strength');
   String get onScreenButtons => _t('Ekran butonları', 'On-screen buttons');
   String get buttonOpacity => _t('Buton görünürlüğü', 'Button visibility');

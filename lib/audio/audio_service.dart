@@ -45,6 +45,37 @@ enum Sfx {
 /// Every call is fire-and-forget and failures are swallowed: missing audio
 /// support on a platform must never break the game.
 class AudioService {
+  /// The last audio failure, shown in the settings so a silent game can be
+  /// diagnosed on the player's machine.
+  static final ValueNotifier<String?> lastError = ValueNotifier(null);
+
+  /// A player without audioplayers' default per-frame position polling.
+  ///
+  /// By default every playing sound asks the platform for its position on
+  /// every frame, and when the same sound restarts quickly those per-frame
+  /// loops pile up and never all stop: the game slowed down more and more
+  /// over a session. Android and Linux need no polling at all. Windows stops
+  /// playing without it, so there a timer updater is used: restarting it
+  /// replaces the old timer, so nothing piles up.
+  static AudioPlayer quietPlayer() {
+    final player = AudioPlayer();
+    final windows = !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+    player.positionUpdater = windows
+        ? TimerPositionUpdater(getPosition: player.getCurrentPosition, interval: const Duration(milliseconds: 200))
+        : null;
+    return player;
+  }
+
+  /// Platform errors (a missing codec, a file that cannot be opened) arrive
+  /// on a player's log stream rather than as exceptions.
+  static void watchErrors(AudioPlayer player, String what) => player.onLog.listen((_) {}, onError: (Object e) => _report(what, e));
+
+  static void _report(String what, Object error) {
+    debugPrint('$what: $error');
+    final text = '$what: $error';
+    lastError.value = text.length > 160 ? '${text.substring(0, 160)}…' : text;
+  }
+
   AudioService({this.enabled = true, int? lastTrack, this.onTrackStarted}) : _currentTrack = lastTrack, _random = _makeRandom();
 
   /// False in widget tests, where no audio plugin is available.
@@ -126,7 +157,7 @@ class AudioService {
     try {
       await AudioPlayer.global.setAudioContext(_sfxContext);
     } catch (e) {
-      debugPrint('Audio context failed: $e');
+      _report('Audio context', e);
     }
     // On Android short effects go through SoundPool ("low latency" mode),
     // which is built for game sounds. The default MediaPlayer path costs far
@@ -143,7 +174,7 @@ class AudioService {
             context: _sfxContext,
           );
         } catch (e) {
-          debugPrint('sfx ${s.name} init failed: $e');
+          _report('sfx ${s.name}', e);
         }
       }),
     );
@@ -203,13 +234,14 @@ class AudioService {
     if (!enabled || _musicStarted) return;
     _musicStarted = true;
     try {
-      _music = AudioPlayer()..positionUpdater = null;
+      _music = quietPlayer();
+      watchErrors(_music!, 'Music');
       await _music!.setAudioContext(_musicContext);
       await _music!.setReleaseMode(ReleaseMode.stop);
       _musicDone = _music!.onPlayerComplete.listen((_) => _playNext());
       await _playNext();
     } catch (e) {
-      debugPrint('Music failed: $e');
+      _report('Music', e);
     }
   }
 
@@ -240,7 +272,7 @@ class AudioService {
         await player.setSource(source);
       }
     } catch (e) {
-      debugPrint('Music track failed: $e');
+      _report('Music track', e);
     }
   }
 
@@ -257,12 +289,7 @@ class AudioService {
 
 /// A fixed set of pre-loaded players for one effect, used round-robin.
 /// Unlike AudioPool it never creates players while the game runs.
-///
-/// Every player has its position updater removed: by default audioplayers
-/// asks the platform for the playback position on every frame while a sound
-/// plays, and when the same sound restarts quickly those per-frame loops
-/// pile up and never all stop. The game slowed down more and more over a
-/// session (and phones heated up). The game never needs the position.
+/// Players come from [AudioService.quietPlayer].
 class _SfxChannel {
   _SfxChannel(this._players);
 
@@ -272,7 +299,8 @@ class _SfxChannel {
   static Future<_SfxChannel> create(String asset, {required int voices, required bool lowLatency, required AudioContext context}) async {
     final players = <AudioPlayer>[];
     for (var i = 0; i < voices; i++) {
-      final player = AudioPlayer()..positionUpdater = null;
+      final player = AudioService.quietPlayer();
+      AudioService.watchErrors(player, asset.split('/').last);
       await player.setAudioContext(context);
       if (lowLatency) await player.setPlayerMode(PlayerMode.lowLatency);
       await player.setReleaseMode(ReleaseMode.stop);
@@ -291,7 +319,7 @@ class _SfxChannel {
         await player.setVolume(volume);
         await player.resume();
       } catch (e) {
-        debugPrint('sfx play failed: $e');
+        AudioService._report('sfx play', e);
       }
     }();
   }

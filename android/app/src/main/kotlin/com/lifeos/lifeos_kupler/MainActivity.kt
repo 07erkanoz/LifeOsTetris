@@ -1,6 +1,12 @@
 package com.lifeos.lifeos_kupler
 
+import android.content.Context
+import android.media.AudioAttributes
 import android.os.Build
+import android.os.VibrationAttributes
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.view.Display
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -19,6 +25,60 @@ class MainActivity : FlutterActivity() {
                 "maxRefreshRate" -> result.success(maxRefreshRate())
                 else -> result.notImplemented()
             }
+        }
+        // "lifeos_kupler/haptics": game vibration straight through the
+        // Vibrator service, tagged as media/game vibration. (The vibration
+        // plugin tags it as an alarm, which some phones silence.)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "lifeos_kupler/haptics").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "hasVibrator" -> result.success(vibrator()?.hasVibrator() == true)
+                "vibrate" -> {
+                    val args = call.arguments as? List<*>
+                    val timings = args?.getOrNull(0) as? List<*>
+                    val amplitudes = args?.getOrNull(1) as? List<*>
+                    vibrate(
+                        timings?.mapNotNull { (it as? Number)?.toLong() } ?: emptyList(),
+                        amplitudes?.mapNotNull { (it as? Number)?.toInt() } ?: emptyList(),
+                    )
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun vibrator(): Vibrator? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
+        } else {
+            getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+        }
+
+    /** [timings]: off/on durations in ms (starting with a pause); [amplitudes]: 0..255 per step. */
+    @Suppress("DEPRECATION")
+    private fun vibrate(timings: List<Long>, amplitudes: List<Int>) {
+        val v = vibrator() ?: return
+        if (!v.hasVibrator() || timings.isEmpty()) return
+        try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+                v.vibrate(timings.toLongArray(), -1)
+                return
+            }
+            val useAmplitude = v.hasAmplitudeControl() && amplitudes.size == timings.size
+            val effect = if (useAmplitude) {
+                VibrationEffect.createWaveform(timings.toLongArray(), amplitudes.map { it.coerceIn(0, 255) }.toIntArray(), -1)
+            } else {
+                VibrationEffect.createWaveform(timings.toLongArray(), -1)
+            }
+            when {
+                Build.VERSION.SDK_INT >= 33 ->
+                    v.vibrate(effect, VibrationAttributes.createForUsage(VibrationAttributes.USAGE_MEDIA))
+                else ->
+                    v.vibrate(effect, AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).build())
+            }
+        } catch (e: Exception) {
+            // Never let a vibration problem break the game.
         }
     }
 

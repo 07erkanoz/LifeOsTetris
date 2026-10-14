@@ -18,6 +18,7 @@ import '../platform/window_mode.dart';
 import '../game/render/background_painter.dart';
 import '../game/render/block_sprites.dart';
 import '../game/render/board_painter.dart';
+import '../game/render/warm_up.dart';
 import '../settings/settings.dart';
 import '../theme/palette.dart';
 import 'about_page.dart';
@@ -52,6 +53,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _ticker.start();
+    // Compile the effects' GPU shaders now rather than at the first blast.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      EffectsWarmUp.run(GamePalette.of(context), MediaQuery.devicePixelRatioOf(context));
+    });
     if (BlocksController.demo) {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => BlocksScreen.open(context, settings: widget.settings, audio: widget.audio, haptics: widget.haptics),
@@ -674,6 +680,18 @@ class SettingsPanel extends StatelessWidget {
           onChanged: (v) => settings.music = v,
         ),
         slider(settings.musicVolume, 0, 1, settings.music ? (v) => settings.musicVolume = v : null),
+        ValueListenableBuilder<String?>(
+          valueListenable: AudioService.lastError,
+          builder: (context, error, _) => error == null
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 2),
+                  child: SelectableText(
+                    '${s.audioProblem}: $error',
+                    style: const TextStyle(fontSize: 11.5, height: 1.3, fontWeight: FontWeight.w600, color: Color(0xFFF87171)),
+                  ),
+                ),
+        ),
         ToggleRow(
           label: s.soundEffects,
           icon: compact ? null : Icons.volume_up_rounded,
@@ -715,6 +733,18 @@ class SettingsPanel extends StatelessWidget {
             icon: compact ? null : Icons.smartphone_rounded,
             value: settings.vibration,
             onChanged: (v) => settings.vibration = v,
+          ),
+          ValueListenableBuilder<bool?>(
+            valueListenable: Haptics.available,
+            builder: (context, available, _) => available == false
+                ? Padding(
+                    padding: const EdgeInsets.only(left: 28, bottom: 2),
+                    child: Text(
+                      s.noVibrator,
+                      style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFFF87171)),
+                    ),
+                  )
+                : const SizedBox.shrink(),
           ),
           if (settings.vibration) ...[
             Padding(
