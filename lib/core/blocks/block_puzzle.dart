@@ -392,6 +392,25 @@ class BlockPuzzleGame {
     );
   }
 
+  /// Copies the state of [other] (not its piece source) for look-ahead.
+  void debugCopyFrom(BlockPuzzleGame other) {
+    for (var y = 0; y < size; y++) {
+      for (var x = 0; x < size; x++) {
+        board[y][x] = other.board[y][x];
+      }
+    }
+    for (var i = 0; i < 3; i++) {
+      tray[i] = other.tray[i];
+    }
+    status = other.status;
+    level = other.level;
+    score = other.score;
+    moves = other.moves;
+    lines = other.lines;
+    streak = other.streak;
+    _sinceClear = other._sinceClear;
+  }
+
   /// Test helper: sets the board from strings like [BlockLevel.rows].
   void debugSetBoard(List<String> rows) {
     for (var y = 0; y < size; y++) {

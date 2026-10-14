@@ -130,9 +130,17 @@ const _perfect = [Color(0xFFFDE047), Color(0xFF22D3EE), Color(0xFFA855F7)];
 const _combo = [Color(0xFF38BDF8), Color(0xFF6366F1)];
 const _b2b = [Color(0xFFF97316), Color(0xFFEF4444)];
 
+/// What the animated background needs from a game's effects: a clock and
+/// an occasional coloured pulse.
+abstract interface class BackdropFx {
+  double get time;
+  double get pulse;
+  Color get pulseColor;
+}
+
 /// Drives every visual effect: particles, shake, floating text, trails,
 /// shockwaves, row collapse, level-up wave and the game-over crumble.
-class EffectsEngine {
+class EffectsEngine implements BackdropFx {
   EffectsEngine({int? seed}) : _rng = Random(seed);
 
   final Random _rng;
@@ -159,6 +167,7 @@ class EffectsEngine {
   double fallAge = 1;
   static const fallDuration = 0.5;
 
+  @override
   double time = 0;
   double _trauma = 0;
 
@@ -168,7 +177,9 @@ class EffectsEngine {
   static const collapseDuration = 0.32;
 
   double boardFlash = 0;
+  @override
   Color pulseColor = const Color(0xFF38BDF8);
+  @override
   double pulse = 0;
 
   double levelWaveAge = -1;

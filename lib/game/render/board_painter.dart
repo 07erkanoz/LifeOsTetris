@@ -470,74 +470,9 @@ class BoardPainter extends CustomPainter {
     );
   }
 
-  void _paintShockwaves(Canvas canvas) {
-    final c = geometry.cell;
-    for (final s in fx.shockwaves) {
-      final t = Curves.easeOutCubic.transform(s.t);
-      final radius = s.radius * t * c;
-      final alpha = (1 - s.t) * 0.8;
-      canvas.drawCircle(
-        Offset(s.x * c, s.y * c),
-        radius,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = max(1, s.width * c * (1 - s.t))
-          ..color = s.color.withValues(alpha: alpha),
-      );
-    }
-  }
+  void _paintShockwaves(Canvas canvas) => paintShockwaves(canvas, fx.shockwaves, geometry.cell);
 
-  void _paintParticles(Canvas canvas) {
-    final c = geometry.cell;
-    final glow = Paint();
-    final solid = Paint();
-    for (final p in fx.particles) {
-      if (!p.visible) continue;
-      final t = p.t;
-      final fade = 1 - t * t;
-      final x = p.x * c, y = p.y * c;
-      switch (p.kind) {
-        case ParticleKind.block:
-          sprites.draw(
-            canvas,
-            sprites.block(p.type!),
-            x - c / 2,
-            y - c / 2,
-            scale: p.size * (1 - 0.3 * t),
-            opacity: fade,
-            rotation: p.rotation,
-          );
-        case ParticleKind.grayBlock:
-          sprites.draw(canvas, sprites.gray, x - c / 2, y - c / 2, scale: p.size * (1 - 0.25 * t), opacity: fade, rotation: p.rotation);
-        case ParticleKind.spark:
-          final r = p.size * c * (1 - 0.5 * t);
-          glow.color = p.color.withValues(alpha: 0.22 * fade);
-          canvas.drawCircle(Offset(x, y), r * 1.6, glow);
-          solid.color = p.color.withValues(alpha: fade);
-          canvas.drawPath(_star(x, y, r), solid);
-        case ParticleKind.dot:
-          final r = p.size * c;
-          glow.color = p.color.withValues(alpha: 0.25 * fade);
-          canvas.drawCircle(Offset(x, y), r * 2.2, glow);
-          solid.color = p.color.withValues(alpha: fade);
-          canvas.drawCircle(Offset(x, y), r, solid);
-      }
-    }
-  }
-
-  Path _star(double x, double y, double r) {
-    final inner = r * 0.28;
-    return Path()
-      ..moveTo(x, y - r)
-      ..lineTo(x + inner, y - inner)
-      ..lineTo(x + r, y)
-      ..lineTo(x + inner, y + inner)
-      ..lineTo(x, y + r)
-      ..lineTo(x - inner, y + inner)
-      ..lineTo(x - r, y)
-      ..lineTo(x - inner, y - inner)
-      ..close();
-  }
+  void _paintParticles(Canvas canvas) => paintParticles(canvas, fx.particles, sprites, geometry.cell);
 
   void _paintGameOverShade(Canvas canvas, Rect well) {
     if (fx.gameOverAge < 0) return;
@@ -553,21 +488,93 @@ class BoardPainter extends CustomPainter {
       old.sprites != sprites || old.palette != palette || old.geometry.cell != geometry.cell || old.game != game;
 }
 
-/// Floating callouts ("TETRIS!", "+800", "KOMBO ×2"). Painted without the
+/// Expanding rings, in cell units.
+void paintShockwaves(Canvas canvas, List<Shockwave> shockwaves, double c) {
+  for (final s in shockwaves) {
+    final t = Curves.easeOutCubic.transform(s.t);
+    final radius = s.radius * t * c;
+    final alpha = (1 - s.t) * 0.8;
+    canvas.drawCircle(
+      Offset(s.x * c, s.y * c),
+      radius,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(1, s.width * c * (1 - s.t))
+        ..color = s.color.withValues(alpha: alpha),
+    );
+  }
+}
+
+/// Block shards, sparks and glowing dots, in cell units.
+void paintParticles(Canvas canvas, List<Particle> particles, BlockSprites sprites, double c) {
+  final glow = Paint();
+  final solid = Paint();
+  for (final p in particles) {
+    if (!p.visible) continue;
+    final t = p.t;
+    final fade = 1 - t * t;
+    final x = p.x * c, y = p.y * c;
+    switch (p.kind) {
+      case ParticleKind.block:
+        sprites.draw(
+          canvas,
+          sprites.block(p.type!),
+          x - c / 2,
+          y - c / 2,
+          scale: p.size * (1 - 0.3 * t),
+          opacity: fade,
+          rotation: p.rotation,
+        );
+      case ParticleKind.grayBlock:
+        sprites.draw(canvas, sprites.gray, x - c / 2, y - c / 2, scale: p.size * (1 - 0.25 * t), opacity: fade, rotation: p.rotation);
+      case ParticleKind.spark:
+        final r = p.size * c * (1 - 0.5 * t);
+        glow.color = p.color.withValues(alpha: 0.22 * fade);
+        canvas.drawCircle(Offset(x, y), r * 1.6, glow);
+        solid.color = p.color.withValues(alpha: fade);
+        canvas.drawPath(_star(x, y, r), solid);
+      case ParticleKind.dot:
+        final r = p.size * c;
+        glow.color = p.color.withValues(alpha: 0.25 * fade);
+        canvas.drawCircle(Offset(x, y), r * 2.2, glow);
+        solid.color = p.color.withValues(alpha: fade);
+        canvas.drawCircle(Offset(x, y), r, solid);
+    }
+  }
+}
+
+Path _star(double x, double y, double r) {
+  final inner = r * 0.28;
+  return Path()
+    ..moveTo(x, y - r)
+    ..lineTo(x + inner, y - inner)
+    ..lineTo(x + r, y)
+    ..lineTo(x + inner, y + inner)
+    ..lineTo(x, y + r)
+    ..lineTo(x - inner, y + inner)
+    ..lineTo(x - r, y)
+    ..lineTo(x - inner, y - inner)
+    ..close();
+}
+
+/// Floating callouts ("DÖRTLÜ!", "+800", "KOMBO ×2"). Painted without the
 /// board's perspective tilt so text stays crisp and readable.
 class FloaterPainter extends CustomPainter {
-  FloaterPainter({required this.fx, required this.geometry, required Listenable repaint}) : super(repaint: repaint);
+  FloaterPainter({required this.floaters, required this.cell, required this.origin, required Listenable repaint}) : super(repaint: repaint);
 
-  final EffectsEngine fx;
-  final BoardGeometry geometry;
+  /// The live list of an effects engine; read on every repaint.
+  final List<Floater> floaters;
+  final double cell;
+
+  /// Canvas position of the board's (0, 0) cell corner.
+  final Offset origin;
 
   static const _outline = Color(0xE60F172A);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final c = geometry.cell;
-    final origin = geometry.wellOrigin;
-    for (final f in fx.floaters) {
+    final c = cell;
+    for (final f in floaters) {
       final appear = Curves.easeOutBack.transform((f.age / 0.32).clamp(0.0, 1.0));
       final scale = 0.35 + 0.65 * appear;
       final outT = ((f.t - 0.68) / 0.32).clamp(0.0, 1.0);
@@ -651,5 +658,5 @@ class FloaterPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant FloaterPainter old) => old.geometry.cell != geometry.cell || old.fx != fx;
+  bool shouldRepaint(covariant FloaterPainter old) => old.cell != cell || old.floaters != floaters || old.origin != origin;
 }

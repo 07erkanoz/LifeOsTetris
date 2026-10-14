@@ -75,7 +75,7 @@ class BackgroundPainter extends CustomPainter {
     required Listenable repaint,
   }) : super(repaint: repaint);
 
-  final EffectsEngine fx;
+  final BackdropFx fx;
   final GamePalette palette;
   final BlockSprites sprites;
   final bool effectsEnabled;

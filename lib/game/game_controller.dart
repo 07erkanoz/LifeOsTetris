@@ -34,6 +34,10 @@ class GameController extends ChangeNotifier {
   /// Repaint signal for the animated background, at half the board's rate.
   final ValueNotifier<int> backgroundFrame = ValueNotifier(0);
   double _sinceRepaint = 0;
+
+  /// Repaint cadence: 60 fps, also on 90/120 Hz screens.
+  static const double repaintInterval = 1 / 60;
+  static const double repaintTolerance = 0.004;
   int _paintCount = 0;
   final MotivationEngine motivation = MotivationEngine();
   int _lastMotivationId = 0;
@@ -232,8 +236,11 @@ class GameController extends ChangeNotifier {
     // Repaint at most ~60 times a second even on 90/120 Hz screens; the game
     // logic above still runs every tick. Halves GPU work (and heat) there.
     _sinceRepaint += dt;
-    if (!_idle && _sinceRepaint >= 1 / 62) {
-      _sinceRepaint = 0;
+    if (!_idle && _sinceRepaint >= repaintInterval - repaintTolerance) {
+      // Keep the remainder so the cadence stays even. A strict threshold
+      // skipped frames whenever vsync came a hair early on 60 Hz screens,
+      // which showed up as random hitches (seen on Windows).
+      _sinceRepaint = (_sinceRepaint - repaintInterval).clamp(0.0, repaintInterval);
       frame.value++;
       _paintCount++;
       if (_paintCount.isEven) backgroundFrame.value++;

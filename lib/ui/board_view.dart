@@ -74,7 +74,12 @@ class BoardView extends StatelessWidget {
               child: IgnorePointer(
                 child: CustomPaint(
                   size: geometry.size,
-                  painter: FloaterPainter(fx: controller.fx, geometry: geometry, repaint: controller.frame),
+                  painter: FloaterPainter(
+                    floaters: controller.fx.floaters,
+                    cell: cell,
+                    origin: geometry.wellOrigin,
+                    repaint: controller.frame,
+                  ),
                 ),
               ),
             ),
