@@ -12,6 +12,11 @@ Geliştirici: **Erkan ÖZ** · [lifeos.com.tr](https://lifeos.com.tr)
   ▪️ Tekli blok, 🔩 Matkap (blokları delip sütunu yer), 🧲 Yerçekimi (havadaki
   bloklar düşer), ⏳ Ağır çekim (10 sn) ve 👻 Hayalet Çizgi (yığının içinden
   süzülür, dokununca bulunduğu satırın boşluklarını doldurur).
+- **Bulmaca Küpler:** 10 bölümde 100 bulmaca. Tahtada altın ★ bloklar var;
+  sadece verilen parçalarla hepsini temizlemek gerekiyor. Parçalar kendiliğinden
+  düşmez. Her seviye her açılışta **yeni, rastgele** bir tahta üretir; üretilen
+  her tahta oyun motorunda oynatılarak çözülebilir olduğu doğrulanır. 2 parça
+  artırırsan ★★★, 1 parça ★★, hiç artırmazsan ★. Çözdükçe sıradaki açılır.
 - **Klasik Küpler:** *Normal* (hız 10. seviyeye kadar yavaşça artar, sonra sabit)
   ve *Rahat* (sabit, sakin hız). Her modun rekoru ayrı tutulur.
 - **Koyu ve açık tema**, telefon ve masaüstü için ayrı yerleşim; ekran ne olursa
@@ -53,7 +58,8 @@ flutter build apk --release # Android
 - Efekt demosu: `flutter run --dart-define=KUPLER_DEMO=true` neredeyse dolu bir
   tahtayla başlar; ilk sert düşüşte dörtlü silme ve seviye atlama görülür.
   `--dart-define=KUPLER_DEMO_SUPER=true` eklenirse Süper Küpler'de, güç
-  yuvaları dolu başlar.
+  yuvaları dolu başlar. `KUPLER_DEMO_PUZZLE=<n>` Enter ile n. bulmacayı,
+  `KUPLER_DEMO_LEVELS=true` bulmaca seçim ekranını açar.
 
 ### Proje yapısı
 
@@ -70,5 +76,11 @@ assets/        Yazı tipi (Inter, OFL), sesler, müzikler (bkz. assets/audio/mus
 ## Test sürümü (Android)
 
 `main` dalına her gönderimde GitHub Actions bir APK derler ve
-**Releases → Test sürümü** altına koyar; aynı sayfada Windows için zip de
-vardır (klasörü çıkarıp `lifeos_kupler.exe` çalıştırılır).
+**Releases → Test sürümü** altına koyar:
+
+- `LifeOS-Kupler-arm64.apk` – modern telefonlar için küçük APK
+- `LifeOS-Kupler.apk` – tüm Android telefonlar
+- `LifeOS-Kupler-Windows.zip` – klasörü çıkarıp `lifeos_kupler.exe` çalıştırılır
+
+Telefondan doğrudan indirmek için tarayıcıda:
+https://github.com/07erkanoz/LifeOsTetris/releases/download/test-build/LifeOS-Kupler-arm64.apk

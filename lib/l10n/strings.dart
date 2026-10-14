@@ -191,7 +191,33 @@ class AppStrings {
     GameMode.classic => classic,
     GameMode.relaxed => relaxed,
     GameMode.superMode => superTitle,
+    GameMode.puzzle => puzzleTitle,
   };
+
+  // ------------------------------------------------------------ bulmaca küpler
+
+  String get puzzleTitle => _t('Bulmaca Küpler', 'Puzzle Blocks');
+  String get puzzleSubtitle => _t('100 bulmaca, her seferinde yeni tahta', '100 puzzles, a new board every time');
+  String get puzzleLabel => _t('BULMACA', 'PUZZLE');
+  String get gemsLeftLabel => _t('KALAN ★', '★ LEFT');
+  String get piecesLeftLabel => _t('PARÇA', 'PIECES');
+  String get puzzleGoal => _t('Verilen parçalarla tüm ★ blokları temizle!', 'Clear every ★ block with the pieces you get!');
+  String get puzzleNoGravity => _t('Parçalar kendiliğinden düşmez, acele etme.', "Pieces don't fall on their own. Take your time.");
+  String get solved => _t('ÇÖZÜLDÜ!', 'SOLVED!');
+  String get puzzleSolvedTitle => _t('Bulmaca çözüldü!', 'Puzzle solved!');
+  String get puzzleFailedTitle => _t('Parçalar bitti', 'Out of pieces');
+  String get puzzleFailedHint => _t(
+    '★ bloklar kaldı. Aynı tahtayı tekrar dene ya da yeni bir tahta al.',
+    'Some ★ blocks are left. Try the same board again or get a new one.',
+  );
+  String get starsHint => _t('2 parça artır: ★★★ · 1 parça: ★★', '2 pieces to spare: ★★★ · 1 spare: ★★');
+  String get tryAgain => _t('Tekrar dene', 'Try again');
+  String get newBoard => _t('Yeni tahta', 'New board');
+  String get nextPuzzle => _t('Sonraki bulmaca', 'Next puzzle');
+  String get levelsLabel => _t('Bulmacalar', 'Puzzles');
+  String chapter(int n) => _t('Bölüm $n', 'Chapter $n');
+  String puzzleNumber(int n) => _t('Bulmaca $n', 'Puzzle $n');
+  String get locked => _t('Önceki bulmacayı çöz', 'Solve the previous puzzle');
 
   String powerName(PowerType type) => switch (type) {
     PowerType.bomb => _t('BOMBA', 'BOMB'),

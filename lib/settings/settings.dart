@@ -25,6 +25,7 @@ class Settings extends ChangeNotifier {
   int _gamesPlayed = 0;
   int _totalLines = 0;
   int _totalSeconds = 0;
+  final Map<int, int> _puzzleStars = {};
 
   static Future<Settings> load() async {
     SharedPreferences? prefs;
@@ -54,6 +55,12 @@ class Settings extends ChangeNotifier {
       s._gamesPlayed = prefs.getInt('gamesPlayed') ?? 0;
       s._totalLines = prefs.getInt('totalLines') ?? 0;
       s._totalSeconds = prefs.getInt('totalSeconds') ?? 0;
+      for (final entry in (prefs.getString('puzzleStars') ?? '').split(',')) {
+        final parts = entry.split(':');
+        if (parts.length != 2) continue;
+        final level = int.tryParse(parts[0]), stars = int.tryParse(parts[1]);
+        if (level != null && stars != null) s._puzzleStars[level] = stars;
+      }
     }
     return s;
   }
@@ -76,6 +83,23 @@ class Settings extends ChangeNotifier {
   int get totalSeconds => _totalSeconds;
 
   int bestScore(GameMode mode) => _best[mode]!;
+
+  /// Stars earned on puzzle [level] (0 = not solved yet).
+  int puzzleStars(int level) => _puzzleStars[level] ?? 0;
+
+  int get totalPuzzleStars => _puzzleStars.values.fold(0, (a, b) => a + b);
+
+  /// Highest playable puzzle: one past the highest solved.
+  int get unlockedPuzzle => (_puzzleStars.keys.fold(0, (a, b) => a > b ? a : b)) + 1;
+
+  /// Saves a solved puzzle, keeping the best star count.
+  void recordPuzzle(int level, int stars) {
+    if (stars <= puzzleStars(level)) return;
+    _set(
+      () => _puzzleStars[level] = stars,
+      () => _prefs?.setString('puzzleStars', _puzzleStars.entries.map((e) => '${e.key}:${e.value}').join(',')),
+    );
+  }
 
   /// Highest score across all modes.
   int get topScore => _best.values.fold(0, (a, b) => a > b ? a : b);

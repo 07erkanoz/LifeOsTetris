@@ -21,7 +21,10 @@ enum PieceType {
   bomb,
 
   /// Single drill that passes through blocks and eats its whole column.
-  drill;
+  drill,
+
+  /// Golden target block of the puzzles. Only ever on the board.
+  gem;
 
   /// Power pieces never come from the bag and cannot be held or rotated.
   bool get isSpecial => index >= PieceType.mono.index;
@@ -71,6 +74,7 @@ const Map<PieceType, List<Cell>> _spawnCells = {
   PieceType.mono: [Cell(1, 0)],
   PieceType.bomb: [Cell(1, 0)],
   PieceType.drill: [Cell(1, 0)],
+  PieceType.gem: [Cell(1, 0)],
 };
 
 int boxSize(PieceType type) => switch (type) {

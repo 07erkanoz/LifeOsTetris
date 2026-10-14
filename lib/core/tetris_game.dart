@@ -2,10 +2,12 @@ import 'dart:math';
 
 import 'bag.dart';
 import 'game_events.dart';
+import 'puzzle.dart';
 import 'scoring.dart';
 import 'tetromino.dart';
 
 export 'game_events.dart';
+export 'puzzle.dart';
 export 'scoring.dart' show GameMode;
 export 'tetromino.dart';
 
@@ -76,6 +78,10 @@ class TetrisGame {
   double _slowMotion = 0;
   double? _ghostLine;
 
+  // Bulmaca Küpler state.
+  PuzzleLevel? _puzzle;
+  bool _puzzleSolved = false;
+
   // ---------------------------------------------------------------- queries
 
   Piece? get active => _active;
@@ -95,6 +101,23 @@ class TetrisGame {
   List<PieceType> get preview => _bag.peek(previewCount);
 
   bool get powersEnabled => mode.hasPowers;
+
+  PuzzleLevel? get puzzle => _puzzle;
+  bool get puzzleSolved => _puzzleSolved;
+
+  /// Gems still on the board.
+  int get gemsLeft {
+    var n = 0;
+    for (final row in _board) {
+      for (final c in row) {
+        if (c == PieceType.gem) n++;
+      }
+    }
+    return n;
+  }
+
+  /// Pieces the player has not used yet (queue plus the held piece).
+  int get piecesLeft => _bag.remaining + (_held != null ? 1 : 0);
 
   /// Energy towards the next power, 0..[energyPerPower].
   int get energy => _energy;
@@ -153,15 +176,29 @@ class TetrisGame {
     _powers.clear();
     _slowMotion = 0;
     _ghostLine = null;
+    _puzzleSolved = false;
   }
 
   /// Starts a new game. Pass [seed] to make the piece sequence reproducible.
   void start({int? seed, GameMode? mode}) {
     if (mode != null) this.mode = mode;
+    _puzzle = null;
     final s = seed ?? Random().nextInt(1 << 31);
     _bag = PieceBag(s);
     _powerRandom = Random(s);
     _reset();
+    status = GameStatus.playing;
+    _spawn(_bag.next());
+  }
+
+  /// Starts a "Bulmaca Küpler" level.
+  void startPuzzle(PuzzleLevel level) {
+    mode = GameMode.puzzle;
+    _puzzle = level;
+    _bag = PieceBag.fixed(level.queue);
+    _powerRandom = Random(level.number);
+    _reset();
+    debugSetBoard(level.rows);
     status = GameStatus.playing;
     _spawn(_bag.next());
   }
@@ -297,6 +334,8 @@ class TetrisGame {
     if (!_canAct || !_canHold || _active!.type.isSpecial) return false;
     final current = _active!.type;
     final swapIn = _held;
+    // A puzzle with nothing left in the queue has nothing to swap in.
+    if (swapIn == null && _bag.isExhausted) return false;
     _held = current;
     _canHold = false;
     _events.add(PieceHeld(current));
@@ -490,6 +529,33 @@ class TetrisGame {
     }
   }
 
+  /// Deals the next piece, or ends a puzzle: solved once no gems are left,
+  /// failed when the pieces run out first.
+  void _spawnNext() {
+    if (mode == GameMode.puzzle) {
+      if (gemsLeft == 0) {
+        _puzzleSolved = true;
+        status = GameStatus.over;
+        final left = piecesLeft;
+        _events.add(PuzzleSolved(stars: PuzzleLevel.starsFor(left), piecesLeft: left));
+        return;
+      }
+      if (_bag.isExhausted) {
+        final held = _held;
+        if (held != null) {
+          // The held piece is the last one available: play it.
+          _held = null;
+          _spawn(held);
+          return;
+        }
+        status = GameStatus.over;
+        _events.add(const PuzzleFailed());
+        return;
+      }
+    }
+    _spawn(_bag.next());
+  }
+
   void _spawn(PieceType type) {
     // One-cell power pieces would sit entirely in the hidden rows at the
     // normal spawn height, so they appear at the top of the visible well.
@@ -577,7 +643,7 @@ class TetrisGame {
     } else {
       if (tSpin != TSpin.none) _events.add(TSpinNoLines(tSpin, points));
       _canHold = true;
-      _spawn(_bag.next());
+      _spawnNext();
     }
   }
 
@@ -615,7 +681,7 @@ class TetrisGame {
     _combo = -1;
     _events.add(BombExploded(center, removed, points));
     _canHold = true;
-    _spawn(_bag.next());
+    _spawnNext();
   }
 
   void _drillColumn(Piece piece) {
@@ -633,7 +699,7 @@ class TetrisGame {
     _combo = -1;
     _events.add(ColumnDrilled(start.x, start.y, removed, points));
     _canHold = true;
-    _spawn(_bag.next());
+    _spawnNext();
   }
 
   void _collapseRows() {
@@ -647,7 +713,7 @@ class TetrisGame {
     status = GameStatus.playing;
     _events.add(RowsCollapsed(rows));
     _canHold = true;
-    _spawn(_bag.next());
+    _spawnNext();
   }
 
   void _gameOver() {
@@ -671,6 +737,7 @@ class TetrisGame {
   static PieceType? _parseCell(String ch) => switch (ch) {
     '.' => null,
     'M' => PieceType.mono,
+    '*' => PieceType.gem,
     _ => PieceType.values.byName(ch.toLowerCase()),
   };
 

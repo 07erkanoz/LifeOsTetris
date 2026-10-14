@@ -48,12 +48,18 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter build apk --release
-      - name: Rename APK
+      - name: Rename universal APK
         run: cp build/app/outputs/flutter-apk/app-release.apk LifeOS-Kupler.apk
+      # A much smaller APK for modern (64-bit ARM) phones.
+      - run: flutter build apk --release --split-per-abi --target-platform android-arm64
+      - name: Rename arm64 APK
+        run: cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk LifeOS-Kupler-arm64.apk
       - uses: actions/upload-artifact@v4
         with:
           name: LifeOS-Kupler-android
-          path: LifeOS-Kupler.apk
+          path: |
+            LifeOS-Kupler.apk
+            LifeOS-Kupler-arm64.apk
 
   windows:
     needs: test
@@ -91,11 +97,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release delete test-build --yes --cleanup-tag || true
-          gh release create test-build LifeOS-Kupler.apk LifeOS-Kupler-Windows.zip \
-            --target "$GITHUB_SHA" \
-            --prerelease \
-            --title "Test sürümü (${GITHUB_SHA::7})" \
-            --notes "Android: LifeOS-Kupler.apk dosyasını telefona indirip kurun (bilinmeyen kaynaklara izin vermeniz gerekebilir).
-          Windows: LifeOS-Kupler-Windows.zip dosyasını indirip bir klasöre çıkarın ve lifeos_kupler.exe dosyasını çalıştırın. Windows SmartScreen uyarı verirse 'Ek bilgi' > 'Yine de çalıştır' deyin.
-          Bu derlemeler test içindir; mağazaya yüklenemez."
+          NOTES="Android: LifeOS-Kupler-arm64.apk (küçük, modern telefonlar) ya da LifeOS-Kupler.apk (tüm telefonlar) dosyasını telefonun tarayıcısından indirip kurun; bilinmeyen kaynaklara izin vermeniz gerekebilir.
+          Windows: LifeOS-Kupler-Windows.zip dosyasını bir klasöre çıkarın ve lifeos_kupler.exe dosyasını çalıştırın. SmartScreen uyarırsa 'Ek bilgi' > 'Yine de çalıştır' deyin.
+          Bu derlemeler test içindir; mağazaya yüklenemez. Sürüm: ${GITHUB_SHA::7}"
+          # Update the existing release in place instead of deleting and
+          # recreating it (recreating moves the tag, which GitHub can refuse).
+          if gh release view test-build >/dev/null 2>&1; then
+            gh release upload test-build LifeOS-Kupler.apk LifeOS-Kupler-arm64.apk LifeOS-Kupler-Windows.zip --clobber
+            gh release edit test-build --title "Test sürümü (${GITHUB_SHA::7})" --notes "$NOTES" --prerelease
+          else
+            gh release create test-build LifeOS-Kupler.apk LifeOS-Kupler-arm64.apk LifeOS-Kupler-Windows.zip \
+              --target "$GITHUB_SHA" --prerelease --title "Test sürümü (${GITHUB_SHA::7})" --notes "$NOTES"
+          fi

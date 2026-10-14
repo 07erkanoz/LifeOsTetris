@@ -14,6 +14,7 @@ const Map<PieceType, Color> blockColors = {
   PieceType.mono: Color(0xFFCBD5E1),
   PieceType.bomb: Color(0xFFF43F5E),
   PieceType.drill: Color(0xFFF59E0B),
+  PieceType.gem: Color(0xFFFBBF24),
 };
 
 const String fontFamily = 'Inter';

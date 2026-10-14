@@ -12,10 +12,13 @@ enum GameMode {
   relaxed,
 
   /// "Süper Küpler": classic speed plus the energy bar and power-ups.
-  superMode;
+  superMode,
+
+  /// "Bulmaca Küpler": hand-made boards, a fixed list of pieces, no gravity.
+  puzzle;
 
   bool get hasPowers => this == GameMode.superMode;
-  bool get speedsUp => this != GameMode.relaxed;
+  bool get speedsUp => this == GameMode.classic || this == GameMode.superMode;
 }
 
 /// Level at which classic mode reaches its top speed.
@@ -26,6 +29,8 @@ const int speedCapLevel = 10;
 /// to 0.25 s/row (4 rows per second) at level 10 and never goes faster.
 double gravityInterval(int level, [GameMode mode = GameMode.classic]) {
   if (mode == GameMode.relaxed) return 0.8;
+  // Puzzles are about thinking: pieces only move down when the player says so.
+  if (mode == GameMode.puzzle) return double.infinity;
   final l = level.clamp(1, speedCapLevel);
   return pow(0.25, (l - 1) / (speedCapLevel - 1)).toDouble();
 }

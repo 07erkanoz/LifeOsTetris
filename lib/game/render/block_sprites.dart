@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -108,6 +109,28 @@ void paintBomb(Canvas canvas, Offset origin, double s) {
   canvas.drawCircle(fuseEnd, s * 0.05, Paint()..color = Colors.white);
 }
 
+/// Golden puzzle target: a gold block with a white star.
+void paintGem(Canvas canvas, Offset origin, double s, {required Color shadeTarget}) {
+  canvas.drawRRect(
+    RRect.fromRectAndRadius(Rect.fromLTWH(origin.dx + s * 0.02, origin.dy + s * 0.02, s * 0.96, s * 0.96), Radius.circular(s * 0.26)),
+    Paint()
+      ..color = const Color(0xFFFDE047).withValues(alpha: 0.55)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, s * 0.18),
+  );
+  paintBlock(canvas, origin, s, const Color(0xFFFBBF24), shadeTarget: shadeTarget, emissive: false);
+  final c = origin + Offset(s * 0.5, s * 0.44);
+  final star = Path();
+  for (var i = 0; i < 10; i++) {
+    final a = -pi / 2 + i * pi / 5;
+    final r = i.isEven ? s * 0.25 : s * 0.11;
+    final p = c + Offset(cos(a) * r, sin(a) * r);
+    i == 0 ? star.moveTo(p.dx, p.dy) : star.lineTo(p.dx, p.dy);
+  }
+  star.close();
+  canvas.drawPath(star.shift(Offset(0, s * 0.03)), Paint()..color = const Color(0x66B45309));
+  canvas.drawPath(star, Paint()..color = Colors.white);
+}
+
 /// Golden drill bit pointing down.
 void paintDrill(Canvas canvas, Offset origin, double s) {
   final cx = origin.dx + s / 2, top = origin.dy + s * 0.08, bottom = origin.dy + s * 0.94;
@@ -161,6 +184,7 @@ class BlockSprites {
         (c, o) => switch (type) {
           PieceType.bomb => paintBomb(c, o, cell),
           PieceType.drill => paintDrill(c, o, cell),
+          PieceType.gem => paintGem(c, o, cell, shadeTarget: palette.shadeTarget),
           _ => paintBlock(c, o, cell, blockColors[type]!, shadeTarget: palette.shadeTarget, emissive: palette.isDark),
         },
       );

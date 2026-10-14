@@ -1,8 +1,11 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart' show Offset;
 
 import '../audio/audio_service.dart';
 import '../audio/haptics.dart';
+import '../core/puzzle_generator.dart';
 import '../core/tetris_game.dart';
 import '../settings/settings.dart';
 import '../l10n/strings.dart';
@@ -58,7 +61,67 @@ class GameController extends ChangeNotifier {
   Duration? _lastTick;
   Object? _hudSnapshot;
 
-  bool get showGameOver => game.status == GameStatus.over && fx.gameOverAge > 1.5;
+  bool get showGameOver => game.status == GameStatus.over && game.mode != GameMode.puzzle && fx.gameOverAge > 1.5;
+
+  // ------------------------------------------------------------ puzzles
+
+  /// The level-select screen is open.
+  bool showLevelSelect = false;
+  PuzzleLevel? _puzzle;
+  int lastPuzzleStars = 0;
+  double _puzzleEndAge = -1;
+
+  PuzzleLevel? get puzzle => _puzzle;
+
+  /// The result card shows a moment after a puzzle ends, so the last clear
+  /// and its effects can play out first.
+  bool get showPuzzleResult => game.mode == GameMode.puzzle && game.status == GameStatus.over && _puzzleEndAge > 1.1;
+
+  void openLevelSelect() {
+    showLevelSelect = true;
+    audio.play(Sfx.click);
+    notifyListeners();
+  }
+
+  void closeLevelSelect() {
+    showLevelSelect = false;
+    notifyListeners();
+  }
+
+  /// Plays puzzle [number] on a freshly generated board.
+  void startPuzzle(int number) => _playPuzzle(PuzzleGenerator.generate(number));
+
+  /// Tries the same board again.
+  void retryPuzzle() {
+    final level = _puzzle;
+    if (level != null) _playPuzzle(level);
+  }
+
+  void nextPuzzle() {
+    final level = _puzzle;
+    if (level == null) return;
+    startPuzzle(min(level.number + 1, PuzzleGenerator.levelCount));
+  }
+
+  void _playPuzzle(PuzzleLevel level) {
+    _puzzle = level;
+    mode = GameMode.puzzle;
+    showLevelSelect = false;
+    _puzzleEndAge = -1;
+    lastPuzzleStars = 0;
+    fx.reset();
+    motivation.reset(bestScore: 0);
+    newRecord = false;
+    playTime = 0;
+    _leftHeld = _rightHeld = false;
+    _shiftDir = 0;
+    game.startPuzzle(level);
+    audio.startMusic();
+    audio.duck = 1;
+    audio.play(Sfx.start, volume: 0.8);
+    _process(game.drainEvents());
+    notifyListeners();
+  }
 
   void _applySettings() {
     fx.particlesEnabled = settings.effects;
@@ -72,6 +135,8 @@ class GameController extends ChangeNotifier {
   }
 
   void start([GameMode? mode]) {
+    if (_demoPuzzle > 0) return startPuzzle(_demoPuzzle);
+    if ((mode ?? this.mode) == GameMode.puzzle) return retryPuzzle();
     if (mode != null) this.mode = mode;
     if (_demoSuper) this.mode = GameMode.superMode;
     fx.reset();
@@ -93,6 +158,11 @@ class GameController extends ChangeNotifier {
   /// on a nearly full board so effects can be recorded on the first drop.
   static const bool _demo = bool.fromEnvironment('KUPLER_DEMO');
   static const bool _demoSuper = bool.fromEnvironment('KUPLER_DEMO_SUPER');
+  static const int _demoPuzzle = int.fromEnvironment('KUPLER_DEMO_PUZZLE');
+
+  /// Development builds with `--dart-define=KUPLER_DEMO_LEVELS=true` open on
+  /// the puzzle level select.
+  static const bool demoLevels = bool.fromEnvironment('KUPLER_DEMO_LEVELS');
 
   void _setUpDemo() {
     game.debugSetBoard([
@@ -121,6 +191,7 @@ class GameController extends ChangeNotifier {
   }
 
   void toMenu() {
+    showLevelSelect = false;
     game.abandon();
     fx.reset();
     motivation.reset(bestScore: settings.bestScore(mode));
@@ -153,6 +224,7 @@ class GameController extends ChangeNotifier {
       _lastMotivationId = shown.id;
       audio.play(Sfx.combo4, volume: 0.35);
     }
+    if (_puzzleEndAge >= 0) _puzzleEndAge += dt;
     fx.update(game.paused ? 0 : dt, game);
     // Nothing moves behind the pause / menu / results screens, so stop
     // repainting the board and background there: it keeps those screens
@@ -170,7 +242,9 @@ class GameController extends ChangeNotifier {
   }
 
   bool get _idle =>
-      game.paused || game.status == GameStatus.ready || (game.status == GameStatus.over && fx.gameOverAge > 3 && fx.particles.isEmpty);
+      game.paused ||
+      game.status == GameStatus.ready ||
+      (game.status == GameStatus.over && (fx.gameOverAge > 3 || _puzzleEndAge > 3) && fx.particles.isEmpty);
 
   void _notifyHudIfChanged() {
     final snapshot = (
@@ -179,7 +253,10 @@ class GameController extends ChangeNotifier {
       game.lines,
       game.held,
       game.canHold,
-      game.preview.first,
+      game.preview.firstOrNull,
+      game.piecesLeft,
+      showPuzzleResult,
+      showLevelSelect,
       game.status,
       game.paused,
       motivation.current?.id,
@@ -211,6 +288,12 @@ class GameController extends ChangeNotifier {
         newRecord = settings.recordGame(mode: mode, score: game.score, lines: game.lines, seconds: playTime);
         audio.duck = 0.4;
       }
+      if (e is PuzzleSolved) {
+        _puzzleEndAge = 0;
+        lastPuzzleStars = e.stars;
+        settings.recordPuzzle(_puzzle!.number, e.stars);
+      }
+      if (e is PuzzleFailed) _puzzleEndAge = 0;
     }
   }
 
@@ -243,8 +326,10 @@ class GameController extends ChangeNotifier {
         audio.play(Sfx.tspin, volume: 0.7);
       case LevelUp():
         audio.play(Sfx.levelup);
-      case GameOver():
+      case GameOver() || PuzzleFailed():
         audio.play(Sfx.gameover);
+      case PuzzleSolved():
+        audio.play(Sfx.perfect);
       case PowerEarned():
         audio.play(Sfx.power, volume: 0.8);
       case PowerActivated(:final type):
@@ -280,8 +365,10 @@ class GameController extends ChangeNotifier {
         count >= 4 || perfectClear ? haptics.celebrate() : haptics.medium();
       case LevelUp():
         haptics.celebrate();
-      case GameOver() || BombExploded():
+      case GameOver() || BombExploded() || PuzzleFailed():
         haptics.heavy();
+      case PuzzleSolved():
+        haptics.celebrate();
       case ColumnDrilled() || GravityApplied() || GhostLineFilled():
         haptics.medium();
       case PowerEarned() || PowerActivated():

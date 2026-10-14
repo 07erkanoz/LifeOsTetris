@@ -111,4 +111,54 @@ void main() {
     }
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Bulmaca Küpler: pick a level, solve it, earn stars, go on', (tester) async {
+    final settings = Settings.memory()..language = AppLanguage.tr;
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(KuplerApp(settings: settings, audio: AudioService(enabled: false)));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.tap(find.byKey(const ValueKey('start-puzzle')));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('BÖLÜM 1'), findsOneWidget);
+    await tester.tap(find.text('1').last);
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 33));
+    }
+
+    final state = tester.state(find.byType(GameScreen)) as dynamic;
+    final controller = state.controller as GameController;
+    final game = controller.game;
+    expect(game.mode, GameMode.puzzle);
+    expect(find.text('BULMACA 1'), findsOneWidget);
+
+    for (final (_, rot, x) in controller.puzzle!.solution) {
+      for (var i = 0; i < rot.index; i++) {
+        game.rotateClockwise();
+      }
+      while (game.active!.x < x) {
+        game.moveRight();
+      }
+      while (game.active!.x > x) {
+        game.moveLeft();
+      }
+      game.hardDrop();
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 33));
+      }
+    }
+    for (var i = 0; i < 60; i++) {
+      await tester.pump(const Duration(milliseconds: 33));
+    }
+    expect(find.text('Bulmaca çözüldü!'), findsOneWidget);
+    expect(settings.puzzleStars(1), 3);
+    expect(settings.unlockedPuzzle, 2);
+
+    await tester.tap(find.byKey(const ValueKey('next-puzzle')));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(controller.puzzle!.number, 2);
+    expect(tester.takeException(), isNull);
+  });
 }
