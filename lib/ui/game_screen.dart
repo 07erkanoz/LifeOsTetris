@@ -345,21 +345,44 @@ class _ScoreText extends StatelessWidget {
 }
 
 class _BoardArea extends StatelessWidget {
-  const _BoardArea({required this.c, this.padding = 12});
+  const _BoardArea({required this.c, this.padding = 12, this.tilt = 0.2});
 
   final GameController c;
   final double padding;
 
+  /// Perspective tilt; 0 draws the board flat (and so at its full height).
+  final double tilt;
+
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
-      final cell = BoardGeometry.fit(Size(box.maxWidth - 2 * padding, box.maxHeight - 2 * padding));
+      final width = box.maxWidth - 2 * padding, height = box.maxHeight - 2 * padding;
+      // The tilt (pivoting on the bottom edge, with perspective) makes the
+      // board look shorter than its layout box. Size it so that what is seen
+      // fills the height: a frame of height H looks H·cos t / (1 + p·H·sin t)
+      // tall, so pick H = h / (cos t − p·h·sin t).
+      final seenHeight = tilt == 0 ? height : height / (cos(tilt) - BoardView.perspective * height * sin(tilt));
+      final cell = min(width / 10.7, seenHeight / 20.7);
       if (cell <= 4) return const SizedBox.shrink();
+      final frame = BoardGeometry(cell).frameSize;
       return Stack(
         alignment: Alignment.topCenter,
         children: [
-          Center(
-            child: BoardView(controller: c, cell: cell),
+          Positioned.fill(
+            child: Padding(
+              padding: EdgeInsets.all(padding),
+              child: Align(
+                alignment: tilt == 0 ? Alignment.center : Alignment.bottomCenter,
+                // The layout box may be taller than the space; the tilted
+                // drawing is not.
+                child: OverflowBox(
+                  alignment: Alignment.bottomCenter,
+                  maxHeight: frame.height,
+                  maxWidth: frame.width,
+                  child: BoardView(controller: c, cell: cell, tilt: tilt),
+                ),
+              ),
+            ),
           ),
           Positioned(top: 4, left: 8, right: 8, child: _MotivationBanner(c: c)),
         ],
@@ -378,62 +401,38 @@ class _PhoneLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final settings = c.settings;
-    final brightness = Theme.of(context).brightness;
     final s = AppStrings.of(context);
+    // One HUD row (no logo row): every pixel saved goes to the board.
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
-          child: Row(
-            children: [
-              const Flexible(
-                child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: LogoTitle()),
-              ),
-              const SizedBox(width: 8),
-              GlassIconButton(
-                icon: brightness == Brightness.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                tooltip: s.theme,
-                onTap: () => settings.toggleTheme(brightness),
-              ),
-              const SizedBox(width: 8),
-              GlassIconButton(
-                icon: settings.music ? Icons.music_note_rounded : Icons.music_off_rounded,
-                tooltip: s.music,
-                onTap: () => settings.music = !settings.music,
-              ),
-              const SizedBox(width: 8),
-              GlassIconButton(icon: Icons.pause_rounded, tooltip: s.pause, onTap: c.togglePause),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
           child: SizedBox(
-            height: 84,
+            height: 80,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SizedBox(
-                  width: 78,
-                  child: _HoldCard(c: c, cell: 13, size: const Size(62, 42)),
+                  width: 72,
+                  child: _HoldCard(c: c, cell: 12, size: const Size(58, 38)),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Expanded(
                   child: GlassCard(
                     glow: c.fx.levelPulse,
-                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+                    padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         CardLabel(s.scoreLabel),
-                        _ScoreText(c: c, size: 26),
+                        _ScoreText(c: c, size: 24),
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Row(
                             children: [
                               _Stat(s.levelLabel, '${c.game.level}'),
-                              const SizedBox(width: 14),
+                              const SizedBox(width: 12),
                               _Stat(s.linesLabel, '${c.game.lines}'),
                             ],
                           ),
@@ -442,10 +441,23 @@ class _PhoneLayout extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 SizedBox(
-                  width: 78,
-                  child: _NextCard(c: c, cell: 14, size: const Size(62, 42)),
+                  width: 72,
+                  child: _NextCard(c: c, cell: 13, size: const Size(58, 38)),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GlassIconButton(icon: Icons.pause_rounded, tooltip: s.pause, size: 36, onTap: c.togglePause),
+                    GlassIconButton(
+                      icon: settings.music ? Icons.music_note_rounded : Icons.music_off_rounded,
+                      tooltip: s.music,
+                      size: 36,
+                      onTap: () => settings.music = !settings.music,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -503,7 +515,9 @@ class _LandscapeLayout extends StatelessWidget {
     final brightness = Theme.of(context).brightness;
     return LayoutBuilder(
       builder: (context, box) {
-        const pad = 8.0;
+        // The board takes the whole height, drawn flat (the tilt would shrink
+        // its top row), with only a hairline margin.
+        const pad = 2.0;
         final cell = BoardGeometry.fit(Size(double.infinity, box.maxHeight - 2 * pad));
         final boardWidth = cell * 10.7 + 2 * pad;
         final side = max(0.0, (box.maxWidth - boardWidth) / 2);
@@ -632,7 +646,7 @@ class _LandscapeLayout extends StatelessWidget {
             Expanded(child: left),
             SizedBox(
               width: boardWidth,
-              child: _BoardArea(c: c, padding: pad),
+              child: _BoardArea(c: c, padding: pad, tilt: 0),
             ),
             Expanded(child: right),
           ],

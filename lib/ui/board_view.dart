@@ -15,6 +15,9 @@ class BoardView extends StatelessWidget {
   final double cell;
   final double tilt;
 
+  /// Perspective strength of the tilt (Matrix4 entry 3,2).
+  static const double perspective = 0.0009;
+
   @override
   Widget build(BuildContext context) {
     final palette = GamePalette.of(context);
@@ -63,7 +66,7 @@ class BoardView extends StatelessWidget {
               child: Transform(
                 alignment: Alignment.bottomCenter,
                 transform: Matrix4.identity()
-                  ..setEntry(3, 2, 0.0009)
+                  ..setEntry(3, 2, perspective)
                   ..rotateX(-tilt),
                 child: SizedBox.fromSize(size: frame, child: board),
               ),
