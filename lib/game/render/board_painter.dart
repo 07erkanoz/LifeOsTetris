@@ -11,9 +11,7 @@ import 'block_sprites.dart';
 /// Geometry of the board canvas: a margin around the frame lets particles
 /// fly outside the well without being clipped.
 class BoardGeometry {
-  BoardGeometry(this.cell)
-      : framePad = cell * 0.35,
-        margin = cell * 1.3;
+  BoardGeometry(this.cell) : framePad = cell * 0.35, margin = cell * 1.3;
 
   final double cell;
   final double framePad;
@@ -24,11 +22,12 @@ class BoardGeometry {
   Offset get wellOrigin => Offset(margin + framePad, margin + framePad);
   Size get size => Size(wellWidth + 2 * (margin + framePad), wellHeight + 2 * (margin + framePad));
 
-  /// Cell size that fits a board into [available].
-  static double fit(Size available) {
-    // width = 10c + 2(1.3c + 0.35c) = 13.3c, height = 20c + 3.3c = 23.3c
-    return min(available.width / 13.3, available.height / 23.3);
-  }
+  /// Size of the visible frame around the well (the canvas is larger so
+  /// particles can fly over the surrounding UI).
+  Size get frameSize => Size(wellWidth + 2 * framePad, wellHeight + 2 * framePad);
+
+  /// Cell size whose frame (10.7 × 20.7 cells) fits into [available].
+  static double fit(Size available) => min(available.width / 10.7, available.height / 20.7);
 }
 
 class BoardPainter extends CustomPainter {
@@ -119,11 +118,10 @@ class BoardPainter extends CustomPainter {
       canvas.drawRect(
         well,
         Paint()
-          ..shader = ui.Gradient.radial(
-            well.center,
-            well.height * 0.7,
-            [fx.pulseColor.withValues(alpha: 0.28 * fx.pulse), fx.pulseColor.withValues(alpha: 0)],
-          ),
+          ..shader = ui.Gradient.radial(well.center, well.height * 0.7, [
+            fx.pulseColor.withValues(alpha: 0.28 * fx.pulse),
+            fx.pulseColor.withValues(alpha: 0),
+          ]),
       );
     }
     final wave = fx.levelWaveT;
@@ -133,11 +131,12 @@ class BoardPainter extends CustomPainter {
       canvas.drawRect(
         band,
         Paint()
-          ..shader = ui.Gradient.linear(band.topCenter, band.bottomCenter, [
-            palette.accent2.withValues(alpha: 0),
-            palette.accent1.withValues(alpha: 0.45),
-            palette.accent2.withValues(alpha: 0),
-          ], const [0, 0.5, 1]),
+          ..shader = ui.Gradient.linear(
+            band.topCenter,
+            band.bottomCenter,
+            [palette.accent2.withValues(alpha: 0), palette.accent1.withValues(alpha: 0.45), palette.accent2.withValues(alpha: 0)],
+            const [0, 0.5, 1],
+          ),
       );
       canvas.drawRect(Rect.fromLTRB(well.left, y - 1, well.right, y + 1), Paint()..color = Colors.white.withValues(alpha: 0.8));
     }
@@ -251,9 +250,7 @@ class BoardPainter extends CustomPainter {
     final color = blockColors[piece.type]!;
     final spawn = fx.spawnAge < 0.18 ? Curves.easeOutBack.transform(fx.spawnAge / 0.18) : 1.0;
     final scale = (0.6 + 0.4 * spawn) * (1 + 0.12 * fx.rotatePop);
-    final cells = [
-      for (final cell in piece.cells) Offset((cell.x + fx.offsetX) * c, (cell.y - _h + fx.offsetY) * c),
-    ];
+    final cells = [for (final cell in piece.cells) Offset((cell.x + fx.offsetX) * c, (cell.y - _h + fx.offsetY) * c)];
 
     // Pulsing aura behind the piece.
     final aura = Path();
@@ -292,22 +289,24 @@ class BoardPainter extends CustomPainter {
         band,
         Paint()
           ..blendMode = palette.isDark ? BlendMode.plus : BlendMode.srcOver
-          ..shader = ui.Gradient.linear(band.topCenter, band.bottomCenter, [
-            const Color(0x007DD3FC),
-            const Color(0xFF7DD3FC).withValues(alpha: 0.22 * fade),
-            const Color(0x007DD3FC),
-          ], const [0, 0.5, 1]),
+          ..shader = ui.Gradient.linear(
+            band.topCenter,
+            band.bottomCenter,
+            [const Color(0x007DD3FC), const Color(0xFF7DD3FC).withValues(alpha: 0.22 * fade), const Color(0x007DD3FC)],
+            const [0, 0.5, 1],
+          ),
       );
       final width = well.width * (0.3 + 0.9 * Curves.easeOut.transform(min(1, p * 2.5)));
       final line = Rect.fromCenter(center: Offset(well.center.dx, cy), width: width, height: max(2, c * 0.08));
       canvas.drawRect(
         line,
         Paint()
-          ..shader = ui.Gradient.linear(line.centerLeft, line.centerRight, [
-            Colors.white.withValues(alpha: 0),
-            Colors.white.withValues(alpha: 0.95 * fade),
-            Colors.white.withValues(alpha: 0),
-          ], const [0, 0.5, 1]),
+          ..shader = ui.Gradient.linear(
+            line.centerLeft,
+            line.centerRight,
+            [Colors.white.withValues(alpha: 0), Colors.white.withValues(alpha: 0.95 * fade), Colors.white.withValues(alpha: 0)],
+            const [0, 0.5, 1],
+          ),
       );
     }
   }
@@ -352,7 +351,15 @@ class BoardPainter extends CustomPainter {
       final x = p.x * c, y = p.y * c;
       switch (p.kind) {
         case ParticleKind.block:
-          sprites.draw(canvas, sprites.block(p.type!), x - c / 2, y - c / 2, scale: p.size * (1 - 0.3 * t), opacity: fade, rotation: p.rotation);
+          sprites.draw(
+            canvas,
+            sprites.block(p.type!),
+            x - c / 2,
+            y - c / 2,
+            scale: p.size * (1 - 0.3 * t),
+            opacity: fade,
+            rotation: p.rotation,
+          );
         case ParticleKind.grayBlock:
           sprites.draw(canvas, sprites.gray, x - c / 2, y - c / 2, scale: p.size * (1 - 0.25 * t), opacity: fade, rotation: p.rotation);
         case ParticleKind.spark:
@@ -449,13 +456,13 @@ class FloaterPainter extends CustomPainter {
   (TextPainter, TextPainter) _layout(FloaterLine line, double c) {
     final fontSize = line.size * c;
     TextStyle style(Paint paint, {List<Shadow>? shadows}) => TextStyle(
-          fontFamily: fontFamily,
-          fontSize: fontSize,
-          fontWeight: FontWeight.w900,
-          letterSpacing: fontSize * 0.03,
-          foreground: paint,
-          shadows: shadows,
-        );
+      fontFamily: fontFamily,
+      fontSize: fontSize,
+      fontWeight: FontWeight.w900,
+      letterSpacing: fontSize * 0.03,
+      foreground: paint,
+      shadows: shadows,
+    );
     final stroke = TextPainter(
       text: TextSpan(
         text: line.text,

@@ -48,14 +48,12 @@ const Map<PieceType, List<Cell>> _spawnCells = {
 };
 
 int boxSize(PieceType type) => switch (type) {
-      PieceType.i => 4,
-      PieceType.o => 4,
-      _ => 3,
-    };
-
-final Map<PieceType, List<List<Cell>>> _rotations = {
-  for (final type in PieceType.values) type: _buildRotations(type),
+  PieceType.i => 4,
+  PieceType.o => 4,
+  _ => 3,
 };
+
+final Map<PieceType, List<List<Cell>>> _rotations = {for (final type in PieceType.values) type: _buildRotations(type)};
 
 List<List<Cell>> _buildRotations(PieceType type) {
   final states = <List<Cell>>[_spawnCells[type]!];
@@ -120,8 +118,7 @@ class Piece {
     }
   }
 
-  Piece copyWith({Rotation? rotation, int? x, int? y}) =>
-      Piece(type, rotation ?? this.rotation, x ?? this.x, y ?? this.y);
+  Piece copyWith({Rotation? rotation, int? x, int? y}) => Piece(type, rotation ?? this.rotation, x ?? this.x, y ?? this.y);
 
   Piece moved(int dx, int dy) => Piece(type, rotation, x + dx, y + dy);
 }

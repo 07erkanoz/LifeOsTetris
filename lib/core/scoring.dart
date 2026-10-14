@@ -2,19 +2,33 @@ import 'dart:math';
 
 import 'game_events.dart';
 
-const int maxLevel = 20;
+const int maxLevel = 99;
 
-/// Seconds per row of gravity at [level] (Tetris guideline curve).
-double gravityInterval(int level) {
-  final l = level.clamp(1, maxLevel);
-  return pow(0.8 - (l - 1) * 0.007, l - 1).toDouble();
+enum GameMode {
+  /// Speed rises gently until [speedCapLevel], then stays put.
+  classic,
+
+  /// Constant, calm speed for endless play.
+  relaxed,
+}
+
+/// Level at which classic mode reaches its top speed.
+const int speedCapLevel = 10;
+
+/// Seconds per row of gravity. Unlike the official curve (which becomes
+/// near-instant after level 10), classic mode eases from 1 s/row at level 1
+/// to 0.25 s/row (4 rows per second) at level 10 and never goes faster.
+double gravityInterval(int level, [GameMode mode = GameMode.classic]) {
+  if (mode == GameMode.relaxed) return 0.8;
+  final l = level.clamp(1, speedCapLevel);
+  return pow(0.25, (l - 1) / (speedCapLevel - 1)).toDouble();
 }
 
 int _baseClearPoints(int lines, TSpin tSpin) => switch (tSpin) {
-      TSpin.none => const [0, 100, 300, 500, 800][lines],
-      TSpin.mini => const [100, 200, 400, 400, 400][lines],
-      TSpin.full => const [400, 800, 1200, 1600, 1600][lines],
-    };
+  TSpin.none => const [0, 100, 300, 500, 800][lines],
+  TSpin.mini => const [100, 200, 400, 400, 400][lines],
+  TSpin.full => const [400, 800, 1200, 1600, 1600][lines],
+};
 
 /// A "difficult" clear keeps the back-to-back chain alive.
 bool isDifficultClear(int lines, TSpin tSpin) => lines == 4 || (lines > 0 && tSpin != TSpin.none);

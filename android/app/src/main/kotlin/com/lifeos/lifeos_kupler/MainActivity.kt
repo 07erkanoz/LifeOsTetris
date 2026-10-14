@@ -1,4 +1,4 @@
-package com.lifeos.lifeos_tetris
+package com.lifeos.lifeos_kupler
 
 import io.flutter.embedding.android.FlutterActivity
 

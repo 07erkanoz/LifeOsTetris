@@ -1,11 +1,11 @@
 {
-    "name": "lifeos_tetris",
-    "short_name": "lifeos_tetris",
+    "name": "LifeOS Küpler",
+    "short_name": "Küpler",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "LifeOS Tetris - 2.5D blok bulmaca oyunu",
+    "background_color": "#0A0D1A",
+    "theme_color": "#0A0D1A",
+    "description": "LifeOS Küpler - 2.5D blok bulmaca oyunu",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

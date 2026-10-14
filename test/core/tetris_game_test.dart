@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lifeos_tetris/core/bag.dart';
-import 'package:lifeos_tetris/core/scoring.dart';
-import 'package:lifeos_tetris/core/tetris_game.dart';
+import 'package:lifeos_kupler/core/bag.dart';
+import 'package:lifeos_kupler/core/scoring.dart';
+import 'package:lifeos_kupler/core/tetris_game.dart';
 
 TetrisGame startedGame({int seed = 1}) => TetrisGame()..start(seed: seed);
 
@@ -27,6 +27,22 @@ void main() {
 
     test('I occupies column 2 in the right state', () {
       expect(shapeOf(PieceType.i, Rotation.right).map((c) => c.x).toSet(), {2});
+    });
+  });
+
+  group('speed', () {
+    test('classic mode eases in and caps at level 10', () {
+      expect(gravityInterval(1), closeTo(1.0, 1e-9));
+      expect(gravityInterval(5), greaterThan(0.45));
+      expect(gravityInterval(10), closeTo(0.25, 1e-9));
+      expect(gravityInterval(25), closeTo(0.25, 1e-9));
+      for (var l = 1; l < 10; l++) {
+        expect(gravityInterval(l + 1), lessThan(gravityInterval(l)));
+      }
+    });
+
+    test('relaxed mode never speeds up', () {
+      expect(gravityInterval(1, GameMode.relaxed), gravityInterval(30, GameMode.relaxed));
     });
   });
 
@@ -176,11 +192,7 @@ void main() {
 
     test('T-spin double is detected', () {
       final game = startedGame();
-      game.debugSetBoard([
-        '...J......',
-        'JJJ...JJJJ',
-        'JJJJ.JJJJJ',
-      ]);
+      game.debugSetBoard(['...J......', 'JJJ...JJJJ', 'JJJJ.JJJJJ']);
       game.debugSetActive(const Piece(PieceType.t, Rotation.right, 3, TetrisGame.height - 3));
       expect(game.rotateClockwise(), isTrue);
       game.hardDrop();
@@ -221,10 +233,7 @@ void main() {
   group('game over', () {
     test('blocked spawn ends the game', () {
       final game = startedGame();
-      game.debugSetBoard([
-        'JJJJJJJJJ.',
-        ...rows(TetrisGame.height - 1, '.........J'),
-      ]);
+      game.debugSetBoard(['JJJJJJJJJ.', ...rows(TetrisGame.height - 1, '.........J')]);
       game.hold();
       expect(game.status, GameStatus.over);
       expect(game.drainEvents().whereType<GameOver>(), hasLength(1));

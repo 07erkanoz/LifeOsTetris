@@ -6,6 +6,7 @@ import 'scoring.dart';
 import 'tetromino.dart';
 
 export 'game_events.dart';
+export 'scoring.dart' show GameMode;
 export 'tetromino.dart';
 
 enum GameStatus { ready, playing, clearing, over }
@@ -15,7 +16,7 @@ enum GameStatus { ready, playing, clearing, over }
 /// The board has [hiddenRows] buffer rows above the [visibleHeight] rows the
 /// player sees; row 0 is the top of the buffer.
 class TetrisGame {
-  TetrisGame({int? seed, this.startLevel = 1}) : _bag = PieceBag(seed) {
+  TetrisGame({int? seed, this.startLevel = 1, this.mode = GameMode.classic}) : _bag = PieceBag(seed) {
     _reset();
   }
 
@@ -30,6 +31,7 @@ class TetrisGame {
   static const double lineClearDelay = 0.42;
 
   final int startLevel;
+  GameMode mode;
   PieceBag _bag;
 
   late List<List<PieceType?>> _board;
@@ -70,8 +72,7 @@ class TetrisGame {
   List<int> get clearingRows => _clearingRows;
 
   /// Progress of the current line clear animation from 0 to 1.
-  double get clearProgress =>
-      status == GameStatus.clearing ? (1 - _clearTimer / lineClearDelay).clamp(0.0, 1.0) : 0;
+  double get clearProgress => status == GameStatus.clearing ? (1 - _clearTimer / lineClearDelay).clamp(0.0, 1.0) : 0;
 
   /// Progress of the lock delay from 0 to 1 while the piece rests on the stack.
   double get lockProgress => (_lockTimer / lockDelay).clamp(0.0, 1.0);
@@ -121,11 +122,18 @@ class TetrisGame {
   }
 
   /// Starts a new game. Pass [seed] to make the piece sequence reproducible.
-  void start({int? seed}) {
+  void start({int? seed, GameMode? mode}) {
+    if (mode != null) this.mode = mode;
     _bag = PieceBag(seed ?? Random().nextInt(1 << 31));
     _reset();
     status = GameStatus.playing;
     _spawn(_bag.next());
+  }
+
+  /// Abandons the current game and returns to the menu state.
+  void abandon() {
+    _reset();
+    status = GameStatus.ready;
   }
 
   void togglePause() {
@@ -148,7 +156,7 @@ class TetrisGame {
     final piece = _active;
     if (piece == null) return;
 
-    final interval = _softDrop ? min(gravityInterval(level) / 20, 0.05) : gravityInterval(level);
+    final interval = _softDrop ? min(gravityInterval(level, mode) / 20, 0.05) : gravityInterval(level, mode);
     _gravityTimer += dt;
     while (_gravityTimer >= interval) {
       _gravityTimer -= interval;
@@ -216,7 +224,7 @@ class TetrisGame {
   }
 
   void setSoftDrop(bool on) {
-    if (on && !_softDrop) _gravityTimer = max(_gravityTimer, min(gravityInterval(level) / 20, 0.05));
+    if (on && !_softDrop) _gravityTimer = max(_gravityTimer, min(gravityInterval(level, mode) / 20, 0.05));
     _softDrop = on;
   }
 
@@ -228,12 +236,7 @@ class TetrisGame {
     _active = landed;
     if (distance > 0) _lastMoveWasRotation = false;
     score += distance * 2;
-    _events.add(HardDropped(
-      type: piece.type,
-      fromCells: piece.cells.toList(),
-      toCells: landed.cells.toList(),
-      distance: distance,
-    ));
+    _events.add(HardDropped(type: piece.type, fromCells: piece.cells.toList(), toCells: landed.cells.toList(), distance: distance));
     _lock();
   }
 
@@ -364,7 +367,8 @@ class TetrisGame {
       _combo = -1;
     }
 
-    final perfectClear = cleared > 0 &&
+    final perfectClear =
+        cleared > 0 &&
         [
           for (var y = 0; y < height; y++)
             if (!fullRows.contains(y)) _board[y],
@@ -381,14 +385,9 @@ class TetrisGame {
     score += points;
 
     if (cleared > 0) {
-      _events.add(LinesCleared(
-        rows: fullRows,
-        tSpin: tSpin,
-        combo: _combo,
-        backToBack: backToBack,
-        perfectClear: perfectClear,
-        points: points,
-      ));
+      _events.add(
+        LinesCleared(rows: fullRows, tSpin: tSpin, combo: _combo, backToBack: backToBack, perfectClear: perfectClear, points: points),
+      );
       lines += cleared;
       final newLevel = min(startLevel + lines ~/ 10, maxLevel);
       if (newLevel > level) {
@@ -411,10 +410,7 @@ class TetrisGame {
       for (var y = 0; y < height; y++)
         if (!rows.contains(y)) _board[y],
     ];
-    _board = [
-      for (var i = 0; i < rows.length; i++) List<PieceType?>.filled(width, null),
-      ...remaining,
-    ];
+    _board = [for (var i = 0; i < rows.length; i++) List<PieceType?>.filled(width, null), ...remaining];
     _clearingRows = const [];
     status = GameStatus.playing;
     _events.add(RowsCollapsed(rows));
@@ -435,13 +431,9 @@ class TetrisGame {
   /// Missing top rows are filled with empty cells.
   void debugSetBoard(List<String> rows) {
     final parsed = [
-      for (final row in rows)
-        [for (final ch in row.split('')) ch == '.' ? null : PieceType.values.byName(ch.toLowerCase())],
+      for (final row in rows) [for (final ch in row.split('')) ch == '.' ? null : PieceType.values.byName(ch.toLowerCase())],
     ];
-    _board = [
-      for (var i = 0; i < height - parsed.length; i++) List<PieceType?>.filled(width, null),
-      ...parsed,
-    ];
+    _board = [for (var i = 0; i < height - parsed.length; i++) List<PieceType?>.filled(width, null), ...parsed];
   }
 
   /// Puts a specific piece in play (testing only).

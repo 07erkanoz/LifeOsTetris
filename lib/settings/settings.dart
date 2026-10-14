@@ -64,8 +64,7 @@ class Settings extends ChangeNotifier {
     return true;
   }
 
-  void toggleTheme(Brightness current) =>
-      themeMode = current == Brightness.dark ? ThemeMode.light : ThemeMode.dark;
+  void toggleTheme(Brightness current) => themeMode = current == Brightness.dark ? ThemeMode.light : ThemeMode.dark;
 
   void _set(void Function() apply, void Function() persist) {
     apply();

@@ -7,14 +7,7 @@ import '../../theme/palette.dart';
 
 /// Paints one 2.5D "keycap" block: darker front face, gradient top face,
 /// glossy highlight and a soft drop shadow (or coloured glow in dark mode).
-void paintBlock(
-  Canvas canvas,
-  Offset origin,
-  double s,
-  Color color, {
-  required Color shadeTarget,
-  required bool emissive,
-}) {
+void paintBlock(Canvas canvas, Offset origin, double s, Color color, {required Color shadeTarget, required bool emissive}) {
   final g = s * 0.06, w = s - 2 * g, depth = s * 0.17, r = Radius.circular(s * 0.2);
   final x = origin.dx + g, y = origin.dy + g;
   final full = RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, w), r);
@@ -28,11 +21,10 @@ void paintBlock(
   canvas.drawRRect(
     full,
     Paint()
-      ..shader = ui.Gradient.linear(
-        Offset(0, y + w - depth),
-        Offset(0, y + w),
-        [shade(color, shadeTarget, 0.2), shade(color, shadeTarget, 0.45)],
-      ),
+      ..shader = ui.Gradient.linear(Offset(0, y + w - depth), Offset(0, y + w), [
+        shade(color, shadeTarget, 0.2),
+        shade(color, shadeTarget, 0.45),
+      ]),
   );
 
   final top = RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, w - depth), r);
@@ -60,11 +52,10 @@ void paintBlock(
   canvas.drawRRect(
     RRect.fromRectAndRadius(Rect.fromLTWH(x + s * 0.16, glossTop, w * 0.56, s * 0.2), Radius.circular(s * 0.1)),
     Paint()
-      ..shader = ui.Gradient.linear(
-        Offset(0, glossTop),
-        Offset(0, glossTop + s * 0.22),
-        [Colors.white.withValues(alpha: 0.7), Colors.white.withValues(alpha: 0)],
-      ),
+      ..shader = ui.Gradient.linear(Offset(0, glossTop), Offset(0, glossTop + s * 0.22), [
+        Colors.white.withValues(alpha: 0.7),
+        Colors.white.withValues(alpha: 0),
+      ]),
   );
   canvas.drawCircle(Offset(x + w * 0.8, y + s * 0.2), s * 0.045, Paint()..color = Colors.white.withValues(alpha: 0.9));
 }
@@ -74,10 +65,21 @@ void paintBlock(
 class BlockSprites {
   BlockSprites._(this.cell, this.dpr, this.palette) : pad = cell * 0.45 {
     for (final type in PieceType.values) {
-      _normal[type] = _render((c, o) => paintBlock(c, o, cell, blockColors[type]!, shadeTarget: palette.shadeTarget, emissive: palette.isDark));
+      _normal[type] = _render(
+        (c, o) => paintBlock(c, o, cell, blockColors[type]!, shadeTarget: palette.shadeTarget, emissive: palette.isDark),
+      );
       _ghost[type] = _render((c, o) => _paintGhost(c, o, blockColors[type]!));
     }
-    gray = _render((c, o) => paintBlock(c, o, cell, palette.isDark ? const Color(0xFF475069) : const Color(0xFF9AA3B8), shadeTarget: palette.shadeTarget, emissive: false));
+    gray = _render(
+      (c, o) => paintBlock(
+        c,
+        o,
+        cell,
+        palette.isDark ? const Color(0xFF475069) : const Color(0xFF9AA3B8),
+        shadeTarget: palette.shadeTarget,
+        emissive: false,
+      ),
+    );
     white = _render(_paintWhite);
   }
 
@@ -140,9 +142,12 @@ class BlockSprites {
   void _paintWhite(Canvas canvas, Offset o) {
     final g = cell * 0.06, w = cell - 2 * g;
     final rrect = RRect.fromRectAndRadius(Rect.fromLTWH(o.dx + g, o.dy + g, w, w), Radius.circular(cell * 0.2));
-    canvas.drawRRect(rrect, Paint()
-      ..color = Colors.white
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * 0.25));
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..color = Colors.white
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * 0.25),
+    );
     canvas.drawRRect(rrect, Paint()..color = Colors.white);
   }
 

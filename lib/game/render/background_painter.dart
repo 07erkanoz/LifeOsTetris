@@ -10,14 +10,14 @@ import 'block_sprites.dart';
 
 class _Floating {
   _Floating(Random r)
-      : type = PieceType.values[r.nextInt(PieceType.values.length)],
-        x = r.nextDouble(),
-        y = r.nextDouble(),
-        speed = 0.008 + r.nextDouble() * 0.018,
-        drift = (r.nextDouble() - 0.5) * 0.02,
-        rotation = r.nextDouble() * pi * 2,
-        spin = (r.nextDouble() - 0.5) * 0.4,
-        scale = 0.6 + r.nextDouble() * 0.7;
+    : type = PieceType.values[r.nextInt(PieceType.values.length)],
+      x = r.nextDouble(),
+      y = r.nextDouble(),
+      speed = 0.008 + r.nextDouble() * 0.018,
+      drift = (r.nextDouble() - 0.5) * 0.02,
+      rotation = r.nextDouble() * pi * 2,
+      spin = (r.nextDouble() - 0.5) * 0.4,
+      scale = 0.6 + r.nextDouble() * 0.7;
 
   final PieceType type;
   final double x, y, speed, drift, rotation, spin, scale;
@@ -25,11 +25,11 @@ class _Floating {
 
 class _Star {
   _Star(Random r)
-      : x = r.nextDouble(),
-        y = r.nextDouble(),
-        size = 0.6 + r.nextDouble() * 1.4,
-        phase = r.nextDouble() * pi * 2,
-        rate = 0.6 + r.nextDouble() * 1.8;
+    : x = r.nextDouble(),
+      y = r.nextDouble(),
+      size = 0.6 + r.nextDouble() * 1.4,
+      phase = r.nextDouble() * pi * 2,
+      rate = 0.6 + r.nextDouble() * 1.8;
 
   final double x, y, size, phase, rate;
 }
@@ -56,11 +56,12 @@ class BackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    canvas.drawRect(
-      rect,
-      Paint()..shader = ui.Gradient.linear(rect.topLeft, rect.bottomRight, palette.background, const [0, 0.55, 1]),
-    );
-    final glowCenters = [Offset(size.width * 0.15, size.height * 0.12), Offset(size.width * 0.9, size.height * 0.2), Offset(size.width * 0.75, size.height * 0.92)];
+    canvas.drawRect(rect, Paint()..shader = ui.Gradient.linear(rect.topLeft, rect.bottomRight, palette.background, const [0, 0.55, 1]));
+    final glowCenters = [
+      Offset(size.width * 0.15, size.height * 0.12),
+      Offset(size.width * 0.9, size.height * 0.2),
+      Offset(size.width * 0.75, size.height * 0.92),
+    ];
     for (var i = 0; i < 3; i++) {
       final radius = max(size.width, size.height) * 0.45;
       canvas.drawCircle(

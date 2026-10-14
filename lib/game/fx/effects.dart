@@ -186,10 +186,7 @@ class EffectsEngine {
   Offset get shake {
     if (!shakeEnabled || _trauma <= 0) return Offset.zero;
     final k = _trauma * _trauma * 0.55;
-    return Offset(
-      k * (sin(time * 47.0) * 0.7 + sin(time * 83.0) * 0.3),
-      k * (cos(time * 53.0) * 0.7 + sin(time * 71.0) * 0.3),
-    );
+    return Offset(k * (sin(time * 47.0) * 0.7 + sin(time * 83.0) * 0.3), k * (cos(time * 53.0) * 0.7 + sin(time * 71.0) * 0.3));
   }
 
   void addTrauma(double amount) => _trauma = min(1, _trauma + amount);
@@ -292,16 +289,18 @@ class EffectsEngine {
     final cells = piece.cells.toList();
     final c = cells[_rng.nextInt(cells.length)];
     final color = blockColors[piece.type]!;
-    _add(Particle(
-      kind: ParticleKind.dot,
-      x: c.x + _r(0.1, 0.9),
-      y: c.y - TetrisGame.hiddenRows + offsetY + _r(0.1, 0.9),
-      vx: _r(-0.3, 0.3),
-      vy: _r(-1.2, -0.4),
-      maxLife: _r(0.5, 0.9),
-      size: _r(0.04, 0.08),
-      color: lighten(color, 0.4),
-    ));
+    _add(
+      Particle(
+        kind: ParticleKind.dot,
+        x: c.x + _r(0.1, 0.9),
+        y: c.y - TetrisGame.hiddenRows + offsetY + _r(0.1, 0.9),
+        vx: _r(-0.3, 0.3),
+        vy: _r(-1.2, -0.4),
+        maxLife: _r(0.5, 0.9),
+        size: _r(0.04, 0.08),
+        color: lighten(color, 0.4),
+      ),
+    );
   }
 
   // ------------------------------------------------------------ events
@@ -335,10 +334,12 @@ class EffectsEngine {
         _linesCleared(event, game);
       case TSpinNoLines(:final tSpin, :final points):
         final piece = game.active;
-        floaters.add(Floater(5, piece == null ? 8 : (piece.y - TetrisGame.hiddenRows).clamp(3, 14).toDouble(), [
-          FloaterLine(tSpin == TSpin.mini ? 'MİNİ T-SPIN' : 'T-SPIN', 1.1, _violet, glow: const Color(0xFFA855F7)),
-          FloaterLine('+$points', 0.8, _gold),
-        ]));
+        floaters.add(
+          Floater(5, piece == null ? 8 : (piece.y - TetrisGame.hiddenRows).clamp(3, 14).toDouble(), [
+            FloaterLine(tSpin == TSpin.mini ? 'MİNİ T-SPIN' : 'T-SPIN', 1.1, _violet, glow: const Color(0xFFA855F7)),
+            FloaterLine('+$points', 0.8, _gold),
+          ]),
+        );
         addTrauma(0.2);
         scorePulse = 1;
       case RowsCollapsed(:final rows):
@@ -360,17 +361,19 @@ class EffectsEngine {
     final edge = dx < 0 ? piece.cells.map((c) => c.x).reduce(min) : piece.cells.map((c) => c.x).reduce(max) + 1;
     for (final c in piece.cells.where((c) => c.x == (dx < 0 ? edge : edge - 1))) {
       for (var i = 0; i < 2; i++) {
-        _add(Particle(
-          kind: ParticleKind.spark,
-          x: edge.toDouble(),
-          y: c.y - TetrisGame.hiddenRows + _r(0.2, 0.8),
-          vx: -dx * _r(0.5, 2),
-          vy: _r(-1.5, 1.5),
-          maxLife: _r(0.2, 0.35),
-          size: _r(0.08, 0.14),
-          color: const Color(0xFFFFFFFF),
-          drag: 3,
-        ));
+        _add(
+          Particle(
+            kind: ParticleKind.spark,
+            x: edge.toDouble(),
+            y: c.y - TetrisGame.hiddenRows + _r(0.2, 0.8),
+            vx: -dx * _r(0.5, 2),
+            vy: _r(-1.5, 1.5),
+            maxLife: _r(0.2, 0.35),
+            size: _r(0.08, 0.14),
+            color: const Color(0xFFFFFFFF),
+            drag: 3,
+          ),
+        );
       }
     }
   }
@@ -384,17 +387,19 @@ class EffectsEngine {
       final c = cells[_rng.nextInt(cells.length)];
       final a = _r(0, pi * 2);
       final speed = _r(1.5, 4);
-      _add(Particle(
-        kind: i.isEven ? ParticleKind.spark : ParticleKind.dot,
-        x: c.x + 0.5,
-        y: c.y - TetrisGame.hiddenRows + 0.5,
-        vx: cos(a) * speed,
-        vy: sin(a) * speed,
-        maxLife: _r(0.25, 0.45),
-        size: _r(0.06, 0.16),
-        color: lighten(color, 0.5),
-        drag: 4,
-      ));
+      _add(
+        Particle(
+          kind: i.isEven ? ParticleKind.spark : ParticleKind.dot,
+          x: c.x + 0.5,
+          y: c.y - TetrisGame.hiddenRows + 0.5,
+          vx: cos(a) * speed,
+          vy: sin(a) * speed,
+          maxLife: _r(0.25, 0.45),
+          size: _r(0.06, 0.16),
+          color: lighten(color, 0.5),
+          drag: 4,
+        ),
+      );
     }
   }
 
@@ -404,16 +409,18 @@ class EffectsEngine {
     final color = blockColors[piece.type]!;
     final top = piece.cells.map((c) => c.y).reduce(min);
     for (final c in piece.cells.where((c) => c.y == top)) {
-      _add(Particle(
-        kind: ParticleKind.dot,
-        x: c.x + _r(0.2, 0.8),
-        y: c.y - TetrisGame.hiddenRows + 0.1,
-        vx: _r(-0.2, 0.2),
-        vy: _r(-2.5, -1),
-        maxLife: _r(0.25, 0.4),
-        size: _r(0.04, 0.08),
-        color: lighten(color, 0.3),
-      ));
+      _add(
+        Particle(
+          kind: ParticleKind.dot,
+          x: c.x + _r(0.2, 0.8),
+          y: c.y - TetrisGame.hiddenRows + 0.1,
+          vx: _r(-0.2, 0.2),
+          vy: _r(-2.5, -1),
+          maxLife: _r(0.25, 0.4),
+          size: _r(0.04, 0.08),
+          color: lighten(color, 0.3),
+        ),
+      );
     }
   }
 
@@ -438,18 +445,20 @@ class EffectsEngine {
       if (cells.contains(Cell(c.x, c.y + 1))) continue;
       for (var i = 0; i < 5; i++) {
         final dir = i.isEven ? -1 : 1;
-        _add(Particle(
-          kind: i < 3 ? ParticleKind.dot : ParticleKind.spark,
-          x: c.x + _r(0.1, 0.9),
-          y: c.y - h + 1,
-          vx: dir * _r(1.5, 5),
-          vy: _r(-3.5, -0.8),
-          maxLife: _r(0.35, 0.6),
-          size: _r(0.05, 0.14),
-          color: i < 3 ? lighten(color, 0.3) : const Color(0xFFFFFFFF),
-          gravity: 9,
-          drag: 2,
-        ));
+        _add(
+          Particle(
+            kind: i < 3 ? ParticleKind.dot : ParticleKind.spark,
+            x: c.x + _r(0.1, 0.9),
+            y: c.y - h + 1,
+            vx: dir * _r(1.5, 5),
+            vy: _r(-3.5, -0.8),
+            maxLife: _r(0.35, 0.6),
+            size: _r(0.05, 0.14),
+            color: i < 3 ? lighten(color, 0.3) : const Color(0xFFFFFFFF),
+            gravity: 9,
+            drag: 2,
+          ),
+        );
       }
     }
     final bottom = e.toCells.map((c) => c.y).reduce(max) - h + 1.0;
@@ -466,19 +475,21 @@ class EffectsEngine {
     for (var i = 0; i < 14; i++) {
       final a = _r(0, pi * 2);
       final speed = _r(2, 6);
-      _add(Particle(
-        kind: i % 3 == 0 ? ParticleKind.block : ParticleKind.spark,
-        type: type,
-        x: cx,
-        y: 0.5,
-        vx: cos(a) * speed,
-        vy: sin(a) * speed,
-        maxLife: _r(0.35, 0.6),
-        size: i % 3 == 0 ? _r(0.2, 0.32) : _r(0.08, 0.16),
-        color: lighten(color, 0.4),
-        drag: 3,
-        spin: _r(-8, 8),
-      ));
+      _add(
+        Particle(
+          kind: i % 3 == 0 ? ParticleKind.block : ParticleKind.spark,
+          type: type,
+          x: cx,
+          y: 0.5,
+          vx: cos(a) * speed,
+          vy: sin(a) * speed,
+          maxLife: _r(0.35, 0.6),
+          size: i % 3 == 0 ? _r(0.2, 0.32) : _r(0.08, 0.16),
+          color: lighten(color, 0.4),
+          drag: 3,
+          spin: _r(-8, 8),
+        ),
+      );
     }
   }
 
@@ -498,39 +509,43 @@ class EffectsEngine {
         for (var i = 0; i < 3; i++) {
           final a = _r(-pi * 0.95, -pi * 0.05);
           final speed = _r(3, 8 + n * 1.5);
-          _add(Particle(
-            kind: ParticleKind.block,
-            type: type,
-            x: cx,
-            y: cy,
-            vx: cos(a) * speed,
-            vy: sin(a) * speed,
-            maxLife: _r(0.7, 1.2),
-            size: _r(0.22, 0.45),
-            color: color,
-            gravity: 16,
-            drag: 0.6,
-            rotation: _r(0, pi),
-            spin: _r(-9, 9),
-            delay: delay,
-          ));
+          _add(
+            Particle(
+              kind: ParticleKind.block,
+              type: type,
+              x: cx,
+              y: cy,
+              vx: cos(a) * speed,
+              vy: sin(a) * speed,
+              maxLife: _r(0.7, 1.2),
+              size: _r(0.22, 0.45),
+              color: color,
+              gravity: 16,
+              drag: 0.6,
+              rotation: _r(0, pi),
+              spin: _r(-9, 9),
+              delay: delay,
+            ),
+          );
         }
         for (var i = 0; i < 3; i++) {
           final a = _r(0, pi * 2);
           final speed = _r(2, 7);
-          _add(Particle(
-            kind: i == 0 ? ParticleKind.spark : ParticleKind.dot,
-            x: cx,
-            y: cy,
-            vx: cos(a) * speed,
-            vy: sin(a) * speed,
-            maxLife: _r(0.35, 0.8),
-            size: i == 0 ? _r(0.14, 0.3) : _r(0.05, 0.12),
-            color: i == 0 ? const Color(0xFFFFFFFF) : lighten(color, 0.35),
-            gravity: 5,
-            drag: 1.5,
-            delay: delay,
-          ));
+          _add(
+            Particle(
+              kind: i == 0 ? ParticleKind.spark : ParticleKind.dot,
+              x: cx,
+              y: cy,
+              vx: cos(a) * speed,
+              vy: sin(a) * speed,
+              maxLife: _r(0.35, 0.8),
+              size: i == 0 ? _r(0.14, 0.3) : _r(0.05, 0.12),
+              color: i == 0 ? const Color(0xFFFFFFFF) : lighten(color, 0.35),
+              gravity: 5,
+              drag: 1.5,
+              delay: delay,
+            ),
+          );
         }
       }
     }
@@ -549,12 +564,20 @@ class EffectsEngine {
       if (particlesEnabled) shockwaves.add(Shockwave(5, midY, 12, const Color(0xFF7DD3FC), duration: 0.8, width: 0.35));
     }
 
-    addTrauma(switch (n) { 1 => 0.15, 2 => 0.25, 3 => 0.4, _ => 0.7 } + (e.tSpin != TSpin.none ? 0.15 : 0));
+    addTrauma(
+      switch (n) {
+            1 => 0.15,
+            2 => 0.25,
+            3 => 0.4,
+            _ => 0.7,
+          } +
+          (e.tSpin != TSpin.none ? 0.15 : 0),
+    );
     pulseColor = n == 4
         ? const Color(0xFF22D3EE)
         : e.tSpin != TSpin.none
-            ? const Color(0xFFA855F7)
-            : const Color(0xFF38BDF8);
+        ? const Color(0xFFA855F7)
+        : const Color(0xFF38BDF8);
     pulse = max(pulse, 0.25 + n * 0.15 + (e.perfectClear ? 0.4 : 0));
     scorePulse = 1;
 
@@ -580,7 +603,7 @@ class EffectsEngine {
   static double cellVanishTime(int x) => 0.18 + 0.62 * ((x + 0.5 - 5).abs() / 5);
 
   static String clearLabel(int lines, TSpin tSpin) {
-    const names = ['', 'TEK', 'ÇİFT', 'ÜÇLÜ', 'TETRIS'];
+    const names = ['', 'TEK', 'ÇİFT', 'ÜÇLÜ', 'DÖRTLÜ'];
     return switch (tSpin) {
       TSpin.full => lines == 0 ? 'T-SPIN' : 'T-SPIN ${names[lines]}!',
       TSpin.mini => lines == 0 ? 'MİNİ T-SPIN' : 'MİNİ T-SPIN ${names[lines]}',
@@ -594,22 +617,24 @@ class EffectsEngine {
       final a = _r(-pi * 0.85, -pi * 0.15);
       final speed = _r(8, 19);
       final isBlock = i % 3 != 0;
-      _add(Particle(
-        kind: isBlock ? ParticleKind.block : ParticleKind.spark,
-        type: type,
-        x: _r(1, 9),
-        y: y,
-        vx: cos(a) * speed,
-        vy: sin(a) * speed,
-        maxLife: _r(1.4, 2.3),
-        size: isBlock ? _r(0.18, 0.36) : _r(0.15, 0.32),
-        color: isBlock ? blockColors[type]! : lighten(blockColors[type]!, 0.6),
-        gravity: 13,
-        drag: 0.9,
-        rotation: _r(0, pi),
-        spin: _r(-10, 10),
-        delay: _r(0, 0.15),
-      ));
+      _add(
+        Particle(
+          kind: isBlock ? ParticleKind.block : ParticleKind.spark,
+          type: type,
+          x: _r(1, 9),
+          y: y,
+          vx: cos(a) * speed,
+          vy: sin(a) * speed,
+          maxLife: _r(1.4, 2.3),
+          size: isBlock ? _r(0.18, 0.36) : _r(0.15, 0.32),
+          color: isBlock ? blockColors[type]! : lighten(blockColors[type]!, 0.6),
+          gravity: 13,
+          drag: 0.9,
+          rotation: _r(0, pi),
+          spin: _r(-10, 10),
+          delay: _r(0, 0.15),
+        ),
+      );
     }
   }
 
@@ -631,24 +656,28 @@ class EffectsEngine {
     pulseColor = const Color(0xFF6366F1);
     pulse = max(pulse, 0.9);
     addTrauma(0.25);
-    floaters.add(Floater(5, 6.5, [
-      FloaterLine('SEVİYE $level', 1.5, const [Color(0xFFFFFFFF), Color(0xFF38BDF8), Color(0xFF6366F1)], glow: const Color(0xFF6366F1)),
-      FloaterLine('HIZLANIYOR', 0.55, const [Color(0xFFE0F2FE), Color(0xFF7DD3FC)]),
-    ], duration: 1.8));
+    floaters.add(
+      Floater(5, 6.5, [
+        FloaterLine('SEVİYE $level', 1.5, const [Color(0xFFFFFFFF), Color(0xFF38BDF8), Color(0xFF6366F1)], glow: const Color(0xFF6366F1)),
+        FloaterLine('HIZLANIYOR', 0.55, const [Color(0xFFE0F2FE), Color(0xFF7DD3FC)]),
+      ], duration: 1.8),
+    );
     for (var i = 0; i < 60; i++) {
       final left = i.isEven;
-      _add(Particle(
-        kind: i % 4 == 0 ? ParticleKind.spark : ParticleKind.dot,
-        x: left ? _r(-0.3, 0.3) : _r(9.7, 10.3),
-        y: _r(14, 20),
-        vx: left ? _r(-0.5, 0.8) : _r(-0.8, 0.5),
-        vy: _r(-14, -6),
-        maxLife: _r(0.8, 1.4),
-        size: i % 4 == 0 ? _r(0.15, 0.3) : _r(0.05, 0.1),
-        color: i % 3 == 0 ? const Color(0xFFFFFFFF) : const Color(0xFF7DD3FC),
-        drag: 0.8,
-        delay: _r(0, 0.4),
-      ));
+      _add(
+        Particle(
+          kind: i % 4 == 0 ? ParticleKind.spark : ParticleKind.dot,
+          x: left ? _r(-0.3, 0.3) : _r(9.7, 10.3),
+          y: _r(14, 20),
+          vx: left ? _r(-0.5, 0.8) : _r(-0.8, 0.5),
+          vy: _r(-14, -6),
+          maxLife: _r(0.8, 1.4),
+          size: i % 4 == 0 ? _r(0.15, 0.3) : _r(0.05, 0.1),
+          color: i % 3 == 0 ? const Color(0xFFFFFFFF) : const Color(0xFF7DD3FC),
+          drag: 0.8,
+          delay: _r(0, 0.4),
+        ),
+      );
     }
   }
 
@@ -658,20 +687,22 @@ class EffectsEngine {
     for (var y = h; y < TetrisGame.height; y++) {
       for (var x = 0; x < TetrisGame.width; x++) {
         if (game.cellAt(x, y) == null) continue;
-        _add(Particle(
-          kind: ParticleKind.grayBlock,
-          x: x + 0.5,
-          y: y - h + 0.5,
-          vx: _r(-3.5, 3.5),
-          vy: _r(-7, -1),
-          maxLife: _r(1.6, 2.6),
-          size: 1,
-          color: const Color(0xFF64748B),
-          gravity: 22,
-          rotation: 0,
-          spin: _r(-5, 5),
-          delay: (TetrisGame.height - y) * 0.015 + _r(0, 0.05),
-        ));
+        _add(
+          Particle(
+            kind: ParticleKind.grayBlock,
+            x: x + 0.5,
+            y: y - h + 0.5,
+            vx: _r(-3.5, 3.5),
+            vy: _r(-7, -1),
+            maxLife: _r(1.6, 2.6),
+            size: 1,
+            color: const Color(0xFF64748B),
+            gravity: 22,
+            rotation: 0,
+            spin: _r(-5, 5),
+            delay: (TetrisGame.height - y) * 0.015 + _r(0, 0.05),
+          ),
+        );
       }
     }
     addTrauma(0.5);
