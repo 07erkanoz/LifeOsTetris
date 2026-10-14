@@ -25,7 +25,7 @@ void main() {
     c.hardDrop();
     run(2.6);
     expect(c.game.status, GameStatus.playing);
-    c.usePower(0);
+    c.usePower(PowerType.bomb);
     expect(c.game.active!.type, PieceType.bomb);
   });
 }

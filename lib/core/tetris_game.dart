@@ -31,7 +31,9 @@ class TetrisGame {
   static const double lineClearDelay = 0.42;
 
   static const int energyPerPower = 3;
-  static const int maxPowers = 3;
+
+  /// Most of one power the player can hold.
+  static const int maxPerPower = 3;
   static const double slowMotionDuration = 10;
   static const double slowMotionFactor = 2.5;
 
@@ -72,7 +74,11 @@ class TetrisGame {
   // Süper Küpler state.
   Random _powerRandom;
   int _energy = 0;
-  final List<PowerType> _powers = [];
+  final Map<PowerType, int> _powers = {};
+
+  /// Upcoming powers: every power once, shuffled, so all six turn up and
+  /// none repeats before the others have come.
+  final List<PowerType> _powerQueue = [];
   double _slowMotion = 0;
   double? _ghostLine;
 
@@ -100,7 +106,29 @@ class TetrisGame {
 
   /// Energy towards the next power, 0..[energyPerPower].
   int get energy => _energy;
-  List<PowerType> get powers => List.unmodifiable(_powers);
+
+  /// How many of each power the player holds.
+  int powerCount(PowerType type) => _powers[type] ?? 0;
+  int get totalPowers => _powers.values.fold(0, (a, b) => a + b);
+
+  /// True if [type] can be used right now (gravity only when something
+  /// would actually fall).
+  bool canUsePower(PowerType type) => powersEnabled && _canAct && powerCount(type) > 0 && (type != PowerType.gravity || hasFloatingBlocks);
+
+  /// Some block has an empty cell under it.
+  bool get hasFloatingBlocks {
+    for (var x = 0; x < width; x++) {
+      var seenGap = false;
+      for (var y = height - 1; y >= 0; y--) {
+        if (_board[y][x] == null) {
+          seenGap = true;
+        } else if (seenGap) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
 
   /// Seconds of slow motion left.
   double get slowMotion => _slowMotion;
@@ -153,6 +181,7 @@ class TetrisGame {
     _events.clear();
     _energy = 0;
     _powers.clear();
+    _powerQueue.clear();
     _slowMotion = 0;
     _ghostLine = null;
   }
@@ -308,11 +337,11 @@ class TetrisGame {
 
   // ---------------------------------------------------------------- powers
 
-  /// Uses the power in [slot]. Returns false if it cannot be used right now.
-  bool usePower(int slot) {
-    if (!powersEnabled || !_canAct || slot < 0 || slot >= _powers.length) return false;
+  /// Uses one [type] power. Returns false if it cannot be used right now.
+  bool usePower(PowerType type) {
+    if (!canUsePower(type)) return false;
     final piece = _active!;
-    final type = _powers.removeAt(slot);
+    _powers[type] = powerCount(type) - 1;
     _events.add(PowerActivated(type));
     switch (type) {
       case PowerType.bomb || PowerType.single || PowerType.drill:
@@ -367,14 +396,26 @@ class TetrisGame {
   }
 
   void _grantPowers() {
-    while (_energy >= energyPerPower && _powers.length < maxPowers) {
+    while (_energy >= energyPerPower) {
+      final type = _nextPower();
+      if (type == null) {
+        // Every power is maxed out: the bar waits, full.
+        _energy = energyPerPower;
+        return;
+      }
       _energy -= energyPerPower;
-      final type = PowerType.pick(_powerRandom);
-      _powers.add(type);
+      _powers[type] = powerCount(type) + 1;
       _events.add(PowerEarned(type));
     }
-    // With every slot full the bar waits, full, for a slot to free up.
-    if (_powers.length >= maxPowers) _energy = min(_energy, energyPerPower);
+  }
+
+  PowerType? _nextPower() {
+    for (var tries = 0; tries < PowerType.values.length * 2; tries++) {
+      if (_powerQueue.isEmpty) _powerQueue.addAll(List.of(PowerType.values)..shuffle(_powerRandom));
+      final type = _powerQueue.removeAt(0);
+      if (powerCount(type) < maxPerPower) return type;
+    }
+    return null;
   }
 
   void _applyGravity() {
@@ -680,9 +721,10 @@ class TetrisGame {
 
   /// Gives powers directly (testing only).
   void debugGivePowers(List<PowerType> powers) {
-    _powers
-      ..clear()
-      ..addAll(powers);
+    _powers.clear();
+    for (final p in powers) {
+      _powers[p] = powerCount(p) + 1;
+    }
   }
 
   /// Puts a specific piece in play (testing only).

@@ -198,6 +198,9 @@ class EffectsEngine implements BackdropFx {
   // HUD pulses (0..1) read by widgets.
   double holdPulse = 0, scorePulse = 0, levelPulse = 0, energyPulse = 0, powerPulse = 0;
 
+  /// The power earned last, for the power bar's pop.
+  PowerType? lastPower;
+
   static const int _maxParticles = 900;
 
   void reset() {
@@ -222,6 +225,7 @@ class EffectsEngine implements BackdropFx {
     _lastActiveY = null;
     _lastActiveType = null;
     holdPulse = scorePulse = levelPulse = energyPulse = powerPulse = 0;
+    lastPower = null;
   }
 
   double get fallProgress => Curves.bounceOut.transform((fallAge / fallDuration).clamp(0.0, 1.0));
@@ -411,11 +415,34 @@ class EffectsEngine implements BackdropFx {
         energyPulse = 1;
       case PowerEarned(:final type):
         powerPulse = 1;
+        lastPower = type;
+        final colors = powerColors[type]!;
         floaters.add(
-          Floater(5, 2.6, [
-            FloaterLine('+ ${strings.powerName(type)}', 0.62, powerColors[type]!, glow: powerColors[type]!.last),
-          ], duration: 1.2),
+          Floater(5, 3.0, [
+            FloaterLine(strings.newPower, 0.5, const [Color(0xFFFFFFFF), Color(0xFFE9D5FF)]),
+            FloaterLine(strings.powerName(type), 1.05, [const Color(0xFFFFFFFF), ...colors], glow: colors.last),
+            FloaterLine(strings.powerDescription(type), 0.42, const [Color(0xFFF8FAFC), Color(0xFFCBD5E1)]),
+          ], duration: 2.0),
         );
+        pulseColor = colors.last;
+        pulse = max(pulse, 0.5);
+        for (var i = 0; i < 28; i++) {
+          final a = _r(0, pi * 2);
+          final speed = _r(3, 8);
+          _add(
+            Particle(
+              kind: i.isEven ? ParticleKind.spark : ParticleKind.dot,
+              x: 5,
+              y: 3.0,
+              vx: cos(a) * speed,
+              vy: sin(a) * speed,
+              maxLife: _r(0.5, 0.9),
+              size: i.isEven ? _r(0.15, 0.3) : _r(0.05, 0.1),
+              color: colors[i % colors.length],
+              drag: 2.2,
+            ),
+          );
+        }
       case PowerActivated(:final type):
         final colors = powerColors[type]!;
         pulseColor = colors.last;

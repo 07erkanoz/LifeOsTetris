@@ -102,8 +102,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       c.hold();
     } else if (key == LogicalKeyboardKey.keyP || key == LogicalKeyboardKey.escape) {
       c.togglePause();
-    } else if (key == LogicalKeyboardKey.digit1 || key == LogicalKeyboardKey.digit2 || key == LogicalKeyboardKey.digit3) {
-      c.usePower(key == LogicalKeyboardKey.digit1 ? 0 : (key == LogicalKeyboardKey.digit2 ? 1 : 2));
+    } else if (_powerKeys.contains(key)) {
+      c.usePower(PowerType.values[_powerKeys.indexOf(key)]);
     } else if (key == LogicalKeyboardKey.enter) {
       if (c.game.status == GameStatus.ready || c.game.status == GameStatus.over) c.start();
     } else {
@@ -112,7 +112,17 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     return KeyEventResult.handled;
   }
 
+  static final _powerKeys = [
+    LogicalKeyboardKey.digit1,
+    LogicalKeyboardKey.digit2,
+    LogicalKeyboardKey.digit3,
+    LogicalKeyboardKey.digit4,
+    LogicalKeyboardKey.digit5,
+    LogicalKeyboardKey.digit6,
+  ];
+
   static final _gameKeys = {
+    ..._powerKeys,
     LogicalKeyboardKey.arrowLeft,
     LogicalKeyboardKey.arrowRight,
     LogicalKeyboardKey.arrowUp,
@@ -130,9 +140,6 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     LogicalKeyboardKey.enter,
     LogicalKeyboardKey.controlLeft,
     LogicalKeyboardKey.shiftLeft,
-    LogicalKeyboardKey.digit1,
-    LogicalKeyboardKey.digit2,
-    LogicalKeyboardKey.digit3,
   };
 
   bool _isGameKey(LogicalKeyboardKey key) => _gameKeys.contains(key);
@@ -437,7 +444,7 @@ class _PhoneLayout extends StatelessWidget {
         if (c.game.powersEnabled)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: PowerBar(c: c, slotSize: 42),
+            child: PowerBar(c: c),
           ),
         if (settings.showButtons)
           Padding(
@@ -530,7 +537,7 @@ class _DesktopLayout extends StatelessWidget {
                     child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: LogoTitle(fontSize: 26)),
                   ),
                   _HoldCard(c: c, cell: 22, size: const Size(120, 52)),
-                  if (game.powersEnabled) ...[const SizedBox(height: 16), PowerBar(c: c, slotSize: 40, showKeys: true)],
+                  if (game.powersEnabled) ...[const SizedBox(height: 16), PowerBar(c: c, vertical: true)],
                   const SizedBox(height: 16),
                   GlassCard(
                     glow: c.fx.levelPulse,
@@ -577,6 +584,7 @@ class _DesktopLayout extends StatelessWidget {
                         key(['Space'], s.hardDrop),
                         key(['C'], s.holdAction),
                         key(['P', 'Esc'], s.pause),
+                        if (game.powersEnabled) key(['1–6'], s.usePower),
                       ],
                     ),
                   ),

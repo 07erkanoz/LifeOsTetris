@@ -198,8 +198,11 @@ class AppStrings {
   String get powersLabel => _t('GÜÇLER', 'POWERS');
   String get energyLabel => _t('ENERJİ', 'ENERGY');
   String get ghostLineHint => _t('Doğru satırda dokun, boşluklar dolsun!', 'Tap on the right row to fill the gaps!');
-  String get powerKeysHint => _t('1 · 2 · 3: güç kullan', '1 · 2 · 3: use power');
-  String get emptySlot => _t('3 satır sil, güç kazan', 'Clear 3 lines to earn a power');
+  String get usePower => _t('Güç kullan', 'Use a power');
+  String get energyHint => _t('3 satır = 1 güç', '3 lines = 1 power');
+  String get powerNone => _t('Henüz yok. Satır sildikçe sırası gelir.', 'None yet. Keep clearing lines to earn it.');
+  String get gravityNothing => _t('Şu an düşecek blok yok', 'Nothing to drop right now');
+  String get newPower => _t('YENİ GÜÇ', 'NEW POWER');
 
   String modeName(GameMode mode) => switch (mode) {
     GameMode.classic => classic,
@@ -260,6 +263,15 @@ class AppStrings {
     PowerType.gravity => _t('YERÇEKİMİ', 'GRAVITY'),
     PowerType.slowMotion => _t('AĞIR ÇEKİM', 'SLOW-MO'),
     PowerType.ghostLine => _t('HAYALET ÇİZGİ', 'GHOST LINE'),
+  };
+
+  String powerShortName(PowerType type) => switch (type) {
+    PowerType.bomb => _t('Bomba', 'Bomb'),
+    PowerType.single => _t('Tekli', 'Single'),
+    PowerType.drill => _t('Matkap', 'Drill'),
+    PowerType.gravity => _t('Yerçekimi', 'Gravity'),
+    PowerType.slowMotion => _t('Ağır çekim', 'Slow-mo'),
+    PowerType.ghostLine => _t('Hayalet', 'Ghost'),
   };
 
   String powerDescription(PowerType type) => switch (type) {

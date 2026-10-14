@@ -120,7 +120,9 @@ class GameController extends ChangeNotifier {
     ]);
     game.lines = 8;
     game.debugSetActive(const Piece(PieceType.i, Rotation.right, 7, 2));
-    if (game.powersEnabled) game.debugGivePowers([PowerType.bomb, PowerType.ghostLine, PowerType.gravity]);
+    if (game.powersEnabled) {
+      game.debugGivePowers([PowerType.bomb, PowerType.bomb, PowerType.ghostLine, PowerType.drill, PowerType.slowMotion]);
+    }
   }
 
   void togglePause() {
@@ -199,7 +201,8 @@ class GameController extends ChangeNotifier {
       game.paused,
       motivation.current?.id,
       game.energy,
-      Object.hashAll(game.powers),
+      Object.hashAll(PowerType.values.map(game.powerCount)),
+      Object.hashAll(PowerType.values.map(game.canUsePower)),
       game.ghostLine != null,
       game.slowMotion > 0,
       (fx.energyPulse * 4).round(),
@@ -369,7 +372,10 @@ class GameController extends ChangeNotifier {
   /// Tapping the board (or rotating) stops the ghost line while it sinks.
   void rotateCw() => game.ghostLine != null ? game.triggerGhostLine() : game.rotateClockwise();
 
-  void usePower(int slot) => game.usePower(slot);
+  void usePower(PowerType type) {
+    if (!game.usePower(type)) audio.play(Sfx.bump, volume: 0.6);
+  }
+
   void rotateCcw() => game.rotateCounterClockwise();
   void hardDrop() => game.hardDrop();
   void hold() => game.hold();

@@ -9,160 +9,266 @@ import '../l10n/strings.dart';
 import '../theme/palette.dart';
 import 'widgets.dart';
 
-/// Energy meter plus the three power slots of Süper Küpler.
+/// Energy meter plus all six powers of Süper Küpler, each with how many the
+/// player holds. Powers at zero stay visible (dimmed) so players learn what
+/// exists; gravity dims while nothing would fall.
 class PowerBar extends StatelessWidget {
-  const PowerBar({super.key, required this.c, this.slotSize = 46, this.showKeys = false});
+  const PowerBar({super.key, required this.c, this.vertical = false});
 
   final GameController c;
-  final double slotSize;
-  final bool showKeys;
+
+  /// Desktop side panel: a 3×2 grid with names and key hints.
+  final bool vertical;
 
   @override
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
     final s = AppStrings.of(context);
     final game = c.game;
-    final powers = game.powers;
-    final full = powers.length >= TetrisGame.maxPowers;
+    final energy = game.energy;
+    final pulse = c.fx.energyPulse;
 
-    return GlassCard(
-      glow: c.fx.powerPulse,
-      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
-      child: Row(
-        children: [
+    final bar = Row(
+      children: [
+        for (var i = 0; i < TetrisGame.energyPerPower; i++) ...[
+          if (i > 0) const SizedBox(width: 5),
           Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CardLabel(s.energyLabel),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    for (var i = 0; i < TetrisGame.energyPerPower; i++) ...[
-                      if (i > 0) const SizedBox(width: 4),
-                      Expanded(
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          height: 9,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(5),
-                            color: i < game.energy ? null : p.track,
-                            gradient: i < game.energy
-                                ? LinearGradient(colors: full ? const [Color(0xFF94A3B8), Color(0xFF64748B)] : [p.accent1, p.accent2])
-                                : null,
-                            boxShadow: i < game.energy && !full
-                                ? [
-                                    BoxShadow(
-                                      color: p.accent1.withValues(alpha: 0.4 + 0.4 * c.fx.energyPulse),
-                                      blurRadius: 6 + 8 * c.fx.energyPulse,
-                                    ),
-                                  ]
-                                : null,
-                          ),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutBack,
+              height: 14,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(7),
+                color: i < energy ? null : p.track,
+                gradient: i < energy ? const LinearGradient(colors: [Color(0xFF7DD3FC), Color(0xFFA855F7), Color(0xFFF472B6)]) : null,
+                border: Border.all(color: i < energy ? Colors.white.withValues(alpha: 0.55) : p.glassBorder),
+                boxShadow: i < energy
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFFA855F7).withValues(alpha: 0.45 + 0.45 * pulse),
+                          blurRadius: 8 + 14 * pulse,
                         ),
-                      ),
-                    ],
-                  ],
-                ),
-                if (showKeys) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    s.powerKeysHint,
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: p.label),
-                  ),
-                ],
-              ],
+                      ]
+                    : null,
+              ),
             ),
           ),
-          const SizedBox(width: 10),
-          for (var i = 0; i < TetrisGame.maxPowers; i++) ...[
-            if (i > 0) const SizedBox(width: 6),
-            _PowerSlot(
-              type: i < powers.length ? powers[i] : null,
-              size: slotSize,
-              keyLabel: showKeys ? '${i + 1}' : null,
-              newest: i == powers.length - 1 ? c.fx.powerPulse : 0,
-              onTap: () => c.usePower(i),
+        ],
+        const SizedBox(width: 10),
+        Text(
+          '$energy/${TetrisGame.energyPerPower}',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: p.text),
+        ),
+      ],
+    );
+
+    Widget tile(int i) {
+      final type = PowerType.values[i];
+      return _PowerTile(
+        type: type,
+        count: game.powerCount(type),
+        usable: game.canUsePower(type),
+        size: vertical ? 46 : 36,
+        keyLabel: vertical ? '${i + 1}' : null,
+        showName: vertical,
+        pop: c.fx.lastPower == type ? c.fx.powerPulse : 0,
+        onTap: () => c.usePower(type),
+      );
+    }
+
+    final header = Row(
+      children: [
+        CardLabel(s.energyLabel),
+        const SizedBox(width: 8),
+        Flexible(
+          child: Text(
+            s.energyHint,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: p.label),
+          ),
+        ),
+      ],
+    );
+
+    if (!vertical) {
+      // Phones: one slim row so the board keeps its size. The energy meter
+      // is a ring that fills a third per cleared line.
+      return GlassCard(
+        glow: max(c.fx.powerPulse, pulse * 0.5),
+        padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+        child: Row(
+          children: [
+            Tooltip(
+              message: '${s.energyLabel}: ${s.energyHint}',
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: CustomPaint(
+                  painter: _EnergyRingPainter(energy: energy, pulse: pulse, track: p.track),
+                  child: Center(
+                    child: Text(
+                      '$energy/${TetrisGame.energyPerPower}',
+                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: p.text),
+                    ),
+                  ),
+                ),
+              ),
             ),
+            const SizedBox(width: 6),
+            for (var i = 0; i < PowerType.values.length; i++) Expanded(child: Center(child: tile(i))),
           ],
+        ),
+      );
+    }
+
+    return GlassCard(
+      glow: max(c.fx.powerPulse, pulse * 0.5),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          header,
+          const SizedBox(height: 8),
+          bar,
+          SizedBox(height: vertical ? 14 : 10),
+          if (vertical)
+            for (var row = 0; row < 2; row++) ...[
+              if (row > 0) const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [for (var i = row * 3; i < row * 3 + 3; i++) Expanded(child: tile(i))],
+              ),
+            ]
+          else
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [for (var i = 0; i < PowerType.values.length; i++) tile(i)]),
         ],
       ),
     );
   }
 }
 
-class _PowerSlot extends StatelessWidget {
-  const _PowerSlot({required this.type, required this.size, required this.onTap, this.keyLabel, this.newest = 0});
+class _PowerTile extends StatelessWidget {
+  const _PowerTile({
+    required this.type,
+    required this.count,
+    required this.usable,
+    required this.size,
+    required this.onTap,
+    this.keyLabel,
+    this.showName = false,
+    this.pop = 0,
+  });
 
-  final PowerType? type;
+  final PowerType type;
+  final int count;
+  final bool usable;
   final double size;
   final VoidCallback onTap;
   final String? keyLabel;
-  final double newest;
+  final bool showName;
+
+  /// 0..1 while this power was just earned.
+  final double pop;
 
   @override
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
     final s = AppStrings.of(context);
-    final type = this.type;
-    if (type == null) {
-      return Tooltip(
-        message: s.emptySlot,
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: p.track, width: 2),
-          ),
-          child: Icon(Icons.add_rounded, size: size * 0.4, color: p.track),
-        ),
-      );
-    }
     final colors = powerColors[type]!;
+    final owned = count > 0;
+    final active = owned && usable;
+    final circle = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: owned ? LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors) : null,
+        color: owned ? null : p.track,
+        border: Border.all(color: owned ? Colors.white.withValues(alpha: 0.55) : p.glassBorder, width: 1.5),
+        boxShadow: active
+            ? [
+                BoxShadow(
+                  color: colors.last.withValues(alpha: 0.5 + 0.4 * pop),
+                  blurRadius: 12 + 18 * pop,
+                  offset: const Offset(0, 3),
+                ),
+              ]
+            : null,
+      ),
+      child: Opacity(
+        opacity: owned ? 1 : 0.35,
+        child: CustomPaint(painter: PowerGlyphPainter(type, color: owned ? Colors.white : p.icon)),
+      ),
+    );
+    final hint = !owned ? s.powerNone : (!usable && type == PowerType.gravity ? s.gravityNothing : null);
     return Tooltip(
-      message: '${s.powerName(type)}\n${s.powerDescription(type)}',
+      message: '${s.powerName(type)}\n${s.powerDescription(type)}${hint == null ? '' : '\n$hint'}',
       textAlign: TextAlign.center,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Transform.scale(
-          scale: 1 + 0.18 * newest,
-          child: Stack(
-            clipBehavior: Clip.none,
+        child: Opacity(
+          opacity: owned && !usable ? 0.5 : 1,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1.5),
-                  boxShadow: [
-                    BoxShadow(color: colors.last.withValues(alpha: 0.55), blurRadius: 14 + 10 * newest, offset: const Offset(0, 4)),
+              Transform.scale(
+                scale: 1 + 0.3 * pop,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    circle,
+                    if (owned)
+                      Positioned(
+                        right: -5,
+                        top: -5,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            color: p.isDark ? const Color(0xFF111630) : Colors.white,
+                            border: Border.all(color: colors.last, width: 1.5),
+                          ),
+                          child: Text(
+                            '×$count',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: p.text),
+                          ),
+                        ),
+                      ),
+                    if (keyLabel != null)
+                      Positioned(
+                        left: -4,
+                        bottom: -4,
+                        child: Container(
+                          width: 17,
+                          height: 17,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: p.isDark ? const Color(0xFF111630) : Colors.white,
+                            border: Border.all(color: p.glassBorder),
+                          ),
+                          child: Text(
+                            keyLabel!,
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: p.muted),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
-                child: CustomPaint(painter: PowerGlyphPainter(type)),
               ),
-              if (keyLabel != null)
-                Positioned(
-                  right: -3,
-                  bottom: -3,
-                  child: Container(
-                    width: 17,
-                    height: 17,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: p.isDark ? const Color(0xFF111630) : Colors.white,
-                      border: Border.all(color: colors.last),
-                    ),
-                    child: Text(
-                      keyLabel!,
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: p.text),
-                    ),
+              if (showName) ...[
+                const SizedBox(height: 5),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    s.powerShortName(type),
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: owned ? p.text : p.label),
                   ),
                 ),
+              ],
             ],
           ),
         ),
@@ -171,11 +277,58 @@ class _PowerSlot extends StatelessWidget {
   }
 }
 
+/// Three arcs around the energy count, lit one per cleared line.
+class _EnergyRingPainter extends CustomPainter {
+  _EnergyRingPainter({required this.energy, required this.pulse, required this.track});
+
+  final int energy;
+  final double pulse;
+  final Color track;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = (Offset.zero & size).deflate(3);
+    const n = TetrisGame.energyPerPower;
+    const gap = 0.32;
+    const sweep = 2 * pi / n - gap;
+    for (var i = 0; i < n; i++) {
+      final start = -pi / 2 + gap / 2 + i * 2 * pi / n;
+      final on = i < energy;
+      final paint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4.5
+        ..strokeCap = StrokeCap.round;
+      if (on) {
+        paint.shader = const SweepGradient(colors: [Color(0xFF7DD3FC), Color(0xFFA855F7), Color(0xFFF472B6), Color(0xFF7DD3FC)])
+            .createShader(rect);
+        canvas.drawArc(
+          rect,
+          start,
+          sweep,
+          false,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 7 + 6 * pulse
+            ..color = const Color(0xFFA855F7).withValues(alpha: 0.25 + 0.3 * pulse)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+        );
+      } else {
+        paint.color = track;
+      }
+      canvas.drawArc(rect, start, sweep, false, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _EnergyRingPainter old) => old.energy != energy || old.pulse != pulse || old.track != track;
+}
+
 /// White vector icon for each power.
 class PowerGlyphPainter extends CustomPainter {
-  PowerGlyphPainter(this.type);
+  PowerGlyphPainter(this.type, {this.color = Colors.white});
 
   final PowerType type;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -183,12 +336,12 @@ class PowerGlyphPainter extends CustomPainter {
     canvas.translate(s * 0.25, s * 0.25);
     final u = s * 0.5;
     final stroke = Paint()
-      ..color = Colors.white
+      ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = u * 0.13
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
-    final fill = Paint()..color = Colors.white;
+    final fill = Paint()..color = color;
     Offset o(double x, double y) => Offset(x * u, y * u);
 
     switch (type) {
@@ -259,7 +412,7 @@ class PowerGlyphPainter extends CustomPainter {
         );
       case PowerType.ghostLine:
         final dash = Paint()
-          ..color = Colors.white
+          ..color = color
           ..strokeWidth = u * 0.14
           ..strokeCap = StrokeCap.round;
         for (var x = 0.05; x < 1.0; x += 0.3) {
@@ -279,5 +432,5 @@ class PowerGlyphPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant PowerGlyphPainter old) => old.type != type;
+  bool shouldRepaint(covariant PowerGlyphPainter old) => old.type != type || old.color != color;
 }
