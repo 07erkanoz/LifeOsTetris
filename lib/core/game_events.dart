@@ -163,15 +163,3 @@ class GhostLineFilled extends GameEvent {
   final int row;
   final List<Cell> cells;
 }
-
-// ------------------------------------------------------------ puzzles
-
-class PuzzleSolved extends GameEvent {
-  const PuzzleSolved({required this.stars, required this.piecesLeft});
-  final int stars;
-  final int piecesLeft;
-}
-
-class PuzzleFailed extends GameEvent {
-  const PuzzleFailed();
-}

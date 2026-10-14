@@ -22,12 +22,14 @@ class Settings extends ChangeNotifier {
   bool _showButtons = true;
   double _buttonOpacity = 0.9;
   bool _fullScreen = true;
+  double _vibrationStrength = 0.5;
   final Map<GameMode, int> _best = {for (final m in GameMode.values) m: 0};
   int _gamesPlayed = 0;
   int _totalLines = 0;
   int _totalSeconds = 0;
-  final Map<int, int> _puzzleStars = {};
   int? _lastTrack;
+  int _blocksBest = 0;
+  final Map<int, int> _blockStars = {};
 
   static Future<Settings> load() async {
     SharedPreferences? prefs;
@@ -49,6 +51,7 @@ class Settings extends ChangeNotifier {
       s._showButtons = prefs.getBool('showButtons') ?? true;
       s._buttonOpacity = prefs.getDouble('buttonOpacity') ?? 0.9;
       s._fullScreen = prefs.getBool('fullScreen') ?? true;
+      s._vibrationStrength = prefs.getDouble('vibrationStrength') ?? 0.5;
       for (final m in GameMode.values) {
         s._best[m] = prefs.getInt('best_${m.name}') ?? 0;
       }
@@ -56,15 +59,16 @@ class Settings extends ChangeNotifier {
       final legacy = prefs.getInt('bestScore');
       if (legacy != null && legacy > s._best[GameMode.classic]!) s._best[GameMode.classic] = legacy;
       s._lastTrack = prefs.getInt('lastTrack');
-      s._gamesPlayed = prefs.getInt('gamesPlayed') ?? 0;
-      s._totalLines = prefs.getInt('totalLines') ?? 0;
-      s._totalSeconds = prefs.getInt('totalSeconds') ?? 0;
-      for (final entry in (prefs.getString('puzzleStars') ?? '').split(',')) {
+      s._blocksBest = prefs.getInt('blocksBest') ?? 0;
+      for (final entry in (prefs.getString('blockStars') ?? '').split(',')) {
         final parts = entry.split(':');
         if (parts.length != 2) continue;
         final level = int.tryParse(parts[0]), stars = int.tryParse(parts[1]);
-        if (level != null && stars != null) s._puzzleStars[level] = stars;
+        if (level != null && stars != null) s._blockStars[level] = stars;
       }
+      s._gamesPlayed = prefs.getInt('gamesPlayed') ?? 0;
+      s._totalLines = prefs.getInt('totalLines') ?? 0;
+      s._totalSeconds = prefs.getInt('totalSeconds') ?? 0;
     }
     return s;
   }
@@ -85,6 +89,9 @@ class Settings extends ChangeNotifier {
 
   /// Desktop: borderless full screen (Windows), on by default.
   bool get fullScreen => _fullScreen;
+
+  /// Vibration strength, 0..1.
+  double get vibrationStrength => _vibrationStrength;
   int get gamesPlayed => _gamesPlayed;
 
   /// Music track playing when the app was last used.
@@ -99,25 +106,51 @@ class Settings extends ChangeNotifier {
 
   int bestScore(GameMode mode) => _best[mode]!;
 
-  /// Stars earned on puzzle [level] (0 = not solved yet).
-  int puzzleStars(int level) => _puzzleStars[level] ?? 0;
+  // ------------------------------------------------------------ bulmaca küpler
 
-  int get totalPuzzleStars => _puzzleStars.values.fold(0, (a, b) => a + b);
+  /// Best endless score of Bulmaca Küpler.
+  int get blocksBest => _blocksBest;
 
-  /// Highest playable puzzle: one past the highest solved.
-  int get unlockedPuzzle => (_puzzleStars.keys.fold(0, (a, b) => a > b ? a : b)) + 1;
+  /// Stars earned on level [level] (0 = not completed yet).
+  int blockStars(int level) => _blockStars[level] ?? 0;
 
-  /// Saves a solved puzzle, keeping the best star count.
-  void recordPuzzle(int level, int stars) {
-    if (stars <= puzzleStars(level)) return;
+  int get totalBlockStars => _blockStars.values.fold(0, (a, b) => a + b);
+
+  /// Highest playable level: one past the highest completed.
+  int get unlockedBlockLevel => _blockStars.keys.fold(0, (a, b) => a > b ? a : b) + 1;
+
+  /// Saves a completed level, keeping the best star count.
+  void recordBlockLevel(int level, int stars) {
+    if (stars <= blockStars(level)) return;
     _set(
-      () => _puzzleStars[level] = stars,
-      () => _prefs?.setString('puzzleStars', _puzzleStars.entries.map((e) => '${e.key}:${e.value}').join(',')),
+      () => _blockStars[level] = stars,
+      () => _prefs?.setString('blockStars', _blockStars.entries.map((e) => '${e.key}:${e.value}').join(',')),
     );
   }
 
+  /// Records a finished Bulmaca Küpler game for the lifetime stats. Returns
+  /// true when an endless [score] is a new best.
+  bool recordBlocksGame({required bool endless, required int score, required int lines, required double seconds}) {
+    final record = endless && score > _blocksBest;
+    _set(
+      () {
+        if (record) _blocksBest = score;
+        _gamesPlayed++;
+        _totalLines += lines;
+        _totalSeconds += seconds.round();
+      },
+      () {
+        if (record) _prefs?.setInt('blocksBest', score);
+        _prefs?.setInt('gamesPlayed', _gamesPlayed);
+        _prefs?.setInt('totalLines', _totalLines);
+        _prefs?.setInt('totalSeconds', _totalSeconds);
+      },
+    );
+    return record;
+  }
+
   /// Highest score across all modes.
-  int get topScore => _best.values.fold(0, (a, b) => a > b ? a : b);
+  int get topScore => _best.values.fold(_blocksBest, (a, b) => a > b ? a : b);
 
   set themeMode(ThemeMode v) => _set(() => _themeMode = v, () => _prefs?.setInt('themeMode', v.index));
   set language(AppLanguage v) => _set(() => _language = v, () => _prefs?.setInt('language', v.index));
@@ -129,6 +162,7 @@ class Settings extends ChangeNotifier {
   set vibration(bool v) => _set(() => _vibration = v, () => _prefs?.setBool('vibration', v));
   set showButtons(bool v) => _set(() => _showButtons = v, () => _prefs?.setBool('showButtons', v));
   set buttonOpacity(double v) => _set(() => _buttonOpacity = v, () => _prefs?.setDouble('buttonOpacity', v));
+  set vibrationStrength(double v) => _set(() => _vibrationStrength = v, () => _prefs?.setDouble('vibrationStrength', v));
   set fullScreen(bool v) => _set(() => _fullScreen = v, () => _prefs?.setBool('fullScreen', v));
 
   /// Records a finished game. Returns true when [score] is a new best for

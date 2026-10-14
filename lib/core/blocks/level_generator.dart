@@ -22,7 +22,7 @@ class BlockLevels {
   /// awkward pieces are dealt (0..1).
   static ({int gems, double fill, int slack, double awkward}) specFor(int n) {
     final k = (n.clamp(1, count) - 1) / (count - 1);
-    return (gems: 2 + (k * 10).round(), fill: 0.16 + 0.3 * k, slack: max(2, (8 - k * 6).round()), awkward: 0.05 + 0.6 * k);
+    return (gems: 2 + (k * 10).round(), fill: 0.24 + 0.24 * k, slack: max(2, (8 - k * 6).round()), awkward: 0.05 + 0.6 * k);
   }
 
   /// Rough number of moves the reference solution should need.

@@ -23,7 +23,7 @@ enum PieceType {
   /// Single drill that passes through blocks and eats its whole column.
   drill,
 
-  /// Golden target block of the puzzles. Only ever on the board.
+  /// Golden ★ target block of Bulmaca Küpler (only used as a sprite).
   gem;
 
   /// Power pieces never come from the bag and cannot be held or rotated.

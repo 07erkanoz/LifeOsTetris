@@ -9,6 +9,12 @@ class Haptics {
   bool _hasVibrator = false;
   bool _hasAmplitude = false;
 
+  /// Strength from the settings, 0..1 (0.5 is the default feel).
+  double strength = 0.5;
+
+  int _scaleMs(int ms) => (ms * (0.55 + 0.9 * strength)).round();
+  int _scaleAmplitude(int amplitude) => (amplitude * (0.45 + 1.1 * strength)).round().clamp(1, 255);
+
   static bool get _mobile => !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
 
   Future<void> init() async {
@@ -21,9 +27,11 @@ class Haptics {
     }
   }
 
-  void light() => _buzz(18, 70, HapticFeedback.lightImpact);
-  void medium() => _buzz(35, 150, HapticFeedback.mediumImpact);
-  void heavy() => _buzz(70, 255, HapticFeedback.heavyImpact);
+  // Pulses under ~30 ms at low amplitude are not felt at all on many phones
+  // (Xiaomi/Redmi motors in particular), so even "light" is a clear tap.
+  void light() => _buzz(30, 140, HapticFeedback.lightImpact);
+  void medium() => _buzz(50, 210, HapticFeedback.mediumImpact);
+  void heavy() => _buzz(110, 255, HapticFeedback.heavyImpact);
 
   /// Two strong pulses for big moments (quad, perfect clear, level up).
   void celebrate() {
@@ -33,8 +41,8 @@ class Haptics {
       return;
     }
     Vibration.vibrate(
-      pattern: const [0, 60, 60, 90],
-      intensities: _hasAmplitude ? const [0, 255, 0, 200] : const [],
+      pattern: [0, _scaleMs(70), 70, _scaleMs(110)],
+      intensities: _hasAmplitude ? [0, _scaleAmplitude(230), 0, _scaleAmplitude(210)] : const [],
     ).catchError((Object _) {});
   }
 
@@ -44,6 +52,6 @@ class Haptics {
       fallback();
       return;
     }
-    Vibration.vibrate(duration: ms, amplitude: _hasAmplitude ? amplitude : -1).catchError((Object _) {});
+    Vibration.vibrate(duration: _scaleMs(ms), amplitude: _hasAmplitude ? _scaleAmplitude(amplitude) : -1).catchError((Object _) {});
   }
 }

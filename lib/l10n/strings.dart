@@ -85,6 +85,7 @@ class AppStrings {
   String get visualEffects => _t('Görsel efektler', 'Visual effects');
   String get screenShake => _t('Ekran sarsıntısı', 'Screen shake');
   String get vibration => _t('Titreşim', 'Vibration');
+  String get vibrationStrength => _t('Titreşim gücü', 'Vibration strength');
   String get onScreenButtons => _t('Ekran butonları', 'On-screen buttons');
   String get buttonOpacity => _t('Buton görünürlüğü', 'Button visibility');
   String get fullScreen => _t('Tam ekran (F11)', 'Full screen (F11)');
@@ -204,33 +205,53 @@ class AppStrings {
     GameMode.classic => classic,
     GameMode.relaxed => relaxed,
     GameMode.superMode => superTitle,
-    GameMode.puzzle => puzzleTitle,
   };
 
   // ------------------------------------------------------------ bulmaca küpler
 
   String get puzzleTitle => _t('Bulmaca Küpler', 'Puzzle Blocks');
-  String get puzzleSubtitle => _t('100 bulmaca, her seferinde yeni tahta', '100 puzzles, a new board every time');
-  String get puzzleLabel => _t('BULMACA', 'PUZZLE');
-  String get gemsLeftLabel => _t('KALAN ★', '★ LEFT');
-  String get piecesLeftLabel => _t('PARÇA', 'PIECES');
-  String get puzzleGoal => _t('Verilen parçalarla tüm ★ blokları temizle!', 'Clear every ★ block with the pieces you get!');
-  String get puzzleNoGravity => _t('Parçalar kendiliğinden düşmez, acele etme.', "Pieces don't fall on their own. Take your time.");
-  String get solved => _t('ÇÖZÜLDÜ!', 'SOLVED!');
-  String get puzzleSolvedTitle => _t('Bulmaca çözüldü!', 'Puzzle solved!');
-  String get puzzleFailedTitle => _t('Parçalar bitti', 'Out of pieces');
-  String get puzzleFailedHint => _t(
-    '★ bloklar kaldı. Aynı tahtayı tekrar dene ya da yeni bir tahta al.',
-    'Some ★ blocks are left. Try the same board again or get a new one.',
-  );
-  String get starsHint => _t('2 parça artır: ★★★ · 1 parça: ★★', '2 pieces to spare: ★★★ · 1 spare: ★★');
-  String get tryAgain => _t('Tekrar dene', 'Try again');
+  String get puzzleSubtitle => _t('Sürükle, yerleştir, patlat! 100 seviye', 'Drag, drop, blast! 100 levels');
   String get newBoard => _t('Yeni tahta', 'New board');
-  String get nextPuzzle => _t('Sonraki bulmaca', 'Next puzzle');
-  String get levelsLabel => _t('Bulmacalar', 'Puzzles');
   String chapter(int n) => _t('Bölüm $n', 'Chapter $n');
-  String puzzleNumber(int n) => _t('Bulmaca $n', 'Puzzle $n');
-  String get locked => _t('Önceki bulmacayı çöz', 'Solve the previous puzzle');
+  String get locked => _t('Önceki seviyeyi bitir', 'Finish the previous level');
+
+  // ------------------------------------------------------------ bulmaca küpler (blocks)
+
+  String get blocksSubtitle => _t('Sürükle, yerleştir, patlat!', 'Drag, drop, blast!');
+  String get levelsMode => _t('Seviyeler', 'Levels');
+  String get levelsModeSubtitle => _t('100 seviye: ★ blokları topla', '100 levels: collect the ★ blocks');
+  String get endlessMode => _t('Sonsuz', 'Endless');
+  String get endlessModeSubtitle => _t('Rekor için oyna', 'Play for a record');
+  String continueLevel(int n) => _t('Devam et: Seviye $n', 'Continue: Level $n');
+  String levelNumber(int n) => _t('Seviye $n', 'Level $n');
+  String get gemsLeft => _t('KALAN ★', '★ LEFT');
+  String get movesLeft => _t('HAMLE', 'MOVES');
+  String get blocksGoal => _t('Satır ve sütunları doldur, tüm ★ blokları patlat!', 'Fill rows and columns to blast every ★ block!');
+  String get blocksHowTo => _t(
+    'Parçaları tahtaya sürükle. Dolan satır ve sütunlar patlar. Hiçbir parça sığmazsa oyun biter.',
+    'Drag the pieces onto the board. Full rows and columns blast away. When nothing fits, the game is over.',
+  );
+  String threeStars(int moves) => _t('★★★ için en fazla $moves hamle', '★★★ in $moves moves or fewer');
+  String get levelDone => _t('TAMAMLANDI!', 'COMPLETE!');
+  String get levelCompleteTitle => _t('Seviye tamamlandı!', 'Level complete!');
+  String get outOfMovesTitle => _t('Hamlen bitti', 'Out of moves');
+  String get noRoomTitle => _t('Yer kalmadı', 'No room left');
+  String get levelFailedHint => _t(
+    'Biraz daha planla: ★ blokların olduğu satır ve sütunlara odaklan.',
+    'Plan a little more: focus on the rows and columns with ★ blocks.',
+  );
+  String movesUsed(int n) => _t('$n hamlede', 'in $n moves');
+  String get sameBoard => _t('Aynı tahta', 'Same board');
+  String get nextLevel => _t('Sonraki seviye', 'Next level');
+  String get allLevelsDone => _t('Tüm seviyeleri bitirdin!', 'You finished every level!');
+  String get bestLabel => _t('EN İYİ', 'BEST');
+  String? blastWord(int lines) => switch (lines) {
+    < 2 => null,
+    2 => _t('HARİKA!', 'GREAT!'),
+    3 => _t('MUHTEŞEM!', 'AMAZING!'),
+    4 => _t('EFSANE!', 'LEGENDARY!'),
+    _ => _t('İNANILMAZ!', 'INCREDIBLE!'),
+  };
 
   String powerName(PowerType type) => switch (type) {
     PowerType.bomb => _t('BOMBA', 'BOMB'),

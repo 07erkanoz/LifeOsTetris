@@ -407,26 +407,6 @@ class EffectsEngine implements BackdropFx {
         addTrauma(0.6);
         pulseColor = const Color(0xFFEF4444);
         pulse = 0.8;
-      case PuzzleSolved(:final stars):
-        _confetti(10, 160);
-        boardFlash = 0.8;
-        pulseColor = const Color(0xFFFBBF24);
-        pulse = 1;
-        addTrauma(0.35);
-        floaters.add(
-          Floater(5, 8, [
-            FloaterLine(strings.solved, 1.5, const [
-              Color(0xFFFFFFFF),
-              Color(0xFFFDE047),
-              Color(0xFFF59E0B),
-            ], glow: const Color(0xFFFBBF24)),
-            FloaterLine('★' * stars + '☆' * (3 - stars), 1.1, _gold, glow: const Color(0xFFF59E0B)),
-          ], duration: 2.2),
-        );
-      case PuzzleFailed():
-        pulseColor = const Color(0xFFEF4444);
-        pulse = 0.8;
-        addTrauma(0.3);
       case EnergyGained():
         energyPulse = 1;
       case PowerEarned(:final type):

@@ -78,7 +78,6 @@ class MotivationEngine {
     _sinceShown += dt;
     _sinceCloseCall += dt;
     if (current != null && age >= showFor) current = null;
-    if (game.mode == GameMode.puzzle) return;
 
     final score = game.score;
     if (score != _lastScore) {
@@ -95,7 +94,6 @@ class MotivationEngine {
   }
 
   void onEvent(GameEvent event, TetrisGame game) {
-    if (game.mode == GameMode.puzzle) return;
     switch (event) {
       case LinesCleared(:final count, :final combo, :final backToBack, :final rows):
         final linesBefore = game.lines - count;

@@ -7,8 +7,8 @@ import 'package:flutter/services.dart';
 
 import '../audio/audio_service.dart';
 import '../audio/haptics.dart';
-import '../core/puzzle_generator.dart';
 import '../core/tetris_game.dart';
+import '../game/blocks/blocks_controller.dart';
 import '../game/game_controller.dart';
 import '../game/motivation.dart';
 import '../l10n/strings.dart';
@@ -19,6 +19,7 @@ import '../game/render/board_painter.dart';
 import '../settings/settings.dart';
 import '../theme/palette.dart';
 import 'about_page.dart';
+import 'blocks_screen.dart';
 import 'board_view.dart';
 import 'power_bar.dart';
 import 'widgets.dart';
@@ -49,7 +50,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _ticker.start();
-    if (GameController.demoLevels) controller.showLevelSelect = true;
+    if (BlocksController.demo) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => BlocksScreen.open(context, settings: widget.settings, audio: widget.audio, haptics: widget.haptics),
+      );
+    }
   }
 
   @override
@@ -189,9 +194,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   Widget _overlay() {
     final game = controller.game;
-    if (controller.showLevelSelect) return _LevelSelectOverlay(key: const ValueKey('levels'), c: controller);
     if (game.status == GameStatus.ready) return _StartOverlay(key: const ValueKey('start'), c: controller);
-    if (controller.showPuzzleResult) return _PuzzleResultOverlay(key: ValueKey('puzzle-${game.puzzleSolved}'), c: controller);
     if (controller.showGameOver) return _GameOverOverlay(key: const ValueKey('over'), c: controller);
     if (game.paused) return _PauseOverlay(key: const ValueKey('pause'), c: controller);
     return const SizedBox.shrink(key: ValueKey('none'));
@@ -404,22 +407,20 @@ class _PhoneLayout extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: c.game.mode == GameMode.puzzle
-                          ? _puzzleStats(context, c)
-                          : [
-                              CardLabel(s.scoreLabel),
-                              _ScoreText(c: c, size: 26),
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Row(
-                                  children: [
-                                    _Stat(s.levelLabel, '${c.game.level}'),
-                                    const SizedBox(width: 14),
-                                    _Stat(s.linesLabel, '${c.game.lines}'),
-                                  ],
-                                ),
-                              ),
+                      children: [
+                        CardLabel(s.scoreLabel),
+                        _ScoreText(c: c, size: 26),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            children: [
+                              _Stat(s.levelLabel, '${c.game.level}'),
+                              const SizedBox(width: 14),
+                              _Stat(s.linesLabel, '${c.game.lines}'),
                             ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -536,27 +537,17 @@ class _DesktopLayout extends StatelessWidget {
                     padding: const EdgeInsets.all(18),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: game.mode == GameMode.puzzle
-                          ? [
-                              CardLabel(s.puzzleLabel),
-                              const SizedBox(height: 4),
-                              GradientText('${c.puzzle?.number ?? ''}', style: const TextStyle(fontSize: 38, fontWeight: FontWeight.w900)),
-                              const SizedBox(height: 8),
-                              stat(s.gemsLeftLabel, '${game.gemsLeft}', accent: true),
-                              stat(s.piecesLeftLabel, '${game.piecesLeft + (game.active != null ? 1 : 0)}'),
-                              stat(s.chapter(c.puzzle?.chapter ?? 1), '★' * settings.puzzleStars(c.puzzle?.number ?? 0)),
-                            ]
-                          : [
-                              CardLabel(s.scoreLabel),
-                              const SizedBox(height: 4),
-                              _ScoreText(c: c, size: 38),
-                              const SizedBox(height: 8),
-                              stat(s.level, '${game.level}'),
-                              stat(s.lines, '${game.lines}'),
-                              stat(s.time, formatTime(c.playTime)),
-                              stat(s.best, s.score(settings.bestScore(c.mode)), accent: true),
-                              stat(s.mode, s.modeName(c.mode)),
-                            ],
+                      children: [
+                        CardLabel(s.scoreLabel),
+                        const SizedBox(height: 4),
+                        _ScoreText(c: c, size: 38),
+                        const SizedBox(height: 8),
+                        stat(s.level, '${game.level}'),
+                        stat(s.lines, '${game.lines}'),
+                        stat(s.time, formatTime(c.playTime)),
+                        stat(s.best, s.score(settings.bestScore(c.mode)), accent: true),
+                        stat(s.mode, s.modeName(c.mode)),
+                      ],
                     ),
                   ),
                 ],
@@ -592,7 +583,7 @@ class _DesktopLayout extends StatelessWidget {
                   const SizedBox(height: 16),
                   GlassCard(
                     padding: const EdgeInsets.all(18),
-                    child: _SettingsPanel(settings: settings, compact: true),
+                    child: SettingsPanel(settings: settings, compact: true),
                   ),
                 ],
               ),
@@ -630,8 +621,8 @@ class _Kbd extends StatelessWidget {
   }
 }
 
-class _SettingsPanel extends StatelessWidget {
-  const _SettingsPanel({required this.settings, this.compact = false});
+class SettingsPanel extends StatelessWidget {
+  const SettingsPanel({super.key, required this.settings, this.compact = false});
 
   final Settings settings;
   final bool compact;
@@ -705,6 +696,16 @@ class _SettingsPanel extends StatelessWidget {
             value: settings.vibration,
             onChanged: (v) => settings.vibration = v,
           ),
+          if (settings.vibration) ...[
+            Padding(
+              padding: const EdgeInsets.only(left: 28, top: 2),
+              child: Text(
+                s.vibrationStrength,
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: p.label),
+              ),
+            ),
+            slider(settings.vibrationStrength, 0, 1, (v) => settings.vibrationStrength = v),
+          ],
         ],
         if (!compact && isMobilePlatform) ...[
           ToggleRow(
@@ -858,7 +859,7 @@ class _StartOverlay extends StatelessWidget {
           subtitle: s.puzzleSubtitle,
           icon: Icons.extension_rounded,
           colors: const [Color(0xFF14B8A6), Color(0xFF22C55E), Color(0xFFEAB308)],
-          onTap: c.openLevelSelect,
+          onTap: () => BlocksScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics),
         ),
         const SizedBox(height: 16),
         Center(child: CardLabel(s.classicTitle.toUpperCase())),
@@ -960,7 +961,7 @@ class _PauseOverlay extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [...buttons, const SizedBox(height: 14), about]),
               ),
               const SizedBox(width: 28),
-              Expanded(child: _SettingsPanel(settings: c.settings)),
+              Expanded(child: SettingsPanel(settings: c.settings)),
             ],
           ),
         ],
@@ -970,7 +971,7 @@ class _PauseOverlay extends StatelessWidget {
       children: [
         ...buttons,
         const SizedBox(height: 18),
-        _SettingsPanel(settings: c.settings),
+        SettingsPanel(settings: c.settings),
         const SizedBox(height: 6),
         about,
       ],
@@ -1048,11 +1049,6 @@ class _MotivationBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (c.game.ghostLine != null) return const IgnorePointer(child: _GhostLineHint());
-    if (c.game.mode == GameMode.puzzle && c.game.status == GameStatus.playing && c.playTime < 4) {
-      return IgnorePointer(
-        child: _InfoPill(text: AppStrings.of(context).puzzleGoal, icon: Icons.star_rounded, color: const Color(0xFFFBBF24)),
-      );
-    }
     final m = c.motivation.visible ? c.motivation.current : null;
     return IgnorePointer(
       child: AnimatedSwitcher(
@@ -1165,262 +1161,6 @@ class _GhostLineHint extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _InfoPill extends StatelessWidget {
-  const _InfoPill({required this.text, required this.icon, required this.color});
-
-  final String text;
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = GamePalette.of(context);
-    return Center(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(40),
-          color: p.isDark ? const Color(0xF0111630) : const Color(0xF7FFFFFF),
-          border: Border.all(color: color, width: 1.6),
-          boxShadow: [BoxShadow(color: color.withValues(alpha: 0.4), blurRadius: 20)],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: color),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                text,
-                maxLines: 2,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: p.text),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Puzzle HUD for the phone's middle card: puzzle number, gems and pieces left.
-List<Widget> _puzzleStats(BuildContext context, GameController c) {
-  final s = AppStrings.of(context);
-  final p = GamePalette.of(context);
-  final game = c.game;
-  final pieces = game.piecesLeft + (game.active != null ? 1 : 0);
-  return [
-    CardLabel('${s.puzzleLabel} ${c.puzzle?.number ?? ''}'),
-    Row(
-      children: [
-        const Icon(Icons.star_rounded, color: Color(0xFFFBBF24), size: 24),
-        const SizedBox(width: 4),
-        Text(
-          '${game.gemsLeft}',
-          style: TextStyle(fontSize: 24, height: 1.05, fontWeight: FontWeight.w900, color: p.text),
-        ),
-      ],
-    ),
-    FittedBox(fit: BoxFit.scaleDown, child: _Stat(s.piecesLeftLabel, '$pieces')),
-  ];
-}
-
-class _LevelSelectOverlay extends StatelessWidget {
-  const _LevelSelectOverlay({super.key, required this.c});
-
-  final GameController c;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = GamePalette.of(context);
-    final s = AppStrings.of(context);
-    final settings = c.settings;
-    final unlocked = settings.unlockedPuzzle;
-    const chapters = PuzzleGenerator.levelCount ~/ PuzzleGenerator.levelsPerChapter;
-
-    return _OverlayShell(
-      children: [
-        Row(
-          children: [
-            GlassIconButton(icon: Icons.arrow_back_rounded, tooltip: s.back, onTap: c.closeLevelSelect, size: 36),
-            const SizedBox(width: 12),
-            Expanded(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: GradientText(
-                  s.puzzleTitle,
-                  gradient: const LinearGradient(colors: [Color(0xFF14B8A6), Color(0xFFEAB308)]),
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
-                ),
-              ),
-            ),
-            const Icon(Icons.star_rounded, color: Color(0xFFFBBF24), size: 20),
-            const SizedBox(width: 2),
-            Text(
-              '${settings.totalPuzzleStars}/${PuzzleGenerator.levelCount * 3}',
-              style: TextStyle(fontWeight: FontWeight.w800, color: p.text),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Text(
-          s.puzzleGoal,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 13, color: p.muted, fontWeight: FontWeight.w600),
-        ),
-        Text(
-          s.starsHint,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 12, color: p.label, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 14),
-        for (var ch = 1; ch <= chapters; ch++) ...[
-          Padding(padding: const EdgeInsets.fromLTRB(2, 8, 0, 8), child: CardLabel(s.chapter(ch).toUpperCase())),
-          GridView.count(
-            crossAxisCount: 5,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: 0.9,
-            children: [
-              for (var n = (ch - 1) * PuzzleGenerator.levelsPerChapter + 1; n <= ch * PuzzleGenerator.levelsPerChapter; n++)
-                _LevelTile(
-                  number: n,
-                  stars: settings.puzzleStars(n),
-                  locked: n > unlocked,
-                  current: n == unlocked,
-                  onTap: () => c.startPuzzle(n),
-                ),
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _LevelTile extends StatelessWidget {
-  const _LevelTile({required this.number, required this.stars, required this.locked, required this.current, required this.onTap});
-
-  final int number;
-  final int stars;
-  final bool locked;
-  final bool current;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = GamePalette.of(context);
-    final s = AppStrings.of(context);
-    final tile = Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        gradient: current ? const LinearGradient(colors: [Color(0xFF14B8A6), Color(0xFF22C55E)]) : null,
-        color: current ? null : (locked ? p.track.withValues(alpha: 0.5) : p.glass),
-        border: Border.all(color: stars > 0 ? const Color(0xFFFBBF24).withValues(alpha: 0.7) : p.glassBorder),
-        boxShadow: current ? const [BoxShadow(color: Color(0x6614B8A6), blurRadius: 14)] : null,
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          locked
-              ? Icon(Icons.lock_rounded, size: 18, color: p.label)
-              : Text(
-                  '$number',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: current ? Colors.white : p.text),
-                ),
-          const SizedBox(height: 3),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (var i = 0; i < 3; i++)
-                Icon(Icons.star_rounded, size: 11, color: i < stars ? const Color(0xFFFBBF24) : (current ? Colors.white54 : p.track)),
-            ],
-          ),
-        ],
-      ),
-    );
-    if (locked) return Tooltip(message: s.locked, child: tile);
-    return GestureDetector(onTap: onTap, child: tile);
-  }
-}
-
-class _PuzzleResultOverlay extends StatelessWidget {
-  const _PuzzleResultOverlay({super.key, required this.c});
-
-  final GameController c;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = GamePalette.of(context);
-    final s = AppStrings.of(context);
-    final solved = c.game.puzzleSolved;
-    final number = c.puzzle?.number ?? 1;
-    final isLast = number >= PuzzleGenerator.levelCount;
-    return _OverlayShell(
-      children: [
-        Center(child: CardLabel(s.puzzleNumber(number).toUpperCase())),
-        const SizedBox(height: 8),
-        Text(
-          solved ? s.puzzleSolvedTitle : s.puzzleFailedTitle,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: p.text),
-        ),
-        const SizedBox(height: 12),
-        if (solved)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              for (var i = 0; i < 3; i++)
-                Padding(
-                  padding: EdgeInsets.only(bottom: i == 1 ? 10 : 0),
-                  child: Icon(
-                    Icons.star_rounded,
-                    size: i == 1 ? 64 : 50,
-                    color: i < c.lastPuzzleStars ? const Color(0xFFFBBF24) : p.track,
-                    shadows: i < c.lastPuzzleStars ? const [Shadow(color: Color(0x99F59E0B), blurRadius: 18)] : null,
-                  ),
-                ),
-            ],
-          )
-        else
-          Text(
-            s.puzzleFailedHint,
-            textAlign: TextAlign.center,
-            style: TextStyle(color: p.muted, fontWeight: FontWeight.w600, height: 1.4),
-          ),
-        const SizedBox(height: 20),
-        if (solved && !isLast) ...[
-          GradientButton(
-            key: const ValueKey('next-puzzle'),
-            label: s.nextPuzzle,
-            icon: Icons.arrow_forward_rounded,
-            colors: const [Color(0xFF14B8A6), Color(0xFF22C55E)],
-            onTap: c.nextPuzzle,
-          ),
-          const SizedBox(height: 10),
-        ],
-        Row(
-          children: [
-            Expanded(
-              child: GradientButton(label: s.tryAgain, icon: Icons.replay_rounded, secondary: solved, onTap: c.retryPuzzle),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: GradientButton(label: s.newBoard, icon: Icons.casino_rounded, secondary: true, onTap: () => c.startPuzzle(number)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        GradientButton(label: s.levelsLabel, icon: Icons.grid_view_rounded, secondary: true, onTap: c.openLevelSelect),
-      ],
     );
   }
 }
