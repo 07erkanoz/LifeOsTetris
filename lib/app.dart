@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'audio/audio_service.dart';
+import 'l10n/strings.dart';
 import 'settings/settings.dart';
 import 'theme/palette.dart';
 import 'ui/game_screen.dart';
@@ -20,6 +22,13 @@ class KuplerApp extends StatelessWidget {
         title: 'LifeOS Küpler',
         debugShowCheckedModeBanner: false,
         themeMode: settings.themeMode,
+        locale: switch (settings.language) {
+          AppLanguage.system => null,
+          AppLanguage.tr => const Locale('tr'),
+          AppLanguage.en => const Locale('en'),
+        },
+        supportedLocales: supportedLocales,
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
         theme: buildTheme(GamePalette.light),
         darkTheme: buildTheme(GamePalette.dark),
         builder: (context, child) {

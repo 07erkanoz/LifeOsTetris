@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../l10n/strings.dart';
 import '../theme/palette.dart';
 import 'widgets.dart';
 
@@ -38,6 +39,7 @@ class AboutPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
+    final s = AppStrings.of(context);
     TextStyle body() => TextStyle(fontSize: 14, height: 1.5, color: p.muted, fontWeight: FontWeight.w600);
 
     Widget section(String label, List<Widget> children) => Padding(
@@ -62,7 +64,7 @@ class AboutPage extends StatelessWidget {
                 children: [
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: GlassIconButton(icon: Icons.arrow_back_rounded, tooltip: 'Geri', onTap: () => Navigator.of(context).pop()),
+                    child: GlassIconButton(icon: Icons.arrow_back_rounded, tooltip: s.back, onTap: () => Navigator.of(context).pop()),
                   ),
                   const SizedBox(height: 20),
                   const Center(
@@ -71,19 +73,12 @@ class AboutPage extends StatelessWidget {
                   const SizedBox(height: 6),
                   Center(
                     child: Text(
-                      'Sürüm $appVersion',
+                      s.version(appVersion),
                       style: TextStyle(color: p.label, fontWeight: FontWeight.w600),
                     ),
                   ),
-                  section('OYUN', [
-                    Text(
-                      'LifeOS Küpler; düşen blokları dizip satırları patlattığın, '
-                      'bol efektli 2.5D bir blok bulmaca oyunudur. Klasik modda hız '
-                      'yavaşça artar, Rahat modda sakin bir tempoda sonsuza kadar oynarsın.',
-                      style: body(),
-                    ),
-                  ]),
-                  section('GELİŞTİRİCİ', [
+                  section(s.aboutGameLabel, [Text(s.aboutGame, style: body())]),
+                  section(s.developerLabel, [
                     Row(
                       children: [
                         Container(
@@ -105,7 +100,7 @@ class AboutPage extends StatelessWidget {
                                 developerName,
                                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: p.text),
                               ),
-                              Text('Tasarım ve geliştirme', style: body()),
+                              Text(s.developerRole, style: body()),
                             ],
                           ),
                         ),
@@ -118,7 +113,7 @@ class AboutPage extends StatelessWidget {
                       onTap: () => launchUrl(websiteUri, mode: LaunchMode.externalApplication),
                     ),
                   ]),
-                  section('MÜZİK', [
+                  section(s.musicLabel, [
                     for (final (title, artist, source) in _musicCredits)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),
@@ -146,9 +141,7 @@ class AboutPage extends StatelessWidget {
                         ),
                       ),
                   ]),
-                  section('YAZI TİPİ VE SESLER', [
-                    Text('Inter yazı tipi (SIL Open Font License). Ses efektleri oyun için özel olarak üretilmiştir.', style: body()),
-                  ]),
+                  section(s.fontAndSoundsLabel, [Text(s.fontAndSounds, style: body())]),
                   const SizedBox(height: 22),
                   Center(
                     child: Text(

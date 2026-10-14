@@ -2,7 +2,9 @@ import 'dart:math';
 
 import 'package:flutter/animation.dart';
 
+import '../../core/scoring.dart';
 import '../../core/tetris_game.dart';
+import '../../l10n/strings.dart';
 import '../../theme/palette.dart';
 
 /// All effect coordinates are in board cells: x from the left edge of the
@@ -120,6 +122,9 @@ class EffectsEngine {
 
   /// "Ekran sarsıntısı" setting.
   bool shakeEnabled = true;
+
+  /// Language for the floating callouts.
+  AppStrings strings = AppStrings.tr;
 
   final List<Particle> particles = [];
   final List<Floater> floaters = [];
@@ -336,7 +341,7 @@ class EffectsEngine {
         final piece = game.active;
         floaters.add(
           Floater(5, piece == null ? 8 : (piece.y - TetrisGame.hiddenRows).clamp(3, 14).toDouble(), [
-            FloaterLine(tSpin == TSpin.mini ? 'MİNİ T-SPIN' : 'T-SPIN', 1.1, _violet, glow: const Color(0xFFA855F7)),
+            FloaterLine(tSpin == TSpin.mini ? strings.miniTSpin : strings.tSpin, 1.1, _violet, glow: const Color(0xFFA855F7)),
             FloaterLine('+$points', 0.8, _gold),
           ]),
         );
@@ -345,7 +350,7 @@ class EffectsEngine {
       case RowsCollapsed(:final rows):
         _collapse(rows);
       case LevelUp(:final level):
-        _levelUp(level);
+        _levelUp(level, speedingUp: game.mode == GameMode.classic && level <= speedCapLevel);
       case GameOver():
         gameOverAge = 0;
         shattered = false;
@@ -582,8 +587,8 @@ class EffectsEngine {
     scorePulse = 1;
 
     final lines = <FloaterLine>[];
-    if (e.perfectClear) lines.add(FloaterLine('MÜKEMMEL!', 1.6, _perfect, glow: const Color(0xFFFDE047)));
-    final label = clearLabel(n, e.tSpin);
+    if (e.perfectClear) lines.add(FloaterLine(strings.perfectClear, 1.6, _perfect, glow: const Color(0xFFFDE047)));
+    final label = strings.clearLabel(n, e.tSpin);
     final (size, colors, glow) = switch ((n, e.tSpin)) {
       (_, TSpin.full || TSpin.mini) => (1.45, _violet, const Color(0xFFA855F7)),
       (4, _) => (2.0, _rainbow, const Color(0xFF22D3EE)),
@@ -593,23 +598,14 @@ class EffectsEngine {
     };
     lines.add(FloaterLine(label, size, colors, glow: glow));
     lines.add(FloaterLine('+${e.points}', 0.85, _gold, glow: const Color(0xFFF59E0B)));
-    if (e.backToBack) lines.add(FloaterLine('B2B', 0.6, _b2b, glow: const Color(0xFFF97316)));
-    if (e.combo >= 1) lines.add(FloaterLine('KOMBO ×${e.combo}', 0.6, _combo, glow: const Color(0xFF6366F1)));
+    if (e.backToBack) lines.add(FloaterLine(strings.backToBack, 0.6, _b2b, glow: const Color(0xFFF97316)));
+    if (e.combo >= 1) lines.add(FloaterLine(strings.combo(e.combo), 0.6, _combo, glow: const Color(0xFF6366F1)));
     floaters.add(Floater(5, (topRow - 3.2).clamp(3.5, 12.0), lines, duration: big ? 1.8 : 1.35));
   }
 
   /// When a cell of a clearing row vanishes, as a fraction of the clear delay.
   /// The clear sweeps outward from the centre columns.
   static double cellVanishTime(int x) => 0.18 + 0.62 * ((x + 0.5 - 5).abs() / 5);
-
-  static String clearLabel(int lines, TSpin tSpin) {
-    const names = ['', 'TEK', 'ÇİFT', 'ÜÇLÜ', 'DÖRTLÜ'];
-    return switch (tSpin) {
-      TSpin.full => lines == 0 ? 'T-SPIN' : 'T-SPIN ${names[lines]}!',
-      TSpin.mini => lines == 0 ? 'MİNİ T-SPIN' : 'MİNİ T-SPIN ${names[lines]}',
-      TSpin.none => lines == 1 ? 'TEK' : '${names[lines]}!',
-    };
-  }
 
   void _confetti(double y, int count) {
     for (var i = 0; i < count; i++) {
@@ -650,7 +646,7 @@ class EffectsEngine {
     collapseAge = 0;
   }
 
-  void _levelUp(int level) {
+  void _levelUp(int level, {required bool speedingUp}) {
     levelWaveAge = 0;
     levelPulse = 1;
     pulseColor = const Color(0xFF6366F1);
@@ -658,8 +654,12 @@ class EffectsEngine {
     addTrauma(0.25);
     floaters.add(
       Floater(5, 6.5, [
-        FloaterLine('SEVİYE $level', 1.5, const [Color(0xFFFFFFFF), Color(0xFF38BDF8), Color(0xFF6366F1)], glow: const Color(0xFF6366F1)),
-        FloaterLine('HIZLANIYOR', 0.55, const [Color(0xFFE0F2FE), Color(0xFF7DD3FC)]),
+        FloaterLine(strings.levelUp(level), 1.5, const [
+          Color(0xFFFFFFFF),
+          Color(0xFF38BDF8),
+          Color(0xFF6366F1),
+        ], glow: const Color(0xFF6366F1)),
+        FloaterLine(speedingUp ? strings.speedingUp : strings.keepGoing, 0.55, const [Color(0xFFE0F2FE), Color(0xFF7DD3FC)]),
       ], duration: 1.8),
     );
     for (var i = 0; i < 60; i++) {

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../l10n/strings.dart';
+
 /// User preferences plus the best score, persisted with shared_preferences.
 class Settings extends ChangeNotifier {
   Settings._(this._prefs);
@@ -8,6 +10,7 @@ class Settings extends ChangeNotifier {
   final SharedPreferences? _prefs;
 
   ThemeMode _themeMode = ThemeMode.dark;
+  AppLanguage _language = AppLanguage.system;
   bool _music = true;
   double _musicVolume = 0.6;
   bool _sfx = true;
@@ -26,6 +29,7 @@ class Settings extends ChangeNotifier {
     final s = Settings._(prefs);
     if (prefs != null) {
       s._themeMode = ThemeMode.values[(prefs.getInt('themeMode') ?? ThemeMode.dark.index).clamp(0, 2)];
+      s._language = AppLanguage.values[(prefs.getInt('language') ?? 0).clamp(0, AppLanguage.values.length - 1)];
       s._music = prefs.getBool('music') ?? true;
       s._musicVolume = prefs.getDouble('musicVolume') ?? 0.6;
       s._sfx = prefs.getBool('sfx') ?? true;
@@ -41,6 +45,7 @@ class Settings extends ChangeNotifier {
   factory Settings.memory() => Settings._(null);
 
   ThemeMode get themeMode => _themeMode;
+  AppLanguage get language => _language;
   bool get music => _music;
   double get musicVolume => _musicVolume;
   bool get sfx => _sfx;
@@ -50,6 +55,7 @@ class Settings extends ChangeNotifier {
   int get bestScore => _bestScore;
 
   set themeMode(ThemeMode v) => _set(() => _themeMode = v, () => _prefs?.setInt('themeMode', v.index));
+  set language(AppLanguage v) => _set(() => _language = v, () => _prefs?.setInt('language', v.index));
   set music(bool v) => _set(() => _music = v, () => _prefs?.setBool('music', v));
   set musicVolume(double v) => _set(() => _musicVolume = v, () => _prefs?.setDouble('musicVolume', v));
   set sfx(bool v) => _set(() => _sfx = v, () => _prefs?.setBool('sfx', v));

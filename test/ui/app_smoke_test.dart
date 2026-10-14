@@ -3,14 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifeos_kupler/app.dart';
 import 'package:lifeos_kupler/audio/audio_service.dart';
+import 'package:lifeos_kupler/l10n/strings.dart';
 import 'package:lifeos_kupler/settings/settings.dart';
 
 void main() {
-  Future<void> pumpApp(WidgetTester tester, Size size) async {
+  Future<void> pumpApp(WidgetTester tester, Size size, {AppLanguage language = AppLanguage.tr}) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(KuplerApp(settings: Settings.memory(), audio: AudioService(enabled: false)));
+    await tester.pumpWidget(KuplerApp(settings: Settings.memory()..language = language, audio: AudioService(enabled: false)));
     await tester.pump(const Duration(milliseconds: 100));
   }
 
@@ -48,5 +49,16 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Erkan ÖZ'), findsOneWidget);
     expect(find.text('lifeos.com.tr'), findsOneWidget);
+  });
+
+  testWidgets('English UI and switching language from the menu', (tester) async {
+    await pumpApp(tester, const Size(390, 844), language: AppLanguage.en);
+    expect(find.text('Classic'), findsOneWidget);
+    expect(find.text('About'), findsOneWidget);
+
+    await tester.tap(find.text('Türkçe'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Klasik'), findsOneWidget);
+    expect(find.text('Hakkında'), findsOneWidget);
   });
 }

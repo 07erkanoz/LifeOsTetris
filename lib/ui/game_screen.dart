@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import '../audio/audio_service.dart';
 import '../core/tetris_game.dart';
 import '../game/game_controller.dart';
+import '../game/motivation.dart';
+import '../l10n/strings.dart';
 import '../game/render/background_painter.dart';
 import '../game/render/block_sprites.dart';
 import '../game/render/board_painter.dart';
@@ -15,16 +17,6 @@ import '../theme/palette.dart';
 import 'about_page.dart';
 import 'board_view.dart';
 import 'widgets.dart';
-
-String formatScore(int value) {
-  final digits = value.toString();
-  final out = StringBuffer();
-  for (var i = 0; i < digits.length; i++) {
-    if (i > 0 && (digits.length - i) % 3 == 0) out.write('.');
-    out.write(digits[i]);
-  }
-  return out.toString();
-}
 
 String formatTime(double seconds) {
   final s = seconds.floor();
@@ -127,6 +119,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     final palette = GamePalette.of(context);
     final dpr = MediaQuery.devicePixelRatioOf(context);
+    controller.strings = AppStrings.of(context);
     return Scaffold(
       backgroundColor: palette.background.first,
       body: Focus(
@@ -199,7 +192,7 @@ class _HoldCard extends StatelessWidget {
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const CardLabel('TUT'),
+        CardLabel(AppStrings.of(context).hold),
         const SizedBox(height: 4),
         PieceView(type: c.game.held, cell: cell, size: size, dimmed: !c.game.canHold, pop: c.fx.holdPulse),
       ],
@@ -223,7 +216,7 @@ class _NextCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CardLabel('SIRADAKİ'),
+          CardLabel(AppStrings.of(context).next),
           const SizedBox(height: 4),
           for (var i = 0; i < count; i++)
             Opacity(
@@ -279,7 +272,7 @@ class _ScoreText extends StatelessWidget {
       fit: BoxFit.scaleDown,
       alignment: Alignment.centerLeft,
       child: Text(
-        formatScore(c.game.score),
+        AppStrings.of(context).score(c.game.score),
         style: TextStyle(
           fontSize: size,
           height: 1.05,
@@ -303,8 +296,14 @@ class _BoardArea extends StatelessWidget {
     builder: (context, box) {
       final cell = BoardGeometry.fit(Size(box.maxWidth - 2 * padding, box.maxHeight - 2 * padding));
       if (cell <= 4) return const SizedBox.shrink();
-      return Center(
-        child: BoardView(controller: c, cell: cell),
+      return Stack(
+        alignment: Alignment.topCenter,
+        children: [
+          Center(
+            child: BoardView(controller: c, cell: cell),
+          ),
+          Positioned(top: 4, left: 8, right: 8, child: _MotivationBanner(c: c)),
+        ],
       );
     },
   );
@@ -321,6 +320,7 @@ class _PhoneLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = c.settings;
     final brightness = Theme.of(context).brightness;
+    final s = AppStrings.of(context);
     return Column(
       children: [
         Padding(
@@ -333,17 +333,17 @@ class _PhoneLayout extends StatelessWidget {
               const SizedBox(width: 8),
               GlassIconButton(
                 icon: brightness == Brightness.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                tooltip: 'Tema',
+                tooltip: s.theme,
                 onTap: () => settings.toggleTheme(brightness),
               ),
               const SizedBox(width: 8),
               GlassIconButton(
                 icon: settings.music ? Icons.music_note_rounded : Icons.music_off_rounded,
-                tooltip: 'Müzik',
+                tooltip: s.music,
                 onTap: () => settings.music = !settings.music,
               ),
               const SizedBox(width: 8),
-              GlassIconButton(icon: Icons.pause_rounded, tooltip: 'Duraklat', onTap: c.togglePause),
+              GlassIconButton(icon: Icons.pause_rounded, tooltip: s.pause, onTap: c.togglePause),
             ],
           ),
         ),
@@ -367,12 +367,16 @@ class _PhoneLayout extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const CardLabel('SKOR'),
+                        CardLabel(s.scoreLabel),
                         _ScoreText(c: c, size: 26),
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Row(
-                            children: [_Stat('SEVİYE', '${c.game.level}'), const SizedBox(width: 14), _Stat('SATIR', '${c.game.lines}')],
+                            children: [
+                              _Stat(s.levelLabel, '${c.game.level}'),
+                              const SizedBox(width: 14),
+                              _Stat(s.linesLabel, '${c.game.lines}'),
+                            ],
                           ),
                         ),
                       ],
@@ -425,6 +429,7 @@ class _DesktopLayout extends StatelessWidget {
     final side = (width * 0.2).clamp(210.0, 280.0);
     final game = c.game;
     final settings = c.settings;
+    final s = AppStrings.of(context);
 
     TextStyle k() => TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: p.muted);
     Widget stat(String label, String value, {bool accent = false}) => Padding(
@@ -480,15 +485,15 @@ class _DesktopLayout extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const CardLabel('SKOR'),
+                        CardLabel(s.scoreLabel),
                         const SizedBox(height: 4),
                         _ScoreText(c: c, size: 38),
                         const SizedBox(height: 8),
-                        stat('Seviye', '${game.level}'),
-                        stat('Satır', '${game.lines}'),
-                        stat('Süre', formatTime(c.playTime)),
-                        stat('En iyi', formatScore(settings.bestScore), accent: true),
-                        stat('Mod', c.mode == GameMode.classic ? 'Klasik' : 'Rahat'),
+                        stat(s.level, '${game.level}'),
+                        stat(s.lines, '${game.lines}'),
+                        stat(s.time, formatTime(c.playTime)),
+                        stat(s.best, s.score(settings.bestScore), accent: true),
+                        stat(s.mode, c.mode == GameMode.classic ? s.classic : s.relaxed),
                       ],
                     ),
                   ),
@@ -510,15 +515,15 @@ class _DesktopLayout extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const CardLabel('KONTROLLER'),
+                        CardLabel(s.controlsLabel),
                         const SizedBox(height: 10),
-                        key(['←', '→'], 'Sağa / sola'),
-                        key(['↑', 'X'], 'Döndür'),
-                        key(['Z'], 'Ters döndür'),
-                        key(['↓'], 'Yumuşak düşüş'),
-                        key(['Space'], 'Sert düşüş'),
-                        key(['C'], 'Tut'),
-                        key(['P', 'Esc'], 'Duraklat'),
+                        key(['←', '→'], s.moveLeftRight),
+                        key(['↑', 'X'], s.rotate),
+                        key(['Z'], s.rotateBack),
+                        key(['↓'], s.softDrop),
+                        key(['Space'], s.hardDrop),
+                        key(['C'], s.holdAction),
+                        key(['P', 'Esc'], s.pause),
                       ],
                     ),
                   ),
@@ -572,17 +577,25 @@ class _SettingsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
+    final s = AppStrings.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const CardLabel('AYARLAR'),
+        CardLabel(s.settingsLabel),
         const SizedBox(height: 10),
-        ThemeSegment(isDark: isDark, onChanged: (dark) => settings.themeMode = dark ? ThemeMode.dark : ThemeMode.light),
+        ThemeSegment(
+          isDark: isDark,
+          lightLabel: s.light,
+          darkLabel: s.dark,
+          onChanged: (dark) => settings.themeMode = dark ? ThemeMode.dark : ThemeMode.light,
+        ),
+        const SizedBox(height: 8),
+        LanguageSegment(isTurkish: s.isTurkish, onChanged: (tr) => settings.language = tr ? AppLanguage.tr : AppLanguage.en),
         const SizedBox(height: 6),
         ToggleRow(
-          label: 'Müzik',
+          label: s.music,
           icon: compact ? null : Icons.music_note_rounded,
           value: settings.music,
           onChanged: (v) => settings.music = v,
@@ -598,25 +611,25 @@ class _SettingsPanel extends StatelessWidget {
           child: Slider(value: settings.musicVolume, onChanged: settings.music ? (v) => settings.musicVolume = v : null),
         ),
         ToggleRow(
-          label: 'Efekt sesleri',
+          label: s.soundEffects,
           icon: compact ? null : Icons.volume_up_rounded,
           value: settings.sfx,
           onChanged: (v) => settings.sfx = v,
         ),
         ToggleRow(
-          label: 'Görsel efektler',
+          label: s.visualEffects,
           icon: compact ? null : Icons.auto_awesome_rounded,
           value: settings.effects,
           onChanged: (v) => settings.effects = v,
         ),
         ToggleRow(
-          label: 'Ekran sarsıntısı',
+          label: s.screenShake,
           icon: compact ? null : Icons.vibration_rounded,
           value: settings.shake,
           onChanged: (v) => settings.shake = v,
         ),
         ToggleRow(
-          label: 'Titreşim',
+          label: s.vibration,
           icon: compact ? null : Icons.smartphone_rounded,
           value: settings.vibration,
           onChanged: (v) => settings.vibration = v,
@@ -672,6 +685,7 @@ class _StartOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
+    final s = AppStrings.of(context);
     final touch = Theme.of(context).platform == TargetPlatform.android || Theme.of(context).platform == TargetPlatform.iOS;
     return _OverlayShell(
       children: [
@@ -680,7 +694,7 @@ class _StartOverlay extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Blokları diz, satırları patlat!',
+          s.tagline,
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 14, color: p.muted, fontWeight: FontWeight.w600),
         ),
@@ -692,43 +706,43 @@ class _StartOverlay extends StatelessWidget {
               Icon(Icons.emoji_events_rounded, color: const Color(0xFFFACC15), size: 20),
               const SizedBox(width: 6),
               Text(
-                'En iyi: ',
+                s.bestPrefix,
                 style: TextStyle(color: p.muted, fontWeight: FontWeight.w600),
               ),
-              GradientText(formatScore(c.settings.bestScore), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+              GradientText(s.score(c.settings.bestScore), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
             ],
           ),
           const SizedBox(height: 18),
         ],
         GradientButton(
           key: const ValueKey('start-classic'),
-          label: 'Klasik',
-          subtitle: 'Hız 10. seviyeye kadar yavaşça artar',
+          label: s.classic,
+          subtitle: s.classicSubtitle,
           icon: Icons.bolt_rounded,
           onTap: () => c.start(GameMode.classic),
         ),
         const SizedBox(height: 12),
         GradientButton(
-          label: 'Rahat',
-          subtitle: 'Sabit ve sakin hız, sonsuz oyun',
+          label: s.relaxed,
+          subtitle: s.relaxedSubtitle,
           icon: Icons.spa_rounded,
           secondary: true,
           onTap: () => c.start(GameMode.relaxed),
         ),
         const SizedBox(height: 18),
         Text(
-          touch
-              ? 'Dokun: döndür · Kaydır: taşı · Aşağı fırlat: düşür · Yukarı fırlat: tut'
-              : '← → taşı · ↑ döndür · Space düşür · C tut · P duraklat',
+          touch ? s.touchHint : s.keyboardHint,
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 12, color: p.label, fontWeight: FontWeight.w600, height: 1.5),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 14),
+        LanguageSegment(isTurkish: s.isTurkish, onChanged: (tr) => c.settings.language = tr ? AppLanguage.tr : AppLanguage.en),
+        const SizedBox(height: 4),
         TextButton.icon(
           onPressed: () => AboutPage.open(context),
           icon: Icon(Icons.info_outline_rounded, size: 16, color: p.muted),
           label: Text(
-            'Hakkında',
+            s.about,
             style: TextStyle(color: p.muted, fontSize: 13, fontWeight: FontWeight.w600),
           ),
         ),
@@ -745,24 +759,25 @@ class _PauseOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
+    final s = AppStrings.of(context);
     return _OverlayShell(
       children: [
         Text(
-          'Duraklatıldı',
+          s.paused,
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: p.text),
         ),
         const SizedBox(height: 18),
-        GradientButton(label: 'Devam et', icon: Icons.play_arrow_rounded, onTap: c.togglePause),
+        GradientButton(label: s.resume, icon: Icons.play_arrow_rounded, onTap: c.togglePause),
         const SizedBox(height: 10),
         Row(
           children: [
             Expanded(
-              child: GradientButton(label: 'Baştan', icon: Icons.replay_rounded, secondary: true, onTap: () => c.start()),
+              child: GradientButton(label: s.restart, icon: Icons.replay_rounded, secondary: true, onTap: () => c.start()),
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: GradientButton(label: 'Menü', icon: Icons.home_rounded, secondary: true, onTap: c.toMenu),
+              child: GradientButton(label: s.menu, icon: Icons.home_rounded, secondary: true, onTap: c.toMenu),
             ),
           ],
         ),
@@ -773,7 +788,7 @@ class _PauseOverlay extends StatelessWidget {
           onPressed: () => AboutPage.open(context),
           icon: Icon(Icons.info_outline_rounded, size: 16, color: p.muted),
           label: Text(
-            'Hakkında',
+            s.about,
             style: TextStyle(color: p.muted, fontSize: 13, fontWeight: FontWeight.w600),
           ),
         ),
@@ -790,6 +805,7 @@ class _GameOverOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
+    final s = AppStrings.of(context);
     final game = c.game;
     Widget stat(String label, String value) => Expanded(
       child: Column(
@@ -806,36 +822,126 @@ class _GameOverOverlay extends StatelessWidget {
     return _OverlayShell(
       children: [
         Text(
-          'Oyun Bitti',
+          s.gameOver,
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: p.text),
         ),
         const SizedBox(height: 10),
         if (c.newRecord)
-          const Center(
+          Center(
             child: GradientText(
-              '★ YENİ REKOR! ★',
-              gradient: LinearGradient(colors: [Color(0xFFFDE047), Color(0xFFF97316)]),
+              s.newRecord,
+              gradient: const LinearGradient(colors: [Color(0xFFFDE047), Color(0xFFF97316)]),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 1.5),
             ),
           ),
         const SizedBox(height: 6),
         Center(
-          child: GradientText(formatScore(game.score), style: const TextStyle(fontSize: 46, fontWeight: FontWeight.w900)),
+          child: GradientText(s.score(game.score), style: const TextStyle(fontSize: 46, fontWeight: FontWeight.w900)),
         ),
         const SizedBox(height: 14),
-        Row(children: [stat('SEVİYE', '${game.level}'), stat('SATIR', '${game.lines}'), stat('SÜRE', formatTime(c.playTime))]),
+        Row(
+          children: [stat(s.levelLabel, '${game.level}'), stat(s.linesLabel, '${game.lines}'), stat(s.timeLabel, formatTime(c.playTime))],
+        ),
         const SizedBox(height: 10),
         Text(
-          'En iyi: ${formatScore(c.settings.bestScore)}',
+          '${s.bestPrefix}${s.score(c.settings.bestScore)}',
           textAlign: TextAlign.center,
           style: TextStyle(color: p.muted, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 20),
-        GradientButton(label: 'Tekrar oyna', icon: Icons.replay_rounded, onTap: () => c.start()),
+        GradientButton(label: s.playAgain, icon: Icons.replay_rounded, onTap: () => c.start()),
         const SizedBox(height: 10),
-        GradientButton(label: 'Ana menü', icon: Icons.home_rounded, secondary: true, onTap: c.toMenu),
+        GradientButton(label: s.mainMenu, icon: Icons.home_rounded, secondary: true, onTap: c.toMenu),
       ],
+    );
+  }
+}
+
+/// Slides in from the top of the board with a short cheer.
+class _MotivationBanner extends StatelessWidget {
+  const _MotivationBanner({required this.c});
+
+  final GameController c;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = c.motivation.visible ? c.motivation.current : null;
+    return IgnorePointer(
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 320),
+        switchInCurve: Curves.easeOutBack,
+        switchOutCurve: Curves.easeIn,
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween(begin: const Offset(0, -0.8), end: Offset.zero).animate(animation),
+            child: ScaleTransition(scale: Tween(begin: 0.85, end: 1.0).animate(animation), child: child),
+          ),
+        ),
+        child: m == null ? const SizedBox.shrink(key: ValueKey(0)) : _BannerPill(key: ValueKey(m.id), motivation: m),
+      ),
+    );
+  }
+}
+
+class _BannerPill extends StatelessWidget {
+  const _BannerPill({super.key, required this.motivation});
+
+  final Motivation motivation;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = GamePalette.of(context);
+    final s = AppStrings.of(context);
+    final (IconData icon, List<Color> colors) = switch (motivation.kind) {
+      MotivationKind.newBest || MotivationKind.scoreMilestone => (Icons.emoji_events_rounded, const [Color(0xFFFDE047), Color(0xFFF97316)]),
+      MotivationKind.combo ||
+      MotivationKind.backToBack => (Icons.local_fire_department_rounded, const [Color(0xFFF97316), Color(0xFFEF4444)]),
+      MotivationKind.maxSpeed || MotivationKind.firstQuad => (Icons.bolt_rounded, const [Color(0xFFA855F7), Color(0xFF6366F1)]),
+      MotivationKind.closeCall => (Icons.favorite_rounded, const [Color(0xFF22C55E), Color(0xFF14B8A6)]),
+      MotivationKind.linesMilestone => (Icons.layers_rounded, const [Color(0xFF22D3EE), Color(0xFF3B82F6)]),
+      MotivationKind.praise => (Icons.star_rounded, [p.accent1, p.accent2]),
+    };
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(1.6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(40),
+          gradient: LinearGradient(colors: colors),
+          boxShadow: [BoxShadow(color: colors.first.withValues(alpha: 0.45), blurRadius: 22, offset: const Offset(0, 6))],
+        ),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(6, 6, 18, 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(40),
+            color: p.isDark ? const Color(0xF0111630) : const Color(0xF7FFFFFF),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(colors: colors),
+                ),
+                child: Icon(icon, size: 18, color: Colors.white),
+              ),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  motivation.text(s),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: p.text),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

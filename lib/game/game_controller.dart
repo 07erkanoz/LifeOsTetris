@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import '../audio/audio_service.dart';
 import '../core/tetris_game.dart';
 import '../settings/settings.dart';
+import '../l10n/strings.dart';
 import 'fx/effects.dart';
+import 'motivation.dart';
 
 /// Glue between the pure game, input, effects, audio and haptics.
 ///
@@ -21,6 +23,15 @@ class GameController extends ChangeNotifier {
   final TetrisGame game = TetrisGame();
   final EffectsEngine fx = EffectsEngine();
   final ValueNotifier<int> frame = ValueNotifier(0);
+  final MotivationEngine motivation = MotivationEngine();
+  int _lastMotivationId = 0;
+
+  AppStrings _strings = AppStrings.tr;
+  AppStrings get strings => _strings;
+  set strings(AppStrings value) {
+    _strings = value;
+    fx.strings = value;
+  }
 
   GameMode mode = GameMode.classic;
   bool newRecord = false;
@@ -51,6 +62,7 @@ class GameController extends ChangeNotifier {
   void start([GameMode? mode]) {
     if (mode != null) this.mode = mode;
     fx.reset();
+    motivation.reset(bestScore: settings.bestScore);
     newRecord = false;
     playTime = 0;
     _leftHeld = _rightHeld = false;
@@ -96,6 +108,7 @@ class GameController extends ChangeNotifier {
   void toMenu() {
     game.abandon();
     fx.reset();
+    motivation.reset(bestScore: settings.bestScore);
     audio.duck = 1;
     _releaseAll();
     notifyListeners();
@@ -119,6 +132,12 @@ class GameController extends ChangeNotifier {
       game.update(dt);
     }
     _process(game.drainEvents());
+    if (game.isRunning) motivation.update(dt, game);
+    final shown = motivation.current;
+    if (shown != null && shown.id != _lastMotivationId) {
+      _lastMotivationId = shown.id;
+      audio.play(Sfx.combo4, volume: 0.35);
+    }
     fx.update(game.paused ? 0 : dt, game);
     frame.value++;
     _notifyHudIfChanged();
@@ -134,6 +153,7 @@ class GameController extends ChangeNotifier {
       game.preview.first,
       game.status,
       game.paused,
+      motivation.current?.id,
       playTime.floor(),
       showGameOver,
       (fx.holdPulse * 10).round(),
@@ -149,6 +169,7 @@ class GameController extends ChangeNotifier {
   void _process(List<GameEvent> events) {
     for (final e in events) {
       fx.handle(e, game);
+      motivation.onEvent(e, game);
       _sound(e);
       _haptic(e);
       if (e is GameOver) {

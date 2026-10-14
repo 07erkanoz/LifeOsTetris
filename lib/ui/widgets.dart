@@ -423,50 +423,88 @@ class ToggleRow extends StatelessWidget {
   }
 }
 
-/// "Açık / Koyu" segmented theme picker.
-class ThemeSegment extends StatelessWidget {
-  const ThemeSegment({super.key, required this.isDark, required this.onChanged});
+/// Two-option segmented control used for theme and language.
+class SegmentedPicker extends StatelessWidget {
+  const SegmentedPicker({super.key, required this.options, required this.selected, required this.onChanged});
 
-  final bool isDark;
-  final ValueChanged<bool> onChanged;
+  final List<(String label, Widget? leading)> options;
+  final int selected;
+  final ValueChanged<int> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
-    Widget seg(String label, IconData icon, bool selected, bool dark) => Expanded(
-      child: GestureDetector(
-        onTap: () => onChanged(dark),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(9),
-            gradient: selected ? LinearGradient(colors: [p.accent1, p.accent2]) : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 16, color: selected ? Colors.white : p.muted),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: selected ? Colors.white : p.muted),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(color: p.track, borderRadius: BorderRadius.circular(12)),
       child: Row(
         children: [
-          seg('Açık', Icons.light_mode_rounded, !isDark, false),
-          const SizedBox(width: 3),
-          seg('Koyu', Icons.dark_mode_rounded, isDark, true),
+          for (var i = 0; i < options.length; i++) ...[
+            if (i > 0) const SizedBox(width: 3),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => onChanged(i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(9),
+                    gradient: i == selected ? LinearGradient(colors: [p.accent1, p.accent2]) : null,
+                  ),
+                  child: IconTheme(
+                    data: IconThemeData(size: 16, color: i == selected ? Colors.white : p.muted),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (options[i].$2 != null) ...[options[i].$2!, const SizedBox(width: 6)],
+                        Flexible(
+                          child: Text(
+                            options[i].$1,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: i == selected ? Colors.white : p.muted),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
+}
+
+class ThemeSegment extends StatelessWidget {
+  const ThemeSegment({super.key, required this.isDark, required this.onChanged, this.lightLabel = 'Açık', this.darkLabel = 'Koyu'});
+
+  final bool isDark;
+  final ValueChanged<bool> onChanged;
+  final String lightLabel;
+  final String darkLabel;
+
+  @override
+  Widget build(BuildContext context) => SegmentedPicker(
+    options: [(lightLabel, const Icon(Icons.light_mode_rounded)), (darkLabel, const Icon(Icons.dark_mode_rounded))],
+    selected: isDark ? 1 : 0,
+    onChanged: (i) => onChanged(i == 1),
+  );
+}
+
+/// "Türkçe / English" picker. Language names stay in their own language.
+class LanguageSegment extends StatelessWidget {
+  const LanguageSegment({super.key, required this.isTurkish, required this.onChanged});
+
+  final bool isTurkish;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) => SegmentedPicker(
+    options: const [('Türkçe', Icon(Icons.translate_rounded)), ('English', Icon(Icons.language_rounded))],
+    selected: isTurkish ? 0 : 1,
+    onChanged: (i) => onChanged(i == 0),
+  );
 }

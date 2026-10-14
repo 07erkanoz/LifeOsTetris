@@ -15,6 +15,10 @@ Geliştirici: **Erkan ÖZ** · [lifeos.com.tr](https://lifeos.com.tr)
   dalgaları, satır çökme animasyonu, seviye atlama dalgası, oyun sonu dağılması,
   "ÇİFT! / DÖRTLÜ! / KOMBO ×2" yazıları ve hareketli arka plan.
 - **Ses:** oyuna özel üretilmiş efekt sesleri ve rastgele sırayla çalan 4 müzik.
+- **Motivasyon yazıları:** puan ve satır hedefleri, rekor kırma, ilk dörtlü, kombo
+  serileri, kıl payı kurtuluşlar ve ara sıra övgüler tahtanın üstünde belirir.
+- **Dil:** Türkçe ve İngilizce (ilk açılışta cihaz diline göre seçilir, menüden ve
+  ayarlardan değiştirilebilir).
 - Tutma, hayalet parça, 7'li torba, SRS döndürme, T-spin, kombo, B2B, mükemmel
   temizlik.
 
@@ -50,6 +54,7 @@ lib/core/      Saf oyun mantığı (Flutter'dan bağımsız, testli)
 lib/game/      Kontrolcü, efekt motoru, çizim (blok sprite'ları, tahta, arka plan)
 lib/audio/     Efekt sesleri ve karışık çalan müzik listesi
 lib/ui/        Ekranlar ve bileşenler (oyun, menüler, Hakkında)
+lib/l10n/      Türkçe / İngilizce metinler
 lib/theme/     Koyu / açık renk paleti
 assets/        Yazı tipi (Inter, OFL), sesler, müzikler (bkz. assets/audio/music/CREDITS.md)
 ```
