@@ -215,7 +215,7 @@ class _GlyphPainter extends CustomPainter {
 /// Paints a 2.5D "jelly keycap" in [rect]: a darker base for depth, a
 /// glossy top face, a soft rim and highlight, matching the game's blocks.
 /// When [pressed] the top face sinks onto its base.
-void paintKeycap(Canvas canvas, Rect rect, Color color, {required bool pressed, required bool dark, double glow = 0}) {
+void paintKeycap(Canvas canvas, Rect rect, Color color, {required bool pressed, required bool dark, double glow = 0, double alpha = 1}) {
   final depth = rect.height * 0.09;
   final radius = Radius.circular(min(rect.width, rect.height) * 0.32);
   final sink = pressed ? depth * 0.75 : 0.0;
@@ -236,14 +236,18 @@ void paintKeycap(Canvas canvas, Rect rect, Color color, {required bool pressed, 
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, rect.height * 0.25),
     );
   }
-  canvas.drawRRect(base, Paint()..color = Color.lerp(color, Colors.black, dark ? 0.5 : 0.28)!);
+  canvas.drawRRect(base, Paint()..color = Color.lerp(color, Colors.black, dark ? 0.5 : 0.28)!.withValues(alpha: alpha));
   canvas.drawRRect(
     face,
     Paint()
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: [lighten(color, 0.28), color, Color.lerp(color, Colors.black, 0.12)!],
+        colors: [
+          lighten(color, 0.28).withValues(alpha: alpha),
+          color.withValues(alpha: alpha),
+          Color.lerp(color, Colors.black, 0.12)!.withValues(alpha: alpha),
+        ],
         stops: const [0, 0.55, 1],
       ).createShader(face.outerRect),
   );
@@ -253,7 +257,7 @@ void paintKeycap(Canvas canvas, Rect rect, Color color, {required bool pressed, 
     Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = max(1, rect.height * 0.03)
-      ..color = Colors.white.withValues(alpha: dark ? 0.22 : 0.5),
+      ..color = Colors.white.withValues(alpha: (dark ? 0.22 : 0.5) + (1 - alpha) * 0.25),
   );
   final gloss = Rect.fromLTWH(face.left + face.width * 0.16, face.top + face.height * 0.08, face.width * 0.68, face.height * 0.32);
   canvas.drawRRect(
@@ -285,6 +289,7 @@ class _KeycapPainter extends CustomPainter {
     this.glyph,
     this.glyphColor = Colors.white,
     this.glyphScale = 0.42,
+    this.alpha = 1,
   });
 
   final Color color;
@@ -294,10 +299,13 @@ class _KeycapPainter extends CustomPainter {
   final Color glyphColor;
   final double glyphScale;
 
+  /// Body opacity: below 1 the key turns to tinted glass.
+  final double alpha;
+
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    paintKeycap(canvas, rect, color, pressed: pressed, dark: dark, glow: pressed ? 1 : 0);
+    paintKeycap(canvas, rect, color, pressed: pressed, dark: dark, glow: pressed ? 1 : 0, alpha: alpha);
     final glyph = this.glyph;
     if (glyph == null) return;
     final face = keycapFace(rect, pressed: pressed);
@@ -315,7 +323,12 @@ class _KeycapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _KeycapPainter old) =>
-      old.color != color || old.pressed != pressed || old.dark != dark || old.glyph != glyph || old.glyphColor != glyphColor;
+      old.color != color ||
+      old.pressed != pressed ||
+      old.dark != dark ||
+      old.glyph != glyph ||
+      old.glyphColor != glyphColor ||
+      old.alpha != alpha;
 }
 
 /// On-screen control drawn as a jelly keycap that sinks when pressed.
@@ -345,6 +358,9 @@ class ControlButton extends StatefulWidget {
   @override
   State<ControlButton> createState() => _ControlButtonState();
 }
+
+/// Body opacity of the secondary keys (1 = solid jelly, lower = glass).
+const double keycapGlass = int.fromEnvironment('KUPLER_KEY_ALPHA', defaultValue: 100) / 100;
 
 class _ControlButtonState extends State<ControlButton> {
   bool _pressed = false;
@@ -380,6 +396,7 @@ class _ControlButtonState extends State<ControlButton> {
           glyph: widget.glyph,
           glyphColor: glyphColor,
           glyphScale: primary ? 0.46 : 0.42,
+          alpha: primary ? max(0.85, keycapGlass) : keycapGlass,
         ),
       );
     } else {
@@ -387,7 +404,7 @@ class _ControlButtonState extends State<ControlButton> {
       body = SizedBox(
         height: s,
         child: CustomPaint(
-          painter: _KeycapPainter(color: color, pressed: _pressed, dark: p.isDark),
+          painter: _KeycapPainter(color: color, pressed: _pressed, dark: p.isDark, alpha: keycapGlass),
           child: Padding(
             padding: EdgeInsets.fromLTRB(s * 0.32, face.top, s * 0.4, s - face.bottom),
             child: Row(
