@@ -9,6 +9,12 @@ on:
 permissions:
   contents: write
 
+# A newer push supersedes an older build, so an old APK can never overwrite
+# the test release after a newer one.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   FLUTTER_VERSION: '3.47.7'
 
