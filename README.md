@@ -5,7 +5,7 @@
 <h1 align="center">LifeOS Küpler</h1>
 
 <p align="center">
-  Düşen blokları dizip satırları patlattığın, bol efektli 2.5D blok bulmaca oyunu.<br>
+  Düşen blokları dizip satırları patlattığın, sürükle-bırak bulmacalarla dolu, bol efektli 2.5D blok oyunu.<br>
   Android · iOS · Windows · Linux · macOS · Web
 </p>
 
@@ -22,6 +22,7 @@
 | Android (modern telefonlar, küçük) | [LifeOS-Kupler-arm64.apk](https://github.com/07erkanoz/LifeOsTetris/releases/download/test-build/LifeOS-Kupler-arm64.apk) |
 | Android (tüm telefonlar) | [LifeOS-Kupler.apk](https://github.com/07erkanoz/LifeOsTetris/releases/download/test-build/LifeOS-Kupler.apk) |
 | Windows | [LifeOS-Kupler-Windows.zip](https://github.com/07erkanoz/LifeOsTetris/releases/download/test-build/LifeOS-Kupler-Windows.zip) |
+| Linux (x64, Arch dahil) | [LifeOS-Kupler-Linux-x64.tar.gz](https://github.com/07erkanoz/LifeOsTetris/releases/download/test-build/LifeOS-Kupler-Linux-x64.tar.gz) |
 
 - **Android:** Linki telefonun tarayıcısında aç ve inen APK'yı kur. "Bilinmeyen kaynaklardan
   yükleme" izni istenebilir.
@@ -29,48 +30,60 @@
   uyarırsa *Ek bilgi → Yine de çalıştır* de.
   Zip şifreli değildir. Windows çıkartırken şifre sorarsa zip'e sağ tıkla,
   *Özellikler → Engellemeyi kaldır* kutusunu işaretle ve tekrar *Tümünü ayıkla* de
-  (ya da 7-Zip ile aç).
+  (ya da 7-Zip ile aç). Oyun tam ekran açılır; **F11** veya **Alt+Enter** pencereye geçirir.
+- **Arch Linux:** Depodaki [`packaging/arch/PKGBUILD`](packaging/arch/PKGBUILD) ile kur:
+  ```bash
+  git clone https://github.com/07erkanoz/LifeOsTetris && cd LifeOsTetris/packaging/arch
+  makepkg -si          # uygulama menüsünde "LifeOS Küpler" olarak görünür
+  ```
+- **Diğer Linux dağıtımları:** `tar.gz` dosyasını aç ve `LifeOS-Kupler/lifeos_kupler` dosyasını
+  çalıştır. Gerekenler: GTK 3 ve GStreamer (base + good eklentileri; yoksa oyun sessiz çalışır).
 
 Bunlar test derlemeleridir ve `main` dalına yapılan her gönderimde otomatik olarak
 yenilenir ([Releases → Test sürümü](https://github.com/07erkanoz/LifeOsTetris/releases/tag/test-build)).
 
 ## Ekran görüntüleri
 
-| Menü | Dörtlü silme | Süper Küpler: bomba |
+| Menü | Süper Küpler: dörtlü ve yeni güç | Süper Küpler: bomba |
 |:---:|:---:|:---:|
 | <img src="docs/images/menu.jpg" width="240"> | <img src="docs/images/dortlu.jpg" width="240"> | <img src="docs/images/super-bomba.jpg" width="240"> |
 
-| Hayalet Çizgi | Bulmaca Küpler | Bulmaca seçimi |
+| Bulmaca Küpler | Nişan alma | Patlama |
 |:---:|:---:|:---:|
-| <img src="docs/images/super-hayalet.jpg" width="240"> | <img src="docs/images/bulmaca.jpg" width="240"> | <img src="docs/images/bulmaca-secim.jpg" width="240"> |
+| <img src="docs/images/bulmaca-menu.jpg" width="240"> | <img src="docs/images/bulmaca.jpg" width="240"> | <img src="docs/images/bulmaca-patlama.jpg" width="240"> |
 
-<p align="center"><img src="docs/images/masaustu.jpg" width="720" alt="Masaüstü görünümü"></p>
+<p align="center"><img src="docs/images/masaustu.jpg" width="720" alt="Masaüstü: Süper Küpler"></p>
+<p align="center"><img src="docs/images/bulmaca-masaustu.jpg" width="720" alt="Masaüstü: Bulmaca Küpler"></p>
 
 ## Oyun modları
 
 ### ✨ Süper Küpler
-Satır sildikçe **enerji barı** dolar: 3 satır 1 güç verir, dörtlü silme barı anında doldurur.
-En fazla 3 güç birikir. Gücü kullanmak için yuvasına dokun ya da **1 · 2 · 3** tuşlarına bas.
+Satır sildikçe **enerji** dolar: her 3 satır 1 güç verir. 6 gücün hepsi her zaman ekranda,
+kaç tane olduğuyla birlikte görünür (her birinden en fazla 3). Güçler karışık sırayla gelir:
+altısı da gelmeden hiçbiri tekrar etmez. Kullanmak için gücün simgesine dokun ya da
+**1–6** tuşlarına bas.
 
 | Güç | Etkisi |
 |---|---|
 | 💣 Bomba | Düştüğü yerde 3×3 alanı patlatır (hedef alanı önceden gösterilir) |
 | ▪️ Tekli blok | Tek karelik parça; kapanmış delikleri doldurur |
 | 🔩 Matkap | Blokların içinden geçer, bütün sütunu yer |
-| 🧲 Yerçekimi | Havada kalan bloklar düşer, dolan satırlar silinir |
+| ⬇️ Yerçekimi | Havada kalan bloklar düşer, dolan satırlar silinir (düşecek blok yoksa kullanılamaz, boşa gitmez) |
 | ⏳ Ağır çekim | 10 saniye boyunca her şey yavaşlar |
 | 👻 Hayalet Çizgi | Yığının içinden süzülür; dokununca bulunduğu satırın boşluklarını doldurur |
 
 ### 🧩 Bulmaca Küpler
-10 bölümde **100 bulmaca**. Tahtada altın ★ bloklar var; sadece verilen parçalarla
-hepsini temizlemen gerekiyor. Parçalar kendiliğinden düşmez, istediğin kadar düşün.
+Sürükle-bırak blok bulmacası: 8×8 tahta, tepside 3 parça. Parçaları istediğin yere
+sürükle; dolan **satır ve sütunlar** birlikte patlar. Parçalar dönmez, düşmez.
 
-- Her seviye her açılışta **yeni, rastgele bir tahta** üretir. Zorluk (parça, satır ve ★
-  sayısı) seviye numarasına göre artar.
-- Üretilen her tahta, oyuncuya gösterilmeden önce oyun motorunda oynatılır ve
-  **çözülebilir olduğu doğrulanır**.
-- 2 parça artırırsan ★★★, 1 parça artırırsan ★★, hiç artırmazsan ★ alırsın.
-  Çözdükçe sıradaki bulmaca açılır.
+- **Seviyeler:** 10 bölümde **100 seviye**. Hamle sınırı içinde tahtadaki bütün altın ★
+  blokları patlat. Her açılışta **yeni, rastgele** bir tahta ve parça listesi üretilir; zorluk
+  (★ sayısı, tahtanın doluluğu, yedek hamle, zor parçalar) seviyeyle artar.
+- Her seviye, gösterilmeden önce bir çözücü tarafından oyun motorunda oynanır: **her seviye
+  çözülebilir**. Çözücünün hamle sayısı ★★★ hedefini belirler.
+- **Sonsuz:** Yer kalmayana kadar rekor için oyna. Tepsiye her zaman sığan bir parça gelir.
+- Nişan alırken patlayacak satır ve sütunlar parçanın rengiyle parlar. Arka arkaya
+  patlatmak kombo verir, tahtayı tamamen boşaltmak bonus verir.
 
 ### 🎮 Klasik Küpler
 - **Normal:** Hız 10. seviyeye kadar yavaşça artar, sonra sabit kalır.
@@ -89,8 +102,8 @@ Her modun rekoru ayrı tutulur.
   kıl payı kurtuluşlar ve ara sıra övgüler.
 - **Ses:** Oyuna özel üretilmiş efekt sesleri; rastgele sırayla çalan müzik listesi.
 - **Dil:** Türkçe ve İngilizce. İlk açılışta cihaz diline göre seçilir.
-- **Ayarlar:** Ekran butonlarını gizleme ve saydamlıklarını ayarlama, titreşim, ekran sarsıntısı,
-  görsel efektler, müzik ve efekt sesi.
+- **Ayarlar:** Ekran butonlarını gizleme ve saydamlıklarını ayarlama, titreşim ve gücü, ekran
+  sarsıntısı, görsel efektler, müzik ve efekt sesi, tam ekran (Windows). Hepsi kaydedilir.
 - **Oyun kuralları:** Tutma, hayalet parça, 7'li torba, SRS döndürme, T-spin, kombo, B2B,
   mükemmel temizlik.
 
@@ -105,13 +118,15 @@ Her modun rekoru ayrı tutulur.
 | Space | Aşağı fırlat / ⇊ butonu | Sert düşüş |
 | C | TUT kartına dokun / yukarı fırlat | Tut |
 | P, Esc | ⏸ | Duraklat |
-| 1 · 2 · 3 | Güç yuvasına dokun | Gücü kullan (Süper Küpler) |
+| 1–6 | Gücün simgesine dokun | Gücü kullan (Süper Küpler) |
+| Fare ile sürükle | Parmakla sürükle | Parça yerleştir (Bulmaca Küpler) |
+| F11, Alt+Enter | – | Tam ekran (Windows) |
 
 ## Geliştirme
 
 ```bash
 flutter pub get
-flutter test                 # oyun kuralları, güçler, 100 bulmaca, arayüz testleri
+flutter test                 # oyun kuralları, güçler, bulmaca üretici, arayüz testleri
 flutter run                  # bağlı cihaz veya masaüstü
 flutter build apk --release  # Android
 ```
@@ -122,21 +137,24 @@ flutter build apk --release  # Android
 | `dart run flutter_launcher_icons` | `assets/icon/` içindeki kaynaktan tüm platform ikonlarını üretir |
 | `python3 tool/make_windows_icon.py` | Windows ikonunu tüm boyutlarıyla üretir (Pillow gerekir) |
 | `--dart-define=KUPLER_DEMO=true` | Oyunu neredeyse dolu tahtayla başlatır (efekt demosu) |
-| `--dart-define=KUPLER_DEMO_SUPER=true` | Süper Küpler'i güç yuvaları dolu başlatır |
-| `--dart-define=KUPLER_DEMO_PUZZLE=<n>` | Enter'a basınca n. bulmacayı açar |
-| `--dart-define=KUPLER_DEMO_LEVELS=true` | Oyunu bulmaca seçim ekranında açar |
+| `--dart-define=KUPLER_DEMO_SUPER=true` | Süper Küpler'i birkaç güçle başlatır |
+| `--dart-define=KUPLER_DEMO_BLOCKS=true` | Doğrudan Bulmaca Küpler'i açar; Sonsuz mod hazır bir tahtayla başlar |
 
 ### Proje yapısı
 
 ```
-lib/core/      Saf oyun mantığı: kurallar, güçler, bulmaca üretici (Flutter'dan bağımsız)
-lib/game/      Kontrolcü, efekt motoru, motivasyon, çizim (sprite'lar, tahta, arka plan)
-lib/audio/     Efekt sesleri, müzik listesi, titreşim
-lib/ui/        Ekranlar ve bileşenler (oyun, menüler, güç barı, Hakkında)
-lib/l10n/      Türkçe / İngilizce metinler
-lib/theme/     Koyu / açık renk paleti
-assets/        Yazı tipi, sesler, müzikler, ikon kaynağı
-tool/          Ses üretici
+lib/core/          Saf oyun mantığı: kurallar ve güçler (Flutter'dan bağımsız)
+lib/core/blocks/   Bulmaca Küpler: tahta, parçalar, seviye üretici ve çözücü
+lib/game/          Kontrolcü, efekt motoru, motivasyon, çizim (sprite'lar, tahta, arka plan)
+lib/game/blocks/   Bulmaca Küpler kontrolcüsü, efektleri ve çizimi
+lib/platform/      Windows tam ekran köprüsü
+lib/audio/         Efekt sesleri, müzik listesi, titreşim
+lib/ui/            Ekranlar ve bileşenler (oyun, Bulmaca Küpler, güç barı, Hakkında)
+lib/l10n/          Türkçe / İngilizce metinler
+lib/theme/         Koyu / açık renk paleti
+assets/            Yazı tipi, sesler, müzikler, ikon kaynağı
+packaging/         Linux masaüstü kısayolu ve Arch Linux PKGBUILD
+tool/              Ses ve Windows ikonu üreticileri
 ```
 
 ## Üçüncü taraf içerikler

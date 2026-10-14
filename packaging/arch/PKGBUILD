@@ -1,0 +1,24 @@
+# Arch Linux package for the LifeOS Küpler test build.
+#   makepkg -si
+pkgname=lifeos-kupler-bin
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="LifeOS Küpler: bol efektli blok bulmaca oyunu"
+arch=('x86_64')
+url="https://github.com/07erkanoz/LifeOsTetris"
+license=('MIT')
+depends=('gtk3' 'gstreamer' 'gst-plugins-base' 'gst-plugins-good')
+options=('!strip')
+# The test build is replaced on every release, so there is no fixed checksum.
+source=("LifeOS-Kupler-Linux-x64.tar.gz::https://github.com/07erkanoz/LifeOsTetris/releases/download/test-build/LifeOS-Kupler-Linux-x64.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+  install -d "$pkgdir/opt/lifeos-kupler"
+  cp -r LifeOS-Kupler/. "$pkgdir/opt/lifeos-kupler/"
+  install -d "$pkgdir/usr/bin"
+  ln -s /opt/lifeos-kupler/lifeos_kupler "$pkgdir/usr/bin/lifeos-kupler"
+  install -Dm644 LifeOS-Kupler/lifeos-kupler.desktop "$pkgdir/usr/share/applications/lifeos-kupler.desktop"
+  install -Dm644 LifeOS-Kupler/lifeos-kupler.png "$pkgdir/usr/share/icons/hicolor/256x256/apps/lifeos-kupler.png"
+  install -Dm644 LifeOS-Kupler/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

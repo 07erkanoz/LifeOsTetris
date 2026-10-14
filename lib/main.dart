@@ -13,7 +13,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   final settings = await Settings.load();
-  final audio = AudioService(lastTrack: settings.lastTrack, onTrackStarted: (t) => settings.lastTrack = t);
+  final audio = AudioService(
+    enabled: AudioService.platformSupported,
+    lastTrack: settings.lastTrack,
+    onTrackStarted: (t) => settings.lastTrack = t,
+  );
   unawaited(audio.init());
   final haptics = Haptics();
   unawaited(haptics.init());

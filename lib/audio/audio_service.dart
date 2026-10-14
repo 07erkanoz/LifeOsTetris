@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:audioplayers/audioplayers.dart';
@@ -52,6 +53,22 @@ class AudioService {
   /// Called with each track index as it starts, so the next launch can avoid
   /// opening with the same song.
   final void Function(int track)? onTrackStarted;
+
+  /// On Linux, audioplayers aborts the whole app if GStreamer's playback
+  /// plugin is missing. Check for it first and play silently without it.
+  static bool get platformSupported {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.linux) return true;
+    final dirs = [
+      ...?Platform.environment['GST_PLUGIN_PATH']?.split(':'),
+      ...?Platform.environment['GST_PLUGIN_SYSTEM_PATH']?.split(':'),
+      '/usr/lib/gstreamer-1.0',
+      '/usr/lib64/gstreamer-1.0',
+      '/usr/lib/x86_64-linux-gnu/gstreamer-1.0',
+      '/usr/lib/aarch64-linux-gnu/gstreamer-1.0',
+      '/usr/local/lib/gstreamer-1.0',
+    ];
+    return dirs.any((d) => d.isNotEmpty && File('$d/libgstplayback.so').existsSync());
+  }
 
   static Random _makeRandom() {
     try {
