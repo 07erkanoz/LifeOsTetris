@@ -46,6 +46,7 @@ class CardLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => FittedBox(
     fit: BoxFit.scaleDown,
+    alignment: Alignment.centerLeft,
     child: Text(
       text,
       maxLines: 1,
