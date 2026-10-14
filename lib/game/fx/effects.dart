@@ -102,6 +102,26 @@ class LockPulse {
   double get t => (age / duration).clamp(0.0, 1.0);
 }
 
+/// Signature colours of each power, used by effects and the power bar.
+const Map<PowerType, List<Color>> powerColors = {
+  PowerType.bomb: [Color(0xFFFB7185), Color(0xFFF97316)],
+  PowerType.single: [Color(0xFFE2E8F0), Color(0xFF94A3B8)],
+  PowerType.drill: [Color(0xFFFDE047), Color(0xFFF59E0B)],
+  PowerType.gravity: [Color(0xFF4ADE80), Color(0xFF14B8A6)],
+  PowerType.slowMotion: [Color(0xFF7DD3FC), Color(0xFF3B82F6)],
+  PowerType.ghostLine: [Color(0xFFE9D5FF), Color(0xFFA855F7)],
+};
+
+class DrillBeam {
+  DrillBeam(this.column);
+
+  final int column;
+  double age = 0;
+  static const duration = 0.55;
+
+  double get t => (age / duration).clamp(0.0, 1.0);
+}
+
 const _cool = [Color(0xFFFFFFFF), Color(0xFF7DD3FC), Color(0xFF818CF8)];
 const _gold = [Color(0xFFFEF08A), Color(0xFFF59E0B)];
 const _rainbow = [Color(0xFF22D3EE), Color(0xFFA855F7), Color(0xFFF97316), Color(0xFFFACC15)];
@@ -131,6 +151,13 @@ class EffectsEngine {
   final List<Shockwave> shockwaves = [];
   final List<DropTrail> trails = [];
   final List<LockPulse> lockPulses = [];
+  final List<DrillBeam> beams = [];
+
+  /// Rows each block still has to fall after the gravity power, keyed by
+  /// (column, visible row) of its new position. Animated to zero.
+  Map<(int, int), double> fallShift = const {};
+  double fallAge = 1;
+  static const fallDuration = 0.5;
 
   double time = 0;
   double _trauma = 0;
@@ -158,9 +185,9 @@ class EffectsEngine {
   PieceType? _lastActiveType;
 
   // HUD pulses (0..1) read by widgets.
-  double holdPulse = 0, scorePulse = 0, levelPulse = 0;
+  double holdPulse = 0, scorePulse = 0, levelPulse = 0, energyPulse = 0, powerPulse = 0;
 
-  static const int _maxParticles = 1400;
+  static const int _maxParticles = 900;
 
   void reset() {
     particles.clear();
@@ -168,6 +195,9 @@ class EffectsEngine {
     shockwaves.clear();
     trails.clear();
     lockPulses.clear();
+    beams.clear();
+    fallShift = const {};
+    fallAge = 1;
     _trauma = 0;
     collapseShift = const {};
     collapseAge = 1;
@@ -180,8 +210,10 @@ class EffectsEngine {
     spawnAge = 1;
     _lastActiveY = null;
     _lastActiveType = null;
-    holdPulse = scorePulse = levelPulse = 0;
+    holdPulse = scorePulse = levelPulse = energyPulse = powerPulse = 0;
   }
+
+  double get fallProgress => Curves.bounceOut.transform((fallAge / fallDuration).clamp(0.0, 1.0));
 
   double get collapseProgress => Curves.easeOutBack.transform((collapseAge / collapseDuration).clamp(0.0, 1.0));
 
@@ -214,7 +246,14 @@ class EffectsEngine {
     holdPulse = max(0, holdPulse - dt * 3);
     scorePulse = max(0, scorePulse - dt * 3);
     levelPulse = max(0, levelPulse - dt * 1.2);
+    energyPulse = max(0, energyPulse - dt * 2.5);
+    powerPulse = max(0, powerPulse - dt * 1.5);
     collapseAge += dt;
+    fallAge += dt;
+    for (final b in beams) {
+      b.age += dt;
+    }
+    beams.removeWhere((b) => b.age >= DrillBeam.duration);
     if (levelWaveAge >= 0) {
       levelWaveAge += dt;
       if (levelWaveAge > levelWaveDuration) levelWaveAge = -1;
@@ -350,14 +389,213 @@ class EffectsEngine {
       case RowsCollapsed(:final rows):
         _collapse(rows);
       case LevelUp(:final level):
-        _levelUp(level, speedingUp: game.mode == GameMode.classic && level <= speedCapLevel);
+        _levelUp(level, speedingUp: game.mode.speedsUp && level <= speedCapLevel);
       case GameOver():
         gameOverAge = 0;
         shattered = false;
         addTrauma(0.6);
         pulseColor = const Color(0xFFEF4444);
         pulse = 0.8;
+      case EnergyGained():
+        energyPulse = 1;
+      case PowerEarned(:final type):
+        powerPulse = 1;
+        floaters.add(
+          Floater(5, 2.6, [
+            FloaterLine('+ ${strings.powerName(type)}', 0.62, powerColors[type]!, glow: powerColors[type]!.last),
+          ], duration: 1.2),
+        );
+      case PowerActivated(:final type):
+        final colors = powerColors[type]!;
+        pulseColor = colors.last;
+        pulse = max(pulse, 0.6);
+        boardFlash = max(boardFlash, 0.25);
+        floaters.add(
+          Floater(5, 7.5, [
+            FloaterLine(strings.powerName(type), 1.1, [const Color(0xFFFFFFFF), ...colors], glow: colors.last),
+          ], duration: 1.1),
+        );
+        _powerSparks(colors);
+      case BombExploded(:final center, :final removed, :final points):
+        _explode(center, removed, points);
+      case ColumnDrilled(:final column, :final removed, :final points):
+        _drill(column, removed, points);
+      case GravityApplied(:final moves):
+        _gravity(moves);
+      case SlowMotionStarted() || SlowMotionEnded() || GhostLineStarted():
+        break;
+      case GhostLineFilled(:final row, :final cells):
+        lockPulses.add(LockPulse(cells));
+        for (final c in cells) {
+          for (var i = 0; i < 4; i++) {
+            final a = _r(0, pi * 2);
+            _add(
+              Particle(
+                kind: i == 0 ? ParticleKind.spark : ParticleKind.dot,
+                x: c.x + 0.5,
+                y: row - TetrisGame.hiddenRows + 0.5,
+                vx: cos(a) * _r(1, 4),
+                vy: sin(a) * _r(1, 4),
+                maxLife: _r(0.4, 0.8),
+                size: i == 0 ? _r(0.15, 0.28) : _r(0.05, 0.1),
+                color: const Color(0xFFE9D5FF),
+                drag: 2,
+              ),
+            );
+          }
+        }
+        addTrauma(0.2);
     }
+  }
+
+  void _powerSparks(List<Color> colors) {
+    for (var i = 0; i < 40; i++) {
+      final a = _r(0, pi * 2);
+      final speed = _r(4, 11);
+      _add(
+        Particle(
+          kind: i.isEven ? ParticleKind.spark : ParticleKind.dot,
+          x: 5,
+          y: 8,
+          vx: cos(a) * speed,
+          vy: sin(a) * speed,
+          maxLife: _r(0.5, 0.9),
+          size: i.isEven ? _r(0.15, 0.3) : _r(0.05, 0.12),
+          color: colors[i % colors.length],
+          drag: 2.2,
+        ),
+      );
+    }
+    shockwaves.add(Shockwave(5, 8, 7, colors.last, duration: 0.5, width: 0.25));
+  }
+
+  void _explode(Cell center, List<RemovedCell> removed, int points) {
+    final h = TetrisGame.hiddenRows;
+    final cx = center.x + 0.5, cy = center.y - h + 0.5;
+    shockwaves.add(Shockwave(cx, cy, 5, const Color(0xFFFDBA74), duration: 0.5, width: 0.4));
+    shockwaves.add(Shockwave(cx, cy, 8, const Color(0xFFF43F5E), duration: 0.7, width: 0.25));
+    const fire = [Color(0xFFFDE047), Color(0xFFF97316), Color(0xFFEF4444), Color(0xFFFFFFFF)];
+    for (var i = 0; i < 70; i++) {
+      final a = _r(0, pi * 2);
+      final speed = _r(2, 12);
+      _add(
+        Particle(
+          kind: i % 3 == 0 ? ParticleKind.spark : ParticleKind.dot,
+          x: cx,
+          y: cy,
+          vx: cos(a) * speed,
+          vy: sin(a) * speed - 2,
+          maxLife: _r(0.4, 1.0),
+          size: i % 3 == 0 ? _r(0.2, 0.4) : _r(0.08, 0.2),
+          color: fire[i % fire.length],
+          gravity: 4,
+          drag: 2.5,
+        ),
+      );
+    }
+    for (final (cell, type) in removed) {
+      final dx = cell.x + 0.5 - cx, dy = cell.y - h + 0.5 - cy;
+      for (var i = 0; i < 2; i++) {
+        _add(
+          Particle(
+            kind: ParticleKind.block,
+            type: type,
+            x: cell.x + 0.5,
+            y: cell.y - h + 0.5,
+            vx: dx * _r(6, 11) + _r(-2, 2),
+            vy: dy * _r(6, 11) - _r(3, 7),
+            maxLife: _r(0.8, 1.3),
+            size: _r(0.3, 0.55),
+            color: blockColors[type]!,
+            gravity: 18,
+            rotation: _r(0, pi),
+            spin: _r(-10, 10),
+          ),
+        );
+      }
+    }
+    floaters.add(
+      Floater(cx.clamp(2.5, 7.5), (cy - 2.5).clamp(3, 15), [
+        FloaterLine('+$points', 0.8, _gold, glow: const Color(0xFFF59E0B)),
+      ], duration: 1.1),
+    );
+    boardFlash = max(boardFlash, 0.5);
+    pulseColor = const Color(0xFFF97316);
+    pulse = max(pulse, 0.9);
+    scorePulse = 1;
+    addTrauma(0.7);
+  }
+
+  void _drill(int column, List<RemovedCell> removed, int points) {
+    final h = TetrisGame.hiddenRows;
+    beams.add(DrillBeam(column));
+    for (final (cell, type) in removed) {
+      final y = cell.y - h + 0.5;
+      final delay = max(0.0, y) * 0.012;
+      for (var i = 0; i < 2; i++) {
+        final dir = i.isEven ? -1 : 1;
+        _add(
+          Particle(
+            kind: ParticleKind.block,
+            type: type,
+            x: column + 0.5,
+            y: y,
+            vx: dir * _r(3, 8),
+            vy: _r(-5, -1),
+            maxLife: _r(0.7, 1.1),
+            size: _r(0.25, 0.45),
+            color: blockColors[type]!,
+            gravity: 16,
+            rotation: _r(0, pi),
+            spin: _r(-9, 9),
+            delay: delay,
+          ),
+        );
+      }
+      _add(
+        Particle(
+          kind: ParticleKind.spark,
+          x: column + 0.5,
+          y: y,
+          vx: _r(-2, 2),
+          vy: _r(-2, 2),
+          maxLife: _r(0.3, 0.6),
+          size: _r(0.2, 0.35),
+          color: const Color(0xFFFDE047),
+          delay: delay,
+        ),
+      );
+    }
+    if (points > 0) {
+      floaters.add(Floater(5, 6, [FloaterLine('+$points', 0.8, _gold, glow: const Color(0xFFF59E0B))], duration: 1.1));
+    }
+    scorePulse = 1;
+    addTrauma(0.4);
+  }
+
+  void _gravity(List<FallenCell> moves) {
+    final h = TetrisGame.hiddenRows;
+    fallShift = {for (final (x, from, to) in moves) (x, to - h): (to - from).toDouble()};
+    fallAge = 0;
+    for (final (x, _, to) in moves) {
+      for (var i = 0; i < 2; i++) {
+        _add(
+          Particle(
+            kind: ParticleKind.dot,
+            x: x + _r(0.1, 0.9),
+            y: to - h + 1.0,
+            vx: _r(-2, 2),
+            vy: _r(-2, -0.5),
+            maxLife: _r(0.3, 0.5),
+            size: _r(0.05, 0.1),
+            color: const Color(0xFF86EFAC),
+            gravity: 6,
+            delay: fallDuration * 0.55,
+          ),
+        );
+      }
+    }
+    addTrauma(0.3);
   }
 
   void _wallBump(TetrisGame game, int dx) {
@@ -609,7 +847,7 @@ class EffectsEngine {
 
   void _confetti(double y, int count) {
     for (var i = 0; i < count; i++) {
-      final type = PieceType.values[_rng.nextInt(PieceType.values.length)];
+      final type = standardPieces[_rng.nextInt(standardPieces.length)];
       final a = _r(-pi * 0.85, -pi * 0.15);
       final speed = _r(8, 19);
       final isBlock = i % 3 != 0;

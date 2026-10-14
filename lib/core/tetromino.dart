@@ -5,7 +5,30 @@
 /// J/L/S/T/Z, and O uses a 4×3 box so it spawns in the middle columns).
 library;
 
-enum PieceType { i, o, t, s, z, j, l }
+enum PieceType {
+  i,
+  o,
+  t,
+  s,
+  z,
+  j,
+  l,
+
+  /// Single block from the "Tekli blok" power.
+  mono,
+
+  /// Single bomb block that blasts a 3×3 area where it lands.
+  bomb,
+
+  /// Single drill that passes through blocks and eats its whole column.
+  drill;
+
+  /// Power pieces never come from the bag and cannot be held or rotated.
+  bool get isSpecial => index >= PieceType.mono.index;
+}
+
+/// The seven regular tetrominoes dealt by the bag.
+const List<PieceType> standardPieces = [PieceType.i, PieceType.o, PieceType.t, PieceType.s, PieceType.z, PieceType.j, PieceType.l];
 
 /// A cell offset inside a grid.
 class Cell {
@@ -45,6 +68,9 @@ const Map<PieceType, List<Cell>> _spawnCells = {
   PieceType.z: [Cell(0, 0), Cell(1, 0), Cell(1, 1), Cell(2, 1)],
   PieceType.j: [Cell(0, 0), Cell(0, 1), Cell(1, 1), Cell(2, 1)],
   PieceType.l: [Cell(2, 0), Cell(0, 1), Cell(1, 1), Cell(2, 1)],
+  PieceType.mono: [Cell(1, 0)],
+  PieceType.bomb: [Cell(1, 0)],
+  PieceType.drill: [Cell(1, 0)],
 };
 
 int boxSize(PieceType type) => switch (type) {
@@ -57,7 +83,7 @@ final Map<PieceType, List<List<Cell>>> _rotations = {for (final type in PieceTyp
 
 List<List<Cell>> _buildRotations(PieceType type) {
   final states = <List<Cell>>[_spawnCells[type]!];
-  if (type == PieceType.o) {
+  if (type == PieceType.o || type.isSpecial) {
     return List.filled(4, states.first);
   }
   final n = boxSize(type);
@@ -97,7 +123,7 @@ const _iKicks = <String, List<Cell>>{
 
 /// Kick offsets to try, in screen space (y down), for a rotation.
 List<Cell> kicksFor(PieceType type, Rotation from, Rotation to) {
-  if (type == PieceType.o) return const [Cell(0, 0)];
+  if (type == PieceType.o || type.isSpecial) return const [Cell(0, 0)];
   final table = type == PieceType.i ? _iKicks : _jlstzKicks;
   final tests = table['${from.index}>${to.index}']!;
   return [for (final k in tests) Cell(k.x, -k.y)];

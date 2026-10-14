@@ -17,6 +17,7 @@ import '../settings/settings.dart';
 import '../theme/palette.dart';
 import 'about_page.dart';
 import 'board_view.dart';
+import 'power_bar.dart';
 import 'widgets.dart';
 
 String formatTime(double seconds) {
@@ -87,6 +88,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       c.hold();
     } else if (key == LogicalKeyboardKey.keyP || key == LogicalKeyboardKey.escape) {
       c.togglePause();
+    } else if (key == LogicalKeyboardKey.digit1 || key == LogicalKeyboardKey.digit2 || key == LogicalKeyboardKey.digit3) {
+      c.usePower(key == LogicalKeyboardKey.digit1 ? 0 : (key == LogicalKeyboardKey.digit2 ? 1 : 2));
     } else if (key == LogicalKeyboardKey.enter) {
       if (c.game.status == GameStatus.ready || c.game.status == GameStatus.over) c.start();
     } else {
@@ -113,6 +116,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     LogicalKeyboardKey.enter,
     LogicalKeyboardKey.controlLeft,
     LogicalKeyboardKey.shiftLeft,
+    LogicalKeyboardKey.digit1,
+    LogicalKeyboardKey.digit2,
+    LogicalKeyboardKey.digit3,
   };
 
   bool _isGameKey(LogicalKeyboardKey key) => _gameKeys.contains(key);
@@ -131,6 +137,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         child: Stack(
           children: [
             Positioned.fill(
+              child: RepaintBoundary(child: CustomPaint(painter: BackgroundBasePainter(palette))),
+            ),
+            Positioned.fill(
               child: RepaintBoundary(
                 child: ListenableBuilder(
                   listenable: widget.settings,
@@ -140,7 +149,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                       palette: palette,
                       sprites: BlockSprites.of(24, dpr, palette),
                       effectsEnabled: widget.settings.effects,
-                      repaint: controller.frame,
+                      repaint: controller.backgroundFrame,
                     ),
                   ),
                 ),
@@ -411,6 +420,11 @@ class _PhoneLayout extends StatelessWidget {
           ),
         ),
         Expanded(child: _BoardArea(c: c, padding: 10)),
+        if (c.game.powersEnabled)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: PowerBar(c: c, slotSize: 42),
+          ),
         if (settings.showButtons)
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
@@ -502,6 +516,7 @@ class _DesktopLayout extends StatelessWidget {
                     child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: LogoTitle(fontSize: 26)),
                   ),
                   _HoldCard(c: c, cell: 22, size: const Size(120, 52)),
+                  if (game.powersEnabled) ...[const SizedBox(height: 16), PowerBar(c: c, slotSize: 40, showKeys: true)],
                   const SizedBox(height: 16),
                   GlassCard(
                     glow: c.fx.levelPulse,
@@ -517,7 +532,7 @@ class _DesktopLayout extends StatelessWidget {
                         stat(s.lines, '${game.lines}'),
                         stat(s.time, formatTime(c.playTime)),
                         stat(s.best, s.score(settings.bestScore(c.mode)), accent: true),
-                        stat(s.mode, c.mode == GameMode.classic ? s.classic : s.relaxed),
+                        stat(s.mode, s.modeName(c.mode)),
                       ],
                     ),
                   ),
@@ -674,7 +689,25 @@ class _SettingsPanel extends StatelessWidget {
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: p.label),
               ),
             ),
-            slider(settings.buttonOpacity, 0.2, 1, (v) => settings.buttonOpacity = v),
+            Row(
+              children: [
+                Expanded(child: slider(settings.buttonOpacity, 0.15, 1, (v) => settings.buttonOpacity = v)),
+                const SizedBox(width: 10),
+                // Live preview: the real buttons are hidden behind this screen.
+                Opacity(
+                  opacity: settings.buttonOpacity,
+                  child: const IgnorePointer(
+                    child: Row(
+                      children: [
+                        ControlButton(glyph: ControlGlyph.left, size: 34),
+                        SizedBox(width: 6),
+                        ControlButton(glyph: ControlGlyph.rotate, size: 38, primary: true),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ],
       ],
@@ -756,20 +789,61 @@ class _StartOverlay extends StatelessWidget {
           ),
           const SizedBox(height: 18),
         ],
-        GradientButton(
-          key: const ValueKey('start-classic'),
-          label: s.classic,
-          subtitle: s.classicSubtitle,
-          icon: Icons.bolt_rounded,
-          onTap: () => c.start(GameMode.classic),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            GradientButton(
+              key: const ValueKey('start-super'),
+              label: s.superTitle,
+              subtitle: s.superSubtitle,
+              icon: Icons.auto_awesome_rounded,
+              colors: const [Color(0xFFA855F7), Color(0xFF6366F1), Color(0xFF38BDF8)],
+              onTap: () => c.start(GameMode.superMode),
+            ),
+            Positioned(
+              top: -9,
+              right: 14,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: const LinearGradient(colors: [Color(0xFFFDE047), Color(0xFFF97316)]),
+                  boxShadow: const [BoxShadow(color: Color(0x66F97316), blurRadius: 10)],
+                ),
+                child: Text(
+                  s.newBadge,
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF3B1D00), letterSpacing: 1),
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
-        GradientButton(
-          label: s.relaxed,
-          subtitle: s.relaxedSubtitle,
-          icon: Icons.spa_rounded,
-          secondary: true,
-          onTap: () => c.start(GameMode.relaxed),
+        const SizedBox(height: 16),
+        Center(child: CardLabel(s.classicTitle.toUpperCase())),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: GradientButton(
+                key: const ValueKey('start-classic'),
+                label: s.normal,
+                subtitle: s.normalSubtitle,
+                icon: Icons.bolt_rounded,
+                secondary: true,
+                onTap: () => c.start(GameMode.classic),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: GradientButton(
+                label: s.relaxed,
+                subtitle: s.relaxedShort,
+                icon: Icons.spa_rounded,
+                secondary: true,
+                onTap: () => c.start(GameMode.relaxed),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 18),
         Text(
@@ -908,6 +982,7 @@ class _MotivationBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (c.game.ghostLine != null) return const IgnorePointer(child: _GhostLineHint());
     final m = c.motivation.visible ? c.motivation.current : null;
     return IgnorePointer(
       child: AnimatedSwitcher(
@@ -982,6 +1057,42 @@ class _BannerPill extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GhostLineHint extends StatelessWidget {
+  const _GhostLineHint();
+
+  @override
+  Widget build(BuildContext context) {
+    final p = GamePalette.of(context);
+    final s = AppStrings.of(context);
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(40),
+          color: p.isDark ? const Color(0xF0111630) : const Color(0xF7FFFFFF),
+          border: Border.all(color: const Color(0xFFA855F7), width: 1.6),
+          boxShadow: const [BoxShadow(color: Color(0x66A855F7), blurRadius: 20)],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.touch_app_rounded, size: 18, color: Color(0xFFC084FC)),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                s.ghostLineHint,
+                maxLines: 2,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: p.text),
+              ),
+            ),
+          ],
         ),
       ),
     );

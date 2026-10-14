@@ -52,10 +52,18 @@ class BoardPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final c = geometry.cell;
     final well = Rect.fromLTWH(0, 0, geometry.wellWidth, geometry.wellHeight);
+    // Frame, shadow, well and grid never change during a game: they are
+    // rasterised once and drawn as a single image every frame.
+    final chrome = _chrome(well);
+    canvas.drawImageRect(
+      chrome,
+      Rect.fromLTWH(0, 0, chrome.width.toDouble(), chrome.height.toDouble()),
+      Offset.zero & geometry.size,
+      Paint()..filterQuality = FilterQuality.low,
+    );
     canvas.save();
     canvas.translate(geometry.wellOrigin.dx, geometry.wellOrigin.dy);
 
-    _paintFrame(canvas, well);
     _paintWellEffects(canvas, well);
 
     // Everything that sits on the grid is clipped at the top edge so the
@@ -63,6 +71,7 @@ class BoardPainter extends CustomPainter {
     canvas.save();
     canvas.clipRect(Rect.fromLTRB(-c * 2, 0, well.right + c * 2, well.bottom + c * 2));
     _paintTrails(canvas);
+    _paintAimHelpers(canvas);
     _paintGhost(canvas);
     _paintStack(canvas);
     _paintLockPulses(canvas);
@@ -70,11 +79,33 @@ class BoardPainter extends CustomPainter {
     canvas.restore();
 
     _paintClearBeams(canvas, well);
+    _paintDrillBeams(canvas, well);
+    _paintGhostLine(canvas, well);
+    _paintSlowMotion(canvas, well);
     _paintFlash(canvas, well);
     _paintShockwaves(canvas);
     _paintParticles(canvas);
     _paintGameOverShade(canvas, well);
     canvas.restore();
+  }
+
+  static final Map<String, ui.Image> _chromeCache = {};
+
+  ui.Image _chrome(Rect well) {
+    final dpr = min(sprites.dpr, 2.0);
+    final key = '${geometry.cell}/${palette.isDark}/$dpr';
+    final hit = _chromeCache[key];
+    if (hit != null) return hit;
+    if (_chromeCache.length >= 4) _chromeCache.remove(_chromeCache.keys.first);
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder)
+      ..scale(dpr)
+      ..translate(geometry.wellOrigin.dx, geometry.wellOrigin.dy);
+    _paintFrame(canvas, well);
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync((geometry.size.width * dpr).ceil(), (geometry.size.height * dpr).ceil());
+    picture.dispose();
+    return _chromeCache[key] = image;
   }
 
   void _paintFrame(Canvas canvas, Rect well) {
@@ -218,7 +249,8 @@ class BoardPainter extends CustomPainter {
       for (var x = 0; x < TetrisGame.width; x++) {
         final type = game.cellAt(x, y);
         if (type == null) continue;
-        final px = x * c, py = drawY * c;
+        final fall = fx.fallAge < EffectsEngine.fallDuration ? (fx.fallShift[(x, yv)] ?? 0) * (1 - fx.fallProgress) : 0.0;
+        final px = x * c, py = (drawY - fall) * c;
         if (isClearing) {
           final vanish = EffectsEngine.cellVanishTime(x);
           if (p >= vanish) continue;
@@ -230,6 +262,128 @@ class BoardPainter extends CustomPainter {
         sprites.draw(canvas, gray ? sprites.gray : sprites.block(type), px, py);
       }
     }
+  }
+
+  /// Aiming aids for power pieces: the drill's column and the bomb's blast area.
+  void _paintAimHelpers(Canvas canvas) {
+    final piece = game.active;
+    final ghost = game.ghost;
+    if (piece == null || ghost == null || game.status != GameStatus.playing) return;
+    final c = geometry.cell;
+    final pulse = 0.6 + 0.4 * sin(fx.time * 6);
+    if (piece.type == PieceType.drill) {
+      final cell = piece.cells.first;
+      final x = (cell.x + fx.offsetX) * c;
+      final rect = Rect.fromLTWH(x + c * 0.15, max(0, (cell.y - _h + 1) * c), c * 0.7, geometry.wellHeight);
+      canvas.drawRect(
+        rect,
+        Paint()
+          ..shader = ui.Gradient.linear(rect.topCenter, rect.bottomCenter, [
+            const Color(0xFFFDE047).withValues(alpha: 0.35 * pulse),
+            const Color(0xFFF59E0B).withValues(alpha: 0.05),
+          ]),
+      );
+    } else if (piece.type == PieceType.bomb) {
+      final center = ghost.cells.first;
+      final area = Rect.fromLTWH(
+        (center.x - 1) * c,
+        (center.y - _h - 1) * c,
+        3 * c,
+        3 * c,
+      ).intersect(Rect.fromLTWH(0, 0, geometry.wellWidth, geometry.wellHeight));
+      if (area.isEmpty) return;
+      final rrect = RRect.fromRectAndRadius(area.deflate(2), Radius.circular(c * 0.3));
+      canvas.drawRRect(rrect, Paint()..color = const Color(0xFFF43F5E).withValues(alpha: 0.16 * pulse));
+      canvas.drawRRect(
+        rrect,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = max(1.5, c * 0.06)
+          ..color = const Color(0xFFFB7185).withValues(alpha: 0.8 * pulse),
+      );
+    }
+  }
+
+  void _paintDrillBeams(Canvas canvas, Rect well) {
+    final c = geometry.cell;
+    for (final b in fx.beams) {
+      final fade = 1 - Curves.easeIn.transform(b.t);
+      final x = (b.column + 0.5) * c;
+      final glow = Rect.fromCenter(center: Offset(x, well.center.dy), width: c * 1.6, height: well.height);
+      canvas.drawRect(
+        glow,
+        Paint()
+          ..blendMode = palette.isDark ? BlendMode.plus : BlendMode.srcOver
+          ..shader = ui.Gradient.linear(
+            glow.centerLeft,
+            glow.centerRight,
+            [const Color(0x00F59E0B), const Color(0xFFFDE047).withValues(alpha: 0.55 * fade), const Color(0x00F59E0B)],
+            const [0, 0.5, 1],
+          ),
+      );
+      canvas.drawRect(
+        Rect.fromCenter(center: Offset(x, well.center.dy), width: max(2, c * 0.12 * fade), height: well.height),
+        Paint()..color = Colors.white.withValues(alpha: 0.9 * fade),
+      );
+    }
+  }
+
+  void _paintGhostLine(Canvas canvas, Rect well) {
+    final line = game.ghostLine;
+    final row = game.ghostLineRow;
+    if (line == null || row == null) return;
+    final c = geometry.cell;
+    final pulse = 0.65 + 0.35 * sin(fx.time * 8);
+    const purple = Color(0xFFA855F7);
+    // Highlight the row that would be filled, with the gaps outlined.
+    final rowRect = Rect.fromLTWH(well.left, row * c, well.width, c);
+    canvas.drawRect(rowRect, Paint()..color = purple.withValues(alpha: 0.18 * pulse));
+    final y = row + _h;
+    final outline = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = max(1.5, c * 0.07)
+      ..color = const Color(0xFFE9D5FF).withValues(alpha: 0.9 * pulse);
+    for (var x = 0; x < TetrisGame.width; x++) {
+      if (game.cellAt(x, y) != null) continue;
+      final r = RRect.fromRectAndRadius(Rect.fromLTWH(x * c, row * c, c, c).deflate(c * 0.12), Radius.circular(c * 0.2));
+      canvas.drawRRect(r, Paint()..color = purple.withValues(alpha: 0.28 * pulse));
+      canvas.drawRRect(r, outline);
+    }
+    // The sinking line itself.
+    final ly = (line + 0.5) * c;
+    final band = Rect.fromLTRB(well.left - c * 0.4, ly - c * 0.7, well.right + c * 0.4, ly + c * 0.7);
+    canvas.drawRect(
+      band,
+      Paint()
+        ..blendMode = palette.isDark ? BlendMode.plus : BlendMode.srcOver
+        ..shader = ui.Gradient.linear(
+          band.topCenter,
+          band.bottomCenter,
+          [purple.withValues(alpha: 0), purple.withValues(alpha: 0.45), purple.withValues(alpha: 0)],
+          const [0, 0.5, 1],
+        ),
+    );
+    canvas.drawRect(
+      Rect.fromCenter(center: Offset(well.center.dx, ly), width: well.width + c * 0.8, height: max(2, c * 0.1)),
+      Paint()..color = Colors.white.withValues(alpha: 0.9),
+    );
+  }
+
+  void _paintSlowMotion(Canvas canvas, Rect well) {
+    final left = game.slowMotion;
+    if (left <= 0) return;
+    final c = geometry.cell;
+    final k = min(1.0, left) * min(1.0, (TetrisGame.slowMotionDuration - left) * 4 + 0.2);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(well, Radius.circular(c * 0.45)),
+      Paint()..color = const Color(0xFF3B82F6).withValues(alpha: 0.1 * k),
+    );
+    // Remaining time as a bar along the top of the well.
+    final bar = Rect.fromLTWH(well.left + c * 0.3, -c * 0.22, (well.width - c * 0.6) * (left / TetrisGame.slowMotionDuration), c * 0.12);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(bar, Radius.circular(c)),
+      Paint()..shader = ui.Gradient.linear(bar.centerLeft, bar.centerRight, const [Color(0xFF7DD3FC), Color(0xFF3B82F6)]),
+    );
   }
 
   void _paintLockPulses(Canvas canvas) {
@@ -247,22 +401,16 @@ class BoardPainter extends CustomPainter {
     final piece = game.active;
     if (piece == null || game.status == GameStatus.over) return;
     final c = geometry.cell;
-    final color = blockColors[piece.type]!;
     final spawn = fx.spawnAge < 0.18 ? Curves.easeOutBack.transform(fx.spawnAge / 0.18) : 1.0;
     final scale = (0.6 + 0.4 * spawn) * (1 + 0.12 * fx.rotatePop);
     final cells = [for (final cell in piece.cells) Offset((cell.x + fx.offsetX) * c, (cell.y - _h + fx.offsetY) * c)];
 
     // Pulsing aura behind the piece.
-    final aura = Path();
+    final auraImage = sprites.aura(piece.type);
+    final auraOpacity = (palette.isDark ? 0.6 : 0.38) + 0.15 * sin(fx.time * 5);
     for (final o in cells) {
-      aura.addRRect(RRect.fromRectAndRadius(Rect.fromLTWH(o.dx + c * 0.1, o.dy + c * 0.1, c * 0.8, c * 0.8), Radius.circular(c * 0.25)));
+      sprites.draw(canvas, auraImage, o.dx, o.dy, scale: 1.25, opacity: auraOpacity);
     }
-    canvas.drawPath(
-      aura,
-      Paint()
-        ..color = color.withValues(alpha: (palette.isDark ? 0.45 : 0.28) + 0.12 * sin(fx.time * 5))
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, c * (palette.isDark ? 0.55 : 0.4)),
-    );
 
     final image = sprites.block(piece.type);
     for (final o in cells) {
@@ -334,8 +482,7 @@ class BoardPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = max(1, s.width * c * (1 - s.t))
-          ..color = s.color.withValues(alpha: alpha)
-          ..maskFilter = MaskFilter.blur(BlurStyle.normal, c * 0.08),
+          ..color = s.color.withValues(alpha: alpha),
       );
     }
   }
@@ -428,14 +575,25 @@ class FloaterPainter extends CustomPainter {
       final rise = Curves.easeIn.transform(outT) * 1.4;
       if (alpha <= 0) continue;
 
-      final painters = [for (final line in f.lines) _layout(line, c)];
+      // Text layout is expensive: do it once per floater and cell size.
+      var cached = _layouts[f];
+      if (cached == null || cached.$1 != c) {
+        cached = (c, [for (final line in f.lines) _layout(line, c)]);
+        _layouts[f] = cached;
+      }
+      final painters = cached.$2;
       final total = painters.fold<double>(0, (sum, p) => sum + p.$1.height * 0.92);
+      final widest = painters.fold<double>(0, (w, p) => max(w, p.$1.width));
       var y = -total / 2;
 
       canvas.save();
       canvas.translate(origin.dx + f.x * c, origin.dy + (f.y - rise) * c);
       canvas.scale(scale);
-      canvas.saveLayer(null, Paint()..color = Color.fromRGBO(255, 255, 255, alpha));
+      // Bounded layer for the fade so only the text area is composited.
+      canvas.saveLayer(
+        Rect.fromCenter(center: Offset.zero, width: widest + c * 2, height: total + c * 2),
+        Paint()..color = Color.fromRGBO(255, 255, 255, alpha),
+      );
       for (var i = 0; i < painters.length; i++) {
         final (stroke, fill) = painters[i];
         // Lines after the first slide in with a small stagger.
@@ -452,6 +610,8 @@ class FloaterPainter extends CustomPainter {
       canvas.restore();
     }
   }
+
+  static final Expando<(double, List<(TextPainter, TextPainter)>)> _layouts = Expando();
 
   (TextPainter, TextPainter) _layout(FloaterLine line, double c) {
     final fontSize = line.size * c;

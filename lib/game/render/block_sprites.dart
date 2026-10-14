@@ -60,15 +60,112 @@ void paintBlock(Canvas canvas, Offset origin, double s, Color color, {required C
   canvas.drawCircle(Offset(x + w * 0.8, y + s * 0.2), s * 0.045, Paint()..color = Colors.white.withValues(alpha: 0.9));
 }
 
+/// Round black bomb with a red glow, a fuse and a spark.
+void paintBomb(Canvas canvas, Offset origin, double s) {
+  final c = origin + Offset(s * 0.48, s * 0.56);
+  final r = s * 0.36;
+  canvas.drawCircle(
+    c,
+    r * 1.25,
+    Paint()
+      ..color = const Color(0xFFF43F5E).withValues(alpha: 0.55)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, s * 0.2),
+  );
+  canvas.drawCircle(
+    c,
+    r,
+    Paint()..shader = ui.Gradient.radial(c - Offset(r * 0.35, r * 0.35), r * 1.3, [const Color(0xFF5B6478), const Color(0xFF151824)]),
+  );
+  canvas.drawCircle(c - Offset(r * 0.38, r * 0.4), r * 0.22, Paint()..color = Colors.white.withValues(alpha: 0.55));
+  // Fuse cap and fuse.
+  final cap = Rect.fromCenter(center: c + Offset(r * 0.55, -r * 0.78), width: r * 0.5, height: r * 0.34);
+  canvas.save();
+  canvas.translate(cap.center.dx, cap.center.dy);
+  canvas.rotate(0.6);
+  canvas.drawRRect(
+    RRect.fromRectAndRadius(Rect.fromCenter(center: Offset.zero, width: cap.width, height: cap.height), Radius.circular(s * 0.04)),
+    Paint()..color = const Color(0xFF8B93A7),
+  );
+  canvas.restore();
+  final fuseEnd = c + Offset(r * 1.05, -r * 1.25);
+  canvas.drawPath(
+    Path()
+      ..moveTo(cap.center.dx, cap.center.dy)
+      ..quadraticBezierTo(c.dx + r * 1.1, c.dy - r * 0.9, fuseEnd.dx, fuseEnd.dy),
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = s * 0.05
+      ..strokeCap = StrokeCap.round
+      ..color = const Color(0xFFD6B57A),
+  );
+  canvas.drawCircle(
+    fuseEnd,
+    s * 0.11,
+    Paint()
+      ..color = const Color(0xFFFDE047)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, s * 0.06),
+  );
+  canvas.drawCircle(fuseEnd, s * 0.05, Paint()..color = Colors.white);
+}
+
+/// Golden drill bit pointing down.
+void paintDrill(Canvas canvas, Offset origin, double s) {
+  final cx = origin.dx + s / 2, top = origin.dy + s * 0.08, bottom = origin.dy + s * 0.94;
+  final half = s * 0.3;
+  canvas.drawRect(
+    Rect.fromLTRB(cx - half, top, cx + half, bottom),
+    Paint()
+      ..color = const Color(0xFFF59E0B).withValues(alpha: 0.5)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, s * 0.18),
+  );
+  final body = Path()
+    ..moveTo(cx - half, top)
+    ..lineTo(cx + half, top)
+    ..lineTo(cx + half, top + s * 0.32)
+    ..lineTo(cx, bottom)
+    ..lineTo(cx - half, top + s * 0.32)
+    ..close();
+  canvas.drawPath(
+    body,
+    Paint()
+      ..shader = ui.Gradient.linear(
+        Offset(cx - half, 0),
+        Offset(cx + half, 0),
+        [const Color(0xFFFDE68A), const Color(0xFFF59E0B), const Color(0xFFB45309)],
+        const [0, 0.5, 1],
+      ),
+  );
+  // Spiral grooves.
+  final groove = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = s * 0.05
+    ..strokeCap = StrokeCap.round
+    ..color = const Color(0xFF92400E).withValues(alpha: 0.8);
+  for (var i = 0; i < 3; i++) {
+    final y = top + s * (0.38 + i * 0.15);
+    final w = half * (1 - (y - top - s * 0.32) / (bottom - top - s * 0.32)).clamp(0.15, 1.0);
+    canvas.drawLine(Offset(cx - w, y), Offset(cx + w, y - s * 0.08), groove);
+  }
+  canvas.drawRRect(
+    RRect.fromRectAndRadius(Rect.fromLTRB(cx - half, top, cx + half, top + s * 0.14), Radius.circular(s * 0.04)),
+    Paint()..color = const Color(0xFF78350F),
+  );
+}
+
 /// Pre-rendered block images for one cell size. Drawing cached images is far
 /// cheaper than re-running gradients and blurs for every cell every frame.
 class BlockSprites {
   BlockSprites._(this.cell, this.dpr, this.palette) : pad = cell * 0.45 {
     for (final type in PieceType.values) {
       _normal[type] = _render(
-        (c, o) => paintBlock(c, o, cell, blockColors[type]!, shadeTarget: palette.shadeTarget, emissive: palette.isDark),
+        (c, o) => switch (type) {
+          PieceType.bomb => paintBomb(c, o, cell),
+          PieceType.drill => paintDrill(c, o, cell),
+          _ => paintBlock(c, o, cell, blockColors[type]!, shadeTarget: palette.shadeTarget, emissive: palette.isDark),
+        },
       );
       _ghost[type] = _render((c, o) => _paintGhost(c, o, blockColors[type]!));
+      _aura[type] = _render((c, o) => _paintAura(c, o, blockColors[type]!));
     }
     gray = _render(
       (c, o) => paintBlock(
@@ -90,11 +187,16 @@ class BlockSprites {
 
   final Map<PieceType, ui.Image> _normal = {};
   final Map<PieceType, ui.Image> _ghost = {};
+  final Map<PieceType, ui.Image> _aura = {};
   late final ui.Image gray;
   late final ui.Image white;
 
   ui.Image block(PieceType type) => _normal[type]!;
   ui.Image ghost(PieceType type) => _ghost[type]!;
+
+  /// Soft coloured glow behind the active piece (pre-blurred, so drawing it
+  /// costs no per-frame blur).
+  ui.Image aura(PieceType type) => _aura[type]!;
 
   static final Map<String, BlockSprites> _cache = {};
 
@@ -104,7 +206,7 @@ class BlockSprites {
     final key = '$rounded@$dpr/${palette.isDark}';
     final hit = _cache.remove(key);
     if (hit != null) return _cache[key] = hit;
-    if (_cache.length >= 8) {
+    if (_cache.length >= 16) {
       _cache.remove(_cache.keys.first);
     }
     return _cache[key] = BlockSprites._(rounded, dpr, palette);
@@ -137,6 +239,19 @@ class BlockSprites {
         canvas.drawPath(metric.extractPath(d, d + dash), stroke);
       }
     }
+  }
+
+  void _paintAura(Canvas canvas, Offset o, Color color) {
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(o.dx + cell * 0.1, o.dy + cell * 0.1, cell * 0.8, cell * 0.8),
+      Radius.circular(cell * 0.25),
+    );
+    canvas.drawRRect(
+      rrect,
+      Paint()
+        ..color = color
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * 0.17),
+    );
   }
 
   void _paintWhite(Canvas canvas, Offset o) {

@@ -10,6 +10,12 @@ enum GameMode {
 
   /// Constant, calm speed for endless play.
   relaxed,
+
+  /// "Süper Küpler": classic speed plus the energy bar and power-ups.
+  superMode;
+
+  bool get hasPowers => this == GameMode.superMode;
+  bool get speedsUp => this != GameMode.relaxed;
 }
 
 /// Level at which classic mode reaches its top speed.

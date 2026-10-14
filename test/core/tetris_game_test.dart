@@ -51,7 +51,7 @@ void main() {
       final bag = PieceBag(42);
       for (var round = 0; round < 5; round++) {
         final seven = [for (var i = 0; i < 7; i++) bag.next()];
-        expect(seven.toSet(), PieceType.values.toSet());
+        expect(seven.toSet(), standardPieces.toSet());
       }
     });
 

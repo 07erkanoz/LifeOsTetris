@@ -126,7 +126,7 @@ class AboutPage extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(vertical: 7),
                             child: Row(
                               children: [
-                                PieceView(type: PieceType.values[(i * 2 + 2) % PieceType.values.length], cell: 8, size: const Size(34, 34)),
+                                PieceView(type: standardPieces[(i * 2 + 2) % standardPieces.length], cell: 8, size: const Size(34, 34)),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
@@ -450,7 +450,7 @@ class _FallingBlocksPainter extends CustomPainter {
 
   static final _pieces = List.generate(9, (i) {
     final r = Random(40 + i);
-    return (PieceType.values[i % PieceType.values.length], r.nextDouble(), r.nextDouble(), 0.6 + r.nextDouble() * 0.6, r.nextDouble() * pi);
+    return (standardPieces[i % standardPieces.length], r.nextDouble(), r.nextDouble(), 0.6 + r.nextDouble() * 0.6, r.nextDouble() * pi);
   });
 
   @override

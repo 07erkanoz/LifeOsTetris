@@ -314,7 +314,16 @@ class _ControlButtonState extends State<ControlButton> {
 
 /// Pill-shaped primary action button.
 class GradientButton extends StatelessWidget {
-  const GradientButton({super.key, required this.label, required this.onTap, this.icon, this.subtitle, this.secondary = false, this.width});
+  const GradientButton({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.icon,
+    this.subtitle,
+    this.secondary = false,
+    this.width,
+    this.colors,
+  });
 
   final String label;
   final String? subtitle;
@@ -323,10 +332,14 @@ class GradientButton extends StatelessWidget {
   final bool secondary;
   final double? width;
 
+  /// Gradient override for primary buttons.
+  final List<Color>? colors;
+
   @override
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
     final fg = secondary ? p.text : Colors.white;
+    final gradient = colors ?? [p.accent1, p.accent2];
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -334,11 +347,11 @@ class GradientButton extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: subtitle == null ? 14 : 20, vertical: 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          gradient: secondary ? null : LinearGradient(colors: [p.accent1, p.accent2]),
+          gradient: secondary ? null : LinearGradient(colors: gradient),
           color: secondary ? p.glass : null,
           border: Border.all(color: secondary ? p.glassBorder : Colors.white.withValues(alpha: 0.25), width: 1.5),
           boxShadow: [
-            BoxShadow(color: secondary ? p.glassShadow : p.accent1.withValues(alpha: 0.4), blurRadius: 22, offset: const Offset(0, 8)),
+            BoxShadow(color: secondary ? p.glassShadow : gradient.first.withValues(alpha: 0.4), blurRadius: 22, offset: const Offset(0, 8)),
           ],
         ),
         child: Row(

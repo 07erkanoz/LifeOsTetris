@@ -30,6 +30,13 @@ enum Sfx {
   combo6,
   combo7,
   combo8,
+  bomb,
+  drill,
+  gravity,
+  slowmo,
+  ghost,
+  power,
+  poweruse,
 }
 
 /// Sound effects and a shuffled background music playlist.
@@ -49,7 +56,7 @@ class AudioService {
     'audio/music/track4.mp3',
   ];
 
-  final Map<Sfx, AudioPool> _pools = {};
+  final Map<Sfx, _SfxChannel> _channels = {};
   final Map<Sfx, DateTime> _lastPlayed = {};
   AudioPlayer? _music;
   StreamSubscription<void>? _musicDone;
@@ -92,35 +99,37 @@ class AudioService {
     } catch (e) {
       debugPrint('Audio context failed: $e');
     }
-    try {
-      await Future.wait(
-        Sfx.values.map((s) async {
-          final busy = s == Sfx.move || s == Sfx.soft || s == Sfx.rotate || s == Sfx.lock;
-          _pools[s] = await AudioPool.create(
-            source: AssetSource('audio/sfx/${s.name}.wav'),
-            maxPlayers: busy ? 4 : 2,
-            audioContext: _sfxContext,
+    // On Android short effects go through SoundPool ("low latency" mode),
+    // which is built for game sounds. The default MediaPlayer path costs far
+    // more per play and heated phones up during long sessions.
+    final lowLatency = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    await Future.wait(
+      Sfx.values.map((s) async {
+        final busy = s == Sfx.move || s == Sfx.soft || s == Sfx.rotate || s == Sfx.lock || s == Sfx.bump;
+        try {
+          _channels[s] = await _SfxChannel.create(
+            'audio/sfx/${s.name}.wav',
+            voices: busy ? 3 : 1,
+            lowLatency: lowLatency,
+            context: _sfxContext,
           );
-        }),
-      );
-    } catch (e) {
-      debugPrint('Audio init failed: $e');
-    }
+        } catch (e) {
+          debugPrint('sfx ${s.name} init failed: $e');
+        }
+      }),
+    );
   }
 
   void play(Sfx sfx, {double volume = 1}) {
     if (!enabled || !sfxOn) return;
-    final pool = _pools[sfx];
-    if (pool == null) return;
+    final channel = _channels[sfx];
+    if (channel == null) return;
     // Avoid machine-gunning the same sample (auto-repeat, soft drop).
     final now = DateTime.now();
     final last = _lastPlayed[sfx];
     if (last != null && now.difference(last).inMilliseconds < 35) return;
     _lastPlayed[sfx] = now;
-    pool.start(volume: volume).catchError((Object e) {
-      debugPrint('sfx $sfx failed: $e');
-      return () async {};
-    });
+    channel.play(volume);
   }
 
   void playCombo(int combo) {
@@ -202,8 +211,50 @@ class AudioService {
   void dispose() {
     _musicDone?.cancel();
     _music?.dispose();
-    for (final pool in _pools.values) {
-      pool.dispose();
+    for (final channel in _channels.values) {
+      channel.dispose();
+    }
+  }
+}
+
+/// A fixed set of pre-loaded players for one effect, used round-robin.
+/// Unlike AudioPool it never creates players while the game runs.
+class _SfxChannel {
+  _SfxChannel(this._players);
+
+  final List<AudioPlayer> _players;
+  int _next = 0;
+
+  static Future<_SfxChannel> create(String asset, {required int voices, required bool lowLatency, required AudioContext context}) async {
+    final players = <AudioPlayer>[];
+    for (var i = 0; i < voices; i++) {
+      final player = AudioPlayer();
+      await player.setAudioContext(context);
+      if (lowLatency) await player.setPlayerMode(PlayerMode.lowLatency);
+      await player.setReleaseMode(ReleaseMode.stop);
+      await player.setSource(AssetSource(asset));
+      players.add(player);
+    }
+    return _SfxChannel(players);
+  }
+
+  void play(double volume) {
+    final player = _players[_next];
+    _next = (_next + 1) % _players.length;
+    () async {
+      try {
+        await player.stop();
+        await player.setVolume(volume);
+        await player.resume();
+      } catch (e) {
+        debugPrint('sfx play failed: $e');
+      }
+    }();
+  }
+
+  void dispose() {
+    for (final p in _players) {
+      p.dispose();
     }
   }
 }

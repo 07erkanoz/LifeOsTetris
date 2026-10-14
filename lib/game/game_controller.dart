@@ -27,6 +27,11 @@ class GameController extends ChangeNotifier {
   final TetrisGame game = TetrisGame();
   final EffectsEngine fx = EffectsEngine();
   final ValueNotifier<int> frame = ValueNotifier(0);
+
+  /// Repaint signal for the animated background, at half the board's rate.
+  final ValueNotifier<int> backgroundFrame = ValueNotifier(0);
+  double _sinceRepaint = 0;
+  int _paintCount = 0;
   final MotivationEngine motivation = MotivationEngine();
   int _lastMotivationId = 0;
 
@@ -68,6 +73,7 @@ class GameController extends ChangeNotifier {
 
   void start([GameMode? mode]) {
     if (mode != null) this.mode = mode;
+    if (_demoSuper) this.mode = GameMode.superMode;
     fx.reset();
     motivation.reset(bestScore: settings.bestScore(this.mode));
     newRecord = false;
@@ -86,6 +92,7 @@ class GameController extends ChangeNotifier {
   /// Development builds made with `--dart-define=KUPLER_DEMO=true` start
   /// on a nearly full board so effects can be recorded on the first drop.
   static const bool _demo = bool.fromEnvironment('KUPLER_DEMO');
+  static const bool _demoSuper = bool.fromEnvironment('KUPLER_DEMO_SUPER');
 
   void _setUpDemo() {
     game.debugSetBoard([
@@ -101,6 +108,7 @@ class GameController extends ChangeNotifier {
     ]);
     game.lines = 8;
     game.debugSetActive(const Piece(PieceType.i, Rotation.right, 7, 2));
+    if (game.powersEnabled) game.debugGivePowers([PowerType.bomb, PowerType.ghostLine, PowerType.gravity]);
   }
 
   void togglePause() {
@@ -149,7 +157,15 @@ class GameController extends ChangeNotifier {
     // Nothing moves behind the pause / menu / results screens, so stop
     // repainting the board and background there: it keeps those screens
     // smooth and saves battery.
-    if (!_idle) frame.value++;
+    // Repaint at most ~60 times a second even on 90/120 Hz screens; the game
+    // logic above still runs every tick. Halves GPU work (and heat) there.
+    _sinceRepaint += dt;
+    if (!_idle && _sinceRepaint >= 1 / 62) {
+      _sinceRepaint = 0;
+      frame.value++;
+      _paintCount++;
+      if (_paintCount.isEven) backgroundFrame.value++;
+    }
     _notifyHudIfChanged();
   }
 
@@ -167,11 +183,17 @@ class GameController extends ChangeNotifier {
       game.status,
       game.paused,
       motivation.current?.id,
+      game.energy,
+      Object.hashAll(game.powers),
+      game.ghostLine != null,
+      game.slowMotion > 0,
+      (fx.energyPulse * 4).round(),
+      (fx.powerPulse * 4).round(),
       playTime.floor(),
       showGameOver,
-      (fx.holdPulse * 10).round(),
-      (fx.scorePulse * 10).round(),
-      (fx.levelPulse * 10).round(),
+      (fx.holdPulse * 4).round(),
+      (fx.scorePulse * 4).round(),
+      (fx.levelPulse * 4).round(),
     );
     if (snapshot != _hudSnapshot) {
       _hudSnapshot = snapshot;
@@ -223,7 +245,28 @@ class GameController extends ChangeNotifier {
         audio.play(Sfx.levelup);
       case GameOver():
         audio.play(Sfx.gameover);
-      case PieceSpawned() || RowsCollapsed():
+      case PowerEarned():
+        audio.play(Sfx.power, volume: 0.8);
+      case PowerActivated(:final type):
+        audio.play(switch (type) {
+          PowerType.gravity => Sfx.gravity,
+          PowerType.slowMotion => Sfx.slowmo,
+          PowerType.ghostLine => Sfx.ghost,
+          _ => Sfx.poweruse,
+        });
+      case BombExploded():
+        audio.play(Sfx.bomb);
+      case ColumnDrilled():
+        audio.play(Sfx.drill);
+      case GhostLineFilled():
+        audio.play(Sfx.clear2, volume: 0.8);
+      case PieceSpawned() ||
+          RowsCollapsed() ||
+          EnergyGained() ||
+          GravityApplied() ||
+          SlowMotionStarted() ||
+          SlowMotionEnded() ||
+          GhostLineStarted():
         break;
     }
   }
@@ -237,8 +280,12 @@ class GameController extends ChangeNotifier {
         count >= 4 || perfectClear ? haptics.celebrate() : haptics.medium();
       case LevelUp():
         haptics.celebrate();
-      case GameOver():
+      case GameOver() || BombExploded():
         haptics.heavy();
+      case ColumnDrilled() || GravityApplied() || GhostLineFilled():
+        haptics.medium();
+      case PowerEarned() || PowerActivated():
+        haptics.light();
       default:
         break;
     }
@@ -304,7 +351,10 @@ class GameController extends ChangeNotifier {
     game.setSoftDrop(false);
   }
 
-  void rotateCw() => game.rotateClockwise();
+  /// Tapping the board (or rotating) stops the ghost line while it sinks.
+  void rotateCw() => game.ghostLine != null ? game.triggerGhostLine() : game.rotateClockwise();
+
+  void usePower(int slot) => game.usePower(slot);
   void rotateCcw() => game.rotateCounterClockwise();
   void hardDrop() => game.hardDrop();
   void hold() => game.hold();
@@ -357,6 +407,7 @@ class GameController extends ChangeNotifier {
   void dispose() {
     settings.removeListener(_applySettings);
     frame.dispose();
+    backgroundFrame.dispose();
     super.dispose();
   }
 }

@@ -20,9 +20,13 @@ class PieceBag {
     return List.unmodifiable(_queue.take(count));
   }
 
+  /// Puts [type] back at the front of the queue (a piece swapped out by a
+  /// power comes back next).
+  void pushFront(PieceType type) => _queue.insert(0, type);
+
   void _fill(int count) {
     while (_queue.length < count) {
-      _queue.addAll(List.of(PieceType.values)..shuffle(_random));
+      _queue.addAll(List.of(standardPieces)..shuffle(_random));
     }
   }
 }

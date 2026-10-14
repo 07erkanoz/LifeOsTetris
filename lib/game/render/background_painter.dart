@@ -10,7 +10,7 @@ import 'block_sprites.dart';
 
 class _Floating {
   _Floating(Random r)
-    : type = PieceType.values[r.nextInt(PieceType.values.length)],
+    : type = standardPieces[r.nextInt(standardPieces.length)],
       x = r.nextDouble(),
       y = r.nextDouble(),
       speed = 0.008 + r.nextDouble() * 0.018,
@@ -34,8 +34,38 @@ class _Star {
   final double x, y, size, phase, rate;
 }
 
-/// Animated backdrop: drifting translucent tetrominoes, twinkling stars in
-/// dark mode, soft colour glows and event pulses (Tetris, level up...).
+/// Static part of the backdrop: gradient and soft colour glows. Painted once
+/// (it only changes with the theme or window size).
+class BackgroundBasePainter extends CustomPainter {
+  BackgroundBasePainter(this.palette);
+
+  final GamePalette palette;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    canvas.drawRect(rect, Paint()..shader = ui.Gradient.linear(rect.topLeft, rect.bottomRight, palette.background, const [0, 0.55, 1]));
+    final glowCenters = [
+      Offset(size.width * 0.15, size.height * 0.12),
+      Offset(size.width * 0.9, size.height * 0.2),
+      Offset(size.width * 0.75, size.height * 0.92),
+    ];
+    for (var i = 0; i < 3; i++) {
+      final radius = max(size.width, size.height) * 0.45;
+      canvas.drawCircle(
+        glowCenters[i],
+        radius,
+        Paint()..shader = ui.Gradient.radial(glowCenters[i], radius, [palette.glows[i], palette.glows[i].withValues(alpha: 0)]),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant BackgroundBasePainter old) => old.palette != palette;
+}
+
+/// Animated layer of the backdrop: drifting translucent tetrominoes,
+/// twinkling stars in dark mode and event pulses (quad, level up...).
 class BackgroundPainter extends CustomPainter {
   BackgroundPainter({
     required this.fx,
@@ -56,21 +86,6 @@ class BackgroundPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    canvas.drawRect(rect, Paint()..shader = ui.Gradient.linear(rect.topLeft, rect.bottomRight, palette.background, const [0, 0.55, 1]));
-    final glowCenters = [
-      Offset(size.width * 0.15, size.height * 0.12),
-      Offset(size.width * 0.9, size.height * 0.2),
-      Offset(size.width * 0.75, size.height * 0.92),
-    ];
-    for (var i = 0; i < 3; i++) {
-      final radius = max(size.width, size.height) * 0.45;
-      canvas.drawCircle(
-        glowCenters[i],
-        radius,
-        Paint()..shader = ui.Gradient.radial(glowCenters[i], radius, [palette.glows[i], palette.glows[i].withValues(alpha: 0)]),
-      );
-    }
-
     final t = fx.time;
     if (palette.isDark) {
       final star = Paint();

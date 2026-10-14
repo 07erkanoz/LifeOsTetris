@@ -1,4 +1,7 @@
+import 'powers.dart';
 import 'tetromino.dart';
+
+export 'powers.dart';
 
 /// Things that happened inside the game during an update. The UI drains these
 /// every frame to trigger sounds, haptics and visual effects.
@@ -95,4 +98,68 @@ class LevelUp extends GameEvent {
 
 class GameOver extends GameEvent {
   const GameOver();
+}
+
+// ------------------------------------------------------------ powers
+
+class EnergyGained extends GameEvent {
+  const EnergyGained(this.energy);
+  final int energy;
+}
+
+class PowerEarned extends GameEvent {
+  const PowerEarned(this.type);
+  final PowerType type;
+}
+
+class PowerActivated extends GameEvent {
+  const PowerActivated(this.type);
+  final PowerType type;
+}
+
+/// A cell removed by a power, with what used to be in it.
+typedef RemovedCell = (Cell cell, PieceType type);
+
+class BombExploded extends GameEvent {
+  const BombExploded(this.center, this.removed, this.points);
+  final Cell center;
+  final List<RemovedCell> removed;
+  final int points;
+}
+
+class ColumnDrilled extends GameEvent {
+  const ColumnDrilled(this.column, this.fromRow, this.removed, this.points);
+  final int column;
+  final int fromRow;
+  final List<RemovedCell> removed;
+  final int points;
+}
+
+/// A block that fell during the gravity power: column, old row, new row.
+typedef FallenCell = (int x, int fromY, int toY);
+
+class GravityApplied extends GameEvent {
+  const GravityApplied(this.moves);
+  final List<FallenCell> moves;
+}
+
+class SlowMotionStarted extends GameEvent {
+  const SlowMotionStarted(this.seconds);
+  final double seconds;
+}
+
+class SlowMotionEnded extends GameEvent {
+  const SlowMotionEnded();
+}
+
+class GhostLineStarted extends GameEvent {
+  const GhostLineStarted();
+}
+
+class GhostLineFilled extends GameEvent {
+  const GhostLineFilled(this.row, this.cells);
+
+  /// Board row (including hidden rows).
+  final int row;
+  final List<Cell> cells;
 }

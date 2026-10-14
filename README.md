@@ -7,8 +7,13 @@ Geliştirici: **Erkan ÖZ** · [lifeos.com.tr](https://lifeos.com.tr)
 
 ## Özellikler
 
-- **İki mod:** *Klasik* (hız 10. seviyeye kadar yavaşça artar, sonra sabit) ve
-  *Rahat* (sabit, sakin hız).
+- **Süper Küpler:** satır sildikçe dolan enerji barı (3 satır = 1 güç, dörtlü
+  bar'ı anında doldurur, en fazla 3 güç) ve 6 güç: 💣 Bomba (3×3 patlatır),
+  ▪️ Tekli blok, 🔩 Matkap (blokları delip sütunu yer), 🧲 Yerçekimi (havadaki
+  bloklar düşer), ⏳ Ağır çekim (10 sn) ve 👻 Hayalet Çizgi (yığının içinden
+  süzülür, dokununca bulunduğu satırın boşluklarını doldurur).
+- **Klasik Küpler:** *Normal* (hız 10. seviyeye kadar yavaşça artar, sonra sabit)
+  ve *Rahat* (sabit, sakin hız). Her modun rekoru ayrı tutulur.
 - **Koyu ve açık tema**, telefon ve masaüstü için ayrı yerleşim; ekran ne olursa
   olsun tahta ekrana tam oturur.
 - **Efektler:** parçacık patlamaları, ekran sarsıntısı, sert düşüş izleri, şok
@@ -33,6 +38,7 @@ Geliştirici: **Erkan ÖZ** · [lifeos.com.tr](https://lifeos.com.tr)
 | Space | Aşağı fırlat / ⇊ butonu | Sert düşüş |
 | C | Yukarı fırlat / ⇅ butonu | Tut |
 | P, Esc | ⏸ | Duraklat |
+| 1 · 2 · 3 | Güç yuvasına dokun | Gücü kullan (Süper Küpler) |
 
 ## Geliştirme
 
@@ -46,6 +52,8 @@ flutter build apk --release # Android
 - Efekt seslerini yeniden üretmek: `python3 tool/generate_sfx.py` (numpy gerekir).
 - Efekt demosu: `flutter run --dart-define=KUPLER_DEMO=true` neredeyse dolu bir
   tahtayla başlar; ilk sert düşüşte dörtlü silme ve seviye atlama görülür.
+  `--dart-define=KUPLER_DEMO_SUPER=true` eklenirse Süper Küpler'de, güç
+  yuvaları dolu başlar.
 
 ### Proje yapısı
 
@@ -62,4 +70,5 @@ assets/        Yazı tipi (Inter, OFL), sesler, müzikler (bkz. assets/audio/mus
 ## Test sürümü (Android)
 
 `main` dalına her gönderimde GitHub Actions bir APK derler ve
-**Releases → Test sürümü** altına koyar. Telefondan indirip kurabilirsin.
+**Releases → Test sürümü** altına koyar; aynı sayfada Windows için zip de
+vardır (klasörü çıkarıp `lifeos_kupler.exe` çalıştırılır).

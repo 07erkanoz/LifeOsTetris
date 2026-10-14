@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../core/game_events.dart';
+import '../core/scoring.dart';
 
 enum AppLanguage { system, tr, en }
 
@@ -170,6 +171,45 @@ class AppStrings {
   String levelUp(int level) => _t('SEVİYE $level', 'LEVEL $level');
   String get speedingUp => _t('HIZLANIYOR', 'SPEEDING UP');
   String get keepGoing => _t('DEVAM!', 'KEEP GOING!');
+
+  // ------------------------------------------------------------ süper küpler
+
+  String get classicTitle => _t('Klasik Küpler', 'Classic Blocks');
+  String get normal => _t('Normal', 'Normal');
+  String get normalSubtitle => _t('Hız yavaşça artar', 'Speed rises gently');
+  String get relaxedShort => _t('Sabit, sakin hız', 'Calm, constant speed');
+  String get superTitle => _t('Süper Küpler', 'Super Blocks');
+  String get superSubtitle => _t('Enerji topla, güçleri kullan!', 'Charge up and unleash powers!');
+  String get newBadge => _t('YENİ', 'NEW');
+  String get powersLabel => _t('GÜÇLER', 'POWERS');
+  String get energyLabel => _t('ENERJİ', 'ENERGY');
+  String get ghostLineHint => _t('Doğru satırda dokun, boşluklar dolsun!', 'Tap on the right row to fill the gaps!');
+  String get powerKeysHint => _t('1 · 2 · 3: güç kullan', '1 · 2 · 3: use power');
+  String get emptySlot => _t('3 satır sil, güç kazan', 'Clear 3 lines to earn a power');
+
+  String modeName(GameMode mode) => switch (mode) {
+    GameMode.classic => classic,
+    GameMode.relaxed => relaxed,
+    GameMode.superMode => superTitle,
+  };
+
+  String powerName(PowerType type) => switch (type) {
+    PowerType.bomb => _t('BOMBA', 'BOMB'),
+    PowerType.single => _t('TEKLİ BLOK', 'SINGLE BLOCK'),
+    PowerType.drill => _t('MATKAP', 'DRILL'),
+    PowerType.gravity => _t('YERÇEKİMİ', 'GRAVITY'),
+    PowerType.slowMotion => _t('AĞIR ÇEKİM', 'SLOW-MO'),
+    PowerType.ghostLine => _t('HAYALET ÇİZGİ', 'GHOST LINE'),
+  };
+
+  String powerDescription(PowerType type) => switch (type) {
+    PowerType.bomb => _t('Düştüğü yerde 3×3 alanı patlatır', 'Blasts a 3×3 area where it lands'),
+    PowerType.single => _t('Tek karelik blok: delikleri kapat', 'A one-cell block to plug holes'),
+    PowerType.drill => _t('Blokları delip bütün sütunu yer', 'Drills through and eats a whole column'),
+    PowerType.gravity => _t('Havadaki bloklar düşer, boşluklar dolar', 'Floating blocks fall and fill the gaps'),
+    PowerType.slowMotion => _t('10 saniye boyunca her şey yavaşlar', 'Everything slows down for 10 seconds'),
+    PowerType.ghostLine => _t('Seçtiğin satırın boşluklarını doldurur', 'Fills the gaps of the row you choose'),
+  };
 
   // ------------------------------------------------------------ motivation
 

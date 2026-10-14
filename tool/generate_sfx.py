@@ -158,6 +158,42 @@ def main():
     sparkle += arpeggio(['C5', 'G5', 'C6', 'E6', 'G6'], 0.03, 1.6, 0.5) * 0.7
     save('perfect', reverb(sparkle, 0.35), 0.9)
 
+    # ---- Süper Küpler powers
+    boom = sweep(110, 30, 1.2) * decay(1.2, 0.35)
+    blast = lowpass(noise(1.2), 1600) * decay(1.2, 0.18)
+    crackle = lowpass(noise(1.2), 6000) * decay(1.2, 0.05)
+    save('bomb', reverb(boom + 0.9 * blast + 0.4 * crackle, 0.3), 0.98)
+
+    t = t_axis(0.7)
+    buzz = sweep(180, 90, 0.7, 'square') * 0.5 + lowpass(noise(0.7), 3000) * 0.4
+    buzz *= (0.6 + 0.4 * np.sin(2 * np.pi * 38 * t)) * np.clip(t / 0.03, 0, 1) * decay(0.7, 0.35)
+    save('drill', buzz, 0.8)
+
+    fall = sweep(900, 140, 0.45, 'tri') * decay(0.45, 0.3) * 0.6
+    thuds = np.zeros(int(SR * 0.9))
+    place(thuds, fall, 0)
+    for i, at in enumerate([0.42, 0.55, 0.64]):
+        place(thuds, sweep(160, 60, 0.18) * decay(0.18, 0.06) * (1 - i * 0.25), at)
+    save('gravity', thuds, 0.85)
+
+    slow = sweep(700, 160, 0.9, 'tri') * decay(0.9, 0.6)
+    t = t_axis(0.9)
+    slow *= 0.7 + 0.3 * np.sin(2 * np.pi * 5 * t)
+    save('slowmo', reverb(lowpass(slow, 2500), 0.4), 0.75)
+
+    ghost = np.zeros(int(SR * 1.2))
+    for i, n in enumerate(['E6', 'B6', 'G#6', 'E7']):
+        place(ghost, bell(note(n), 1.0, 0.35) * 0.6, i * 0.06)
+    t = t_axis(1.2)
+    ghost += lowpass(noise(1.2), 5000) * 0.08 * np.sin(np.pi * t / 1.2)
+    save('ghost', reverb(ghost, 0.45), 0.7)
+
+    save('power', reverb(arpeggio(['G5', 'C6', 'E6', 'G6', 'C7'], 0.035, 0.7, 0.18)), 0.75)
+    zap = sweep(300, 2400, 0.22, 'square') * decay(0.22, 0.12) * 0.5
+    zap = np.concatenate([zap, np.zeros(int(SR * 0.3))])
+    place(zap, bell(note('C7'), 0.4, 0.12) * 0.5, 0.12)
+    save('poweruse', reverb(lowpass(zap, 7000)), 0.75)
+
     save('click', tone(1500, 0.035) * decay(0.035, 0.008), 0.35)
     start = sweep(300, 1200, 0.35, 'tri') * decay(0.35, 0.2)
     start = np.concatenate([start, np.zeros(int(SR * 0.4))])

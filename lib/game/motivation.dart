@@ -113,7 +113,7 @@ class MotivationEngine {
         final chance = count >= 2 ? 0.35 : 0.08;
         if (_random.nextDouble() < chance) _offer(MotivationKind.praise, value: _pickPraise());
       case LevelUp(:final level):
-        if (game.mode == GameMode.classic && level == speedCapLevel) _offer(MotivationKind.maxSpeed);
+        if (game.mode.speedsUp && level == speedCapLevel) _offer(MotivationKind.maxSpeed);
       default:
         break;
     }
@@ -128,6 +128,7 @@ class MotivationEngine {
   /// Height of the stack (in visible rows) before the clear removed [rows].
   int _stackHeight(TetrisGame game, List<int> rows) {
     for (var y = TetrisGame.hiddenRows; y < TetrisGame.height; y++) {
+      if (rows.contains(y)) continue;
       if (game.board[y].any((c) => c != null)) return TetrisGame.height - y;
     }
     return 0;

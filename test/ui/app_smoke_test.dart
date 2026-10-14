@@ -4,9 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lifeos_kupler/app.dart';
 import 'package:lifeos_kupler/audio/audio_service.dart';
 import 'package:lifeos_kupler/l10n/strings.dart';
+import 'package:lifeos_kupler/core/tetris_game.dart';
 import 'package:lifeos_kupler/game/game_controller.dart';
 import 'package:lifeos_kupler/settings/settings.dart';
 import 'package:lifeos_kupler/ui/game_screen.dart';
+import 'package:lifeos_kupler/ui/power_bar.dart';
 import 'package:lifeos_kupler/ui/widgets.dart';
 
 void main() {
@@ -59,12 +61,12 @@ void main() {
 
   testWidgets('English UI and switching language from the menu', (tester) async {
     await pumpApp(tester, const Size(390, 844), language: AppLanguage.en);
-    expect(find.text('Classic'), findsOneWidget);
+    expect(find.text('Super Blocks'), findsOneWidget);
     expect(find.text('About'), findsOneWidget);
 
     await tester.tap(find.text('Türkçe'));
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('Klasik'), findsOneWidget);
+    expect(find.text('Süper Küpler'), findsOneWidget);
     expect(find.text('Hakkında'), findsOneWidget);
   });
 
@@ -87,5 +89,26 @@ void main() {
     await tester.pump(const Duration(milliseconds: 33));
     final state = tester.state(find.byType(GameScreen)) as dynamic;
     expect((state.controller as GameController).game.held, isNotNull);
+  });
+
+  testWidgets('Süper Küpler shows the power bar and uses powers with number keys', (tester) async {
+    await pumpApp(tester, const Size(390, 844));
+    await tester.tap(find.byKey(const ValueKey('start-super')));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 33));
+    }
+    expect(find.byType(PowerBar), findsOneWidget);
+
+    final state = tester.state(find.byType(GameScreen)) as dynamic;
+    final game = (state.controller as GameController).game;
+    game.debugGivePowers([PowerType.bomb]);
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+    await tester.pump(const Duration(milliseconds: 33));
+    expect(game.active!.type, PieceType.bomb);
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 33));
+    }
+    expect(tester.takeException(), isNull);
   });
 }
