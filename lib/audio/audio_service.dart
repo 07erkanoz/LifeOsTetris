@@ -158,9 +158,10 @@ class AudioService {
     } else if (_musicStarted) {
       final player = _music;
       if (player == null) return;
-      if (player.state == PlayerState.completed || player.state == PlayerState.stopped) {
+      if (player.state == PlayerState.completed) {
         _playNext();
       } else {
+        player.setVolume(_musicVolume * _duck).catchError((_) {});
         player.resume().catchError((_) {});
       }
     }
@@ -213,8 +214,14 @@ class AudioService {
     final player = _music;
     if (player == null) return;
     try {
-      await player.play(AssetSource(tracks[nextTrackIndex()]), volume: _musicVolume * _duck);
-      if (!_musicOn) await player.pause();
+      final source = AssetSource(tracks[nextTrackIndex()]);
+      if (_musicOn) {
+        await player.play(source, volume: _musicVolume * _duck);
+      } else {
+        // Music is off: load the track silently, so switching music on
+        // later resumes it, instead of playing a blip and pausing.
+        await player.setSource(source);
+      }
     } catch (e) {
       debugPrint('Music track failed: $e');
     }

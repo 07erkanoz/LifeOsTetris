@@ -1,4 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lifeos_kupler/l10n/strings.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:lifeos_kupler/core/scoring.dart';
 import 'package:lifeos_kupler/settings/settings.dart';
 
@@ -14,5 +17,43 @@ void main() {
     expect(s.gamesPlayed, 3);
     expect(s.totalLines, 9);
     expect(s.totalSeconds, 111);
+  });
+
+  test('every choice the player makes survives a restart', () async {
+    SharedPreferences.setMockInitialValues({});
+    final first = await Settings.load();
+    first
+      ..themeMode = ThemeMode.light
+      ..language = AppLanguage.en
+      ..music = false
+      ..musicVolume = 0.25
+      ..sfx = false
+      ..effects = false
+      ..shake = false
+      ..vibration = false
+      ..vibrationStrength = 0.9
+      ..showButtons = false
+      ..buttonOpacity = 0.4
+      ..fullScreen = false
+      ..lastTrack = 3;
+    first.recordBlockLevel(1, 2);
+    first.recordBlocksGame(endless: true, score: 1234, lines: 5, seconds: 60);
+
+    final again = await Settings.load();
+    expect(again.themeMode, ThemeMode.light);
+    expect(again.language, AppLanguage.en);
+    expect(again.music, isFalse);
+    expect(again.musicVolume, 0.25);
+    expect(again.sfx, isFalse);
+    expect(again.effects, isFalse);
+    expect(again.shake, isFalse);
+    expect(again.vibration, isFalse);
+    expect(again.vibrationStrength, 0.9);
+    expect(again.showButtons, isFalse);
+    expect(again.buttonOpacity, 0.4);
+    expect(again.fullScreen, isFalse);
+    expect(again.lastTrack, 3);
+    expect(again.blockStars(1), 2);
+    expect(again.blocksBest, 1234);
   });
 }
