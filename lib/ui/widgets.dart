@@ -1,9 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../core/tetromino.dart';
 import '../game/render/background_painter.dart';
 import '../game/render/block_sprites.dart';
 import '../theme/palette.dart';
+
+/// Phones and tablets: vibration and on-screen buttons only make sense there.
+bool get isMobilePlatform => !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
 
 class GlassCard extends StatelessWidget {
   const GlassCard({super.key, required this.child, this.padding = const EdgeInsets.all(12), this.radius = 20, this.glow = 0});

@@ -58,144 +58,195 @@ class AboutPage extends StatelessWidget {
           gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: p.background, stops: const [0, 0.55, 1]),
         ),
         child: SafeArea(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 560),
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(18, 10, 18, 32),
+          child: LayoutBuilder(
+            builder: (context, box) {
+              // Desktop windows get two columns instead of a tall phone strip.
+              final wide = box.maxWidth >= 900;
+              final stats = GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 2.1,
                 children: [
-                  Row(
-                    children: [
-                      GlassIconButton(icon: Icons.arrow_back_rounded, tooltip: s.back, onTap: () => Navigator.of(context).pop()),
-                      const Spacer(),
-                      _Chip(text: s.version(appVersion)),
-                    ],
+                  _StatTile(
+                    icon: Icons.emoji_events_rounded,
+                    colors: const [Color(0xFFFDE047), Color(0xFFF97316)],
+                    label: s.bestScore,
+                    value: s.score(settings.topScore),
                   ),
-                  const SizedBox(height: 14),
-                  const _Hero(),
-                  const SizedBox(height: 10),
-                  Center(
-                    child: Text(s.tagline, textAlign: TextAlign.center, style: muted.copyWith(fontSize: 15)),
+                  _StatTile(
+                    icon: Icons.sports_esports_rounded,
+                    colors: const [Color(0xFF38BDF8), Color(0xFF6366F1)],
+                    label: s.gamesPlayed,
+                    value: '${settings.gamesPlayed}',
                   ),
-                  const SizedBox(height: 22),
-
-                  _SectionTitle(s.statsLabel),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 2.1,
-                    children: [
-                      _StatTile(
-                        icon: Icons.emoji_events_rounded,
-                        colors: const [Color(0xFFFDE047), Color(0xFFF97316)],
-                        label: s.bestScore,
-                        value: s.score(settings.topScore),
-                      ),
-                      _StatTile(
-                        icon: Icons.sports_esports_rounded,
-                        colors: const [Color(0xFF38BDF8), Color(0xFF6366F1)],
-                        label: s.gamesPlayed,
-                        value: '${settings.gamesPlayed}',
-                      ),
-                      _StatTile(
-                        icon: Icons.layers_rounded,
-                        colors: const [Color(0xFF22C55E), Color(0xFF14B8A6)],
-                        label: s.totalLines,
-                        value: s.score(settings.totalLines),
-                      ),
-                      _StatTile(
-                        icon: Icons.timer_rounded,
-                        colors: const [Color(0xFFA855F7), Color(0xFFEC4899)],
-                        label: s.playTime,
-                        value: s.duration(settings.totalSeconds),
-                      ),
-                    ],
+                  _StatTile(
+                    icon: Icons.layers_rounded,
+                    colors: const [Color(0xFF22C55E), Color(0xFF14B8A6)],
+                    label: s.totalLines,
+                    value: s.score(settings.totalLines),
                   ),
-                  const SizedBox(height: 22),
-
-                  _SectionTitle(s.featuresLabel),
-                  GlassCard(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                    child: Column(
-                      children: [
-                        for (final (i, (title, sub)) in s.features.indexed)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 7),
-                            child: Row(
-                              children: [
-                                PieceView(type: standardPieces[(i * 2 + 2) % standardPieces.length], cell: 8, size: const Size(34, 34)),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        title,
-                                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: p.text),
-                                      ),
-                                      Text(sub, style: muted),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-
-                  _SectionTitle(s.developerLabel),
-                  _DeveloperCard(strings: s),
-                  const SizedBox(height: 22),
-
-                  _SectionTitle(s.musicLabel),
-                  GlassCard(
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-                    child: Column(
-                      children: [
-                        for (final (title, artist, source) in _musicCredits)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Row(
-                              children: [
-                                Icon(Icons.music_note_rounded, size: 18, color: p.accent1),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    title,
-                                    style: TextStyle(fontWeight: FontWeight.w700, color: p.text),
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Text(
-                                    '$artist · $source',
-                                    textAlign: TextAlign.end,
-                                    style: TextStyle(color: p.muted, fontSize: 12, fontWeight: FontWeight.w600),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        const SizedBox(height: 6),
-                        Text(s.fontAndSounds, style: muted.copyWith(fontSize: 12)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 26),
-                  Center(
-                    child: Text(
-                      '${s.madeWith}\n© ${DateTime.now().year} $developerName',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: p.label, fontSize: 12, height: 1.6, fontWeight: FontWeight.w600),
-                    ),
+                  _StatTile(
+                    icon: Icons.timer_rounded,
+                    colors: const [Color(0xFFA855F7), Color(0xFFEC4899)],
+                    label: s.playTime,
+                    value: s.duration(settings.totalSeconds),
                   ),
                 ],
-              ),
-            ),
+              );
+              final features = GlassCard(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                child: Column(
+                  children: [
+                    for (final (i, (title, sub)) in s.features.indexed)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 7),
+                        child: Row(
+                          children: [
+                            PieceView(type: standardPieces[(i * 2 + 2) % standardPieces.length], cell: 8, size: const Size(34, 34)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title,
+                                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: p.text),
+                                  ),
+                                  Text(sub, style: muted),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              );
+              final music = GlassCard(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+                child: Column(
+                  children: [
+                    for (final (title, artist, source) in _musicCredits)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            Icon(Icons.music_note_rounded, size: 18, color: p.accent1),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                title,
+                                style: TextStyle(fontWeight: FontWeight.w700, color: p.text),
+                              ),
+                            ),
+                            Flexible(
+                              child: Text(
+                                '$artist · $source',
+                                textAlign: TextAlign.end,
+                                style: TextStyle(color: p.muted, fontSize: 12, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: 6),
+                    Text(s.fontAndSounds, style: muted.copyWith(fontSize: 12)),
+                  ],
+                ),
+              );
+              final story = Container(
+                padding: const EdgeInsets.all(1.2),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(22),
+                  gradient: LinearGradient(colors: [p.accent1.withValues(alpha: 0.6), const Color(0xFFA855F7).withValues(alpha: 0.6)]),
+                ),
+                child: Container(
+                  padding: EdgeInsets.fromLTRB(20, 18, 20, 18),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(21),
+                    color: p.isDark ? const Color(0xF20E1226) : const Color(0xF7FFFFFF),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.format_quote_rounded, color: p.accent1, size: 28),
+                      for (final (i, paragraph) in s.aboutStory.indexed)
+                        Padding(
+                          padding: EdgeInsets.only(top: i == 0 ? 4 : 12),
+                          child: Text(
+                            paragraph,
+                            style: TextStyle(fontSize: 14.5, height: 1.6, fontWeight: FontWeight.w500, color: p.text),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+              final left = [_SectionTitle(s.statsLabel), stats, const SizedBox(height: 22), _SectionTitle(s.featuresLabel), features];
+              final right = [
+                _SectionTitle(s.developerLabel),
+                _DeveloperCard(strings: s),
+                const SizedBox(height: 22),
+                _SectionTitle(s.musicLabel),
+                music,
+              ];
+              return Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: wide ? 1080 : 560),
+                  child: ListView(
+                    padding: EdgeInsets.fromLTRB(wide ? 28 : 18, 10, wide ? 28 : 18, 32),
+                    children: [
+                      Row(
+                        children: [
+                          GlassIconButton(icon: Icons.arrow_back_rounded, tooltip: s.back, onTap: () => Navigator.of(context).pop()),
+                          const Spacer(),
+                          _Chip(text: s.version(appVersion)),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      const _Hero(),
+                      const SizedBox(height: 10),
+                      Center(
+                        child: Text(s.tagline, textAlign: TextAlign.center, style: muted.copyWith(fontSize: 15)),
+                      ),
+                      const SizedBox(height: 22),
+                      _SectionTitle(s.aboutGameLabel),
+                      story,
+                      const SizedBox(height: 22),
+                      if (wide)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: left),
+                            ),
+                            const SizedBox(width: 24),
+                            Expanded(
+                              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: right),
+                            ),
+                          ],
+                        )
+                      else ...[
+                        ...left,
+                        const SizedBox(height: 22),
+                        ...right,
+                      ],
+                      const SizedBox(height: 26),
+                      Center(
+                        child: Text(
+                          '${s.madeWith}\n© ${DateTime.now().year} $developerName',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: p.label, fontSize: 12, height: 1.6, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ),
       ),

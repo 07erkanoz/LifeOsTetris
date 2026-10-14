@@ -23,6 +23,7 @@ class KuplerApp extends StatelessWidget {
       builder: (context, _) => MaterialApp(
         title: 'LifeOS Küpler',
         debugShowCheckedModeBanner: false,
+        scrollBehavior: const _AppScrollBehavior(),
         themeMode: settings.themeMode,
         locale: switch (settings.language) {
           AppLanguage.system => null,
@@ -49,4 +50,14 @@ class KuplerApp extends StatelessWidget {
       ),
     );
   }
+}
+
+/// No scrollbars: on Windows the default ones are wide, always-visible bars
+/// that look out of place over the game's glass cards. Lists still scroll
+/// with the mouse wheel, touch and trackpad.
+class _AppScrollBehavior extends MaterialScrollBehavior {
+  const _AppScrollBehavior();
+
+  @override
+  Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) => child;
 }

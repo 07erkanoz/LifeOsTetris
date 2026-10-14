@@ -87,6 +87,7 @@ class AppStrings {
   String get vibration => _t('Titreşim', 'Vibration');
   String get onScreenButtons => _t('Ekran butonları', 'On-screen buttons');
   String get buttonOpacity => _t('Buton görünürlüğü', 'Button visibility');
+  String get fullScreen => _t('Tam ekran (F11)', 'Full screen (F11)');
   String get holdTapHint => _t('Dokun: tut', 'Tap: hold');
 
   // ------------------------------------------------------------ menus
@@ -107,13 +108,25 @@ class AppStrings {
   // ------------------------------------------------------------ about
 
   String version(String v) => _t('Sürüm $v', 'Version $v');
-  String get aboutGameLabel => _t('OYUN', 'GAME');
-  String get aboutGame => _t(
-    'LifeOS Küpler; düşen blokları dizip satırları patlattığın, bol efektli 2.5D bir blok bulmaca oyunudur. '
-        'Klasik modda hız yavaşça artar, Rahat modda sakin bir tempoda sonsuza kadar oynarsın.',
-    'LifeOS Küpler is a 2.5D block puzzle full of effects: stack the falling blocks and blast full lines. '
-        'In Classic mode the speed rises gently; in Relaxed mode you play forever at a calm pace.',
-  );
+  String get aboutGameLabel => _t('HİKÂYE', 'THE STORY');
+  List<String> get aboutStory => isTurkish
+      ? const [
+          'Hayat, tıpkı yukarıdan kontrolsüzce düşen bloklar gibidir: beklenmedik anlarda üst üste yığılır ve kaos yaratır. '
+              'Hukuk kuralları bu kaosu nasıl bir düzene sokmaya çalışıyorsa, LifeOS Küpler de size o karmaşanın içinde kendi '
+              'düzeninizi inşa etme fırsatı sunar.',
+          'Bir avukat ve arabulucunun analitik bakış açısıyla tasarlanan bu oyunda amacınız yalnızca blokları yerleştirmek değil; '
+              'hayatın hızla üzerinize bıraktığı uyuşmazlıkları ve parçaları doğru açıyla hizalayıp çözmektir. Her satır, çözüme '
+              'kavuşturulmuş bir problemdir. Blokları dengeleyin, satırları eritin ve kendi yaşam işletim sisteminizi (LifeOS) '
+              'kaostan kurtarın.',
+        ]
+      : const [
+          'Life is like blocks falling from above without control: they pile up when you least expect it and create chaos. '
+              'Just as the rules of law try to bring order to that chaos, LifeOS Küpler gives you the chance to build your own '
+              'order within it.',
+          'Designed with the analytical mind of a lawyer and mediator, this game is not only about placing blocks. It is about '
+              'lining up the disputes and pieces life quickly drops on you at the right angle, and resolving them. Every line is a '
+              'problem solved. Balance the blocks, melt the lines away and rescue your own life operating system (LifeOS) from chaos.',
+        ];
   String get statsLabel => _t('İSTATİSTİKLERİN', 'YOUR STATS');
   String get gamesPlayed => _t('Oyun', 'Games');
   String get totalLines => _t('Toplam satır', 'Total lines');
@@ -128,13 +141,13 @@ class AppStrings {
   String get featuresLabel => _t('ÖNE ÇIKANLAR', 'HIGHLIGHTS');
   List<(String, String)> get features => isTurkish
       ? const [
-          ('2 oyun modu', 'Klasik ve Rahat'),
+          ('3 oyun modu', 'Klasik, Süper ve Bulmaca'),
           ('Bol efekt', 'Parçacık, ışık, sarsıntı'),
           ('Koyu & açık tema', 'Göz yormayan renkler'),
           ('Türkçe & İngilizce', 'Tek dokunuşla değiştir'),
         ]
       : const [
-          ('2 game modes', 'Classic and Relaxed'),
+          ('3 game modes', 'Classic, Super and Puzzle'),
           ('Packed with effects', 'Particles, light, shake'),
           ('Dark & light themes', 'Easy on the eyes'),
           ('Turkish & English', 'Switch with one tap'),

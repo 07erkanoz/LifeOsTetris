@@ -12,6 +12,7 @@ import '../core/tetris_game.dart';
 import '../game/game_controller.dart';
 import '../game/motivation.dart';
 import '../l10n/strings.dart';
+import '../platform/window_mode.dart';
 import '../game/render/background_painter.dart';
 import '../game/render/block_sprites.dart';
 import '../game/render/board_painter.dart';
@@ -73,6 +74,11 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       return _isGameKey(key) ? KeyEventResult.handled : KeyEventResult.ignored;
     }
     final down = event is KeyDownEvent;
+    final altEnter = key == LogicalKeyboardKey.enter && HardwareKeyboard.instance.isAltPressed;
+    if (down && (key == LogicalKeyboardKey.f11 || altEnter)) {
+      widget.settings.fullScreen = !widget.settings.fullScreen;
+      return KeyEventResult.handled;
+    }
     if (key == LogicalKeyboardKey.arrowLeft || key == LogicalKeyboardKey.keyA) {
       down ? c.pressLeft() : c.releaseLeft();
     } else if (key == LogicalKeyboardKey.arrowRight || key == LogicalKeyboardKey.keyD) {
@@ -685,13 +691,22 @@ class _SettingsPanel extends StatelessWidget {
           value: settings.shake,
           onChanged: (v) => settings.shake = v,
         ),
-        ToggleRow(
-          label: s.vibration,
-          icon: compact ? null : Icons.smartphone_rounded,
-          value: settings.vibration,
-          onChanged: (v) => settings.vibration = v,
-        ),
-        if (!compact) ...[
+        if (WindowMode.supported)
+          ToggleRow(
+            label: s.fullScreen,
+            icon: compact ? null : Icons.fullscreen_rounded,
+            value: settings.fullScreen,
+            onChanged: (v) => settings.fullScreen = v,
+          ),
+        if (isMobilePlatform) ...[
+          ToggleRow(
+            label: s.vibration,
+            icon: compact ? null : Icons.smartphone_rounded,
+            value: settings.vibration,
+            onChanged: (v) => settings.vibration = v,
+          ),
+        ],
+        if (!compact && isMobilePlatform) ...[
           ToggleRow(
             label: s.onScreenButtons,
             icon: Icons.gamepad_rounded,
@@ -735,9 +750,10 @@ class _SettingsPanel extends StatelessWidget {
 // ---------------------------------------------------------------- overlays
 
 class _OverlayShell extends StatelessWidget {
-  const _OverlayShell({required this.children});
+  const _OverlayShell({required this.children, this.maxWidth = 400});
 
   final List<Widget> children;
+  final double maxWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -754,7 +770,7 @@ class _OverlayShell extends StatelessWidget {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
+                constraints: BoxConstraints(maxWidth: maxWidth),
                 child: GlassCard(
                   radius: 28,
                   padding: const EdgeInsets.fromLTRB(24, 26, 24, 22),
@@ -902,38 +918,61 @@ class _PauseOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
     final s = AppStrings.of(context);
+    final buttons = [
+      Text(
+        s.paused,
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: p.text),
+      ),
+      const SizedBox(height: 18),
+      GradientButton(label: s.resume, icon: Icons.play_arrow_rounded, onTap: c.togglePause),
+      const SizedBox(height: 10),
+      Row(
+        children: [
+          Expanded(
+            child: GradientButton(label: s.restart, icon: Icons.replay_rounded, secondary: true, onTap: () => c.start()),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: GradientButton(label: s.menu, icon: Icons.home_rounded, secondary: true, onTap: c.toMenu),
+          ),
+        ],
+      ),
+    ];
+    final about = TextButton.icon(
+      onPressed: () => AboutPage.open(context, c.settings),
+      icon: Icon(Icons.info_outline_rounded, size: 16, color: p.muted),
+      label: Text(
+        s.about,
+        style: TextStyle(color: p.muted, fontSize: 13, fontWeight: FontWeight.w600),
+      ),
+    );
+    // Wide windows: buttons on the left, settings on the right, so nothing
+    // has to scroll.
+    if (MediaQuery.sizeOf(context).width >= 760) {
+      return _OverlayShell(
+        maxWidth: 760,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [...buttons, const SizedBox(height: 14), about]),
+              ),
+              const SizedBox(width: 28),
+              Expanded(child: _SettingsPanel(settings: c.settings)),
+            ],
+          ),
+        ],
+      );
+    }
     return _OverlayShell(
       children: [
-        Text(
-          s.paused,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: p.text),
-        ),
-        const SizedBox(height: 18),
-        GradientButton(label: s.resume, icon: Icons.play_arrow_rounded, onTap: c.togglePause),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: GradientButton(label: s.restart, icon: Icons.replay_rounded, secondary: true, onTap: () => c.start()),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: GradientButton(label: s.menu, icon: Icons.home_rounded, secondary: true, onTap: c.toMenu),
-            ),
-          ],
-        ),
+        ...buttons,
         const SizedBox(height: 18),
         _SettingsPanel(settings: c.settings),
         const SizedBox(height: 6),
-        TextButton.icon(
-          onPressed: () => AboutPage.open(context, c.settings),
-          icon: Icon(Icons.info_outline_rounded, size: 16, color: p.muted),
-          label: Text(
-            s.about,
-            style: TextStyle(color: p.muted, fontSize: 13, fontWeight: FontWeight.w600),
-          ),
-        ),
+        about,
       ],
     );
   }

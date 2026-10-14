@@ -17,4 +17,18 @@ void main() {
       expect(seen.length, count);
     }
   });
+
+  test('the first track is never the one that played last time', () {
+    final firsts = <int>{};
+    for (var i = 0; i < 40; i++) {
+      final started = <int>[];
+      final audio = AudioService(enabled: false, lastTrack: 2, onTrackStarted: started.add);
+      final first = audio.nextTrackIndex();
+      expect(first, isNot(2));
+      expect(started, [first]);
+      firsts.add(first);
+    }
+    // Every other track gets to open the playlist.
+    expect(firsts, hasLength(AudioService.tracks.length - 1));
+  });
 }

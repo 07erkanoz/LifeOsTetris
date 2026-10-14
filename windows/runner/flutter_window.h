@@ -2,7 +2,10 @@
 #define RUNNER_FLUTTER_WINDOW_H_
 
 #include <flutter/dart_project.h>
+#include <flutter/encodable_value.h>
 #include <flutter/flutter_view_controller.h>
+#include <flutter/method_channel.h>
+#include <windows.h>
 
 #include <memory>
 
@@ -28,6 +31,18 @@ class FlutterWindow : public Win32Window {
 
   // The Flutter instance hosted by this window.
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
+
+  // "lifeos_kupler/window": lets the game switch to borderless full screen.
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> window_channel_;
+
+  // Covers the whole monitor (no title bar or taskbar), or restores the
+  // window it was before.
+  void SetFullScreen(bool full_screen);
+
+  bool full_screen_ = false;
+  bool restore_maximized_ = true;
+  LONG saved_style_ = 0;
+  RECT saved_rect_{};
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

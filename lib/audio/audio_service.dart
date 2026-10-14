@@ -44,10 +44,22 @@ enum Sfx {
 /// Every call is fire-and-forget and failures are swallowed: missing audio
 /// support on a platform must never break the game.
 class AudioService {
-  AudioService({this.enabled = true});
+  AudioService({this.enabled = true, int? lastTrack, this.onTrackStarted}) : _currentTrack = lastTrack, _random = _makeRandom();
 
   /// False in widget tests, where no audio plugin is available.
   final bool enabled;
+
+  /// Called with each track index as it starts, so the next launch can avoid
+  /// opening with the same song.
+  final void Function(int track)? onTrackStarted;
+
+  static Random _makeRandom() {
+    try {
+      return Random.secure();
+    } catch (_) {
+      return Random(DateTime.now().microsecondsSinceEpoch);
+    }
+  }
 
   static const List<String> tracks = [
     'audio/music/track1.mp3',
@@ -60,7 +72,7 @@ class AudioService {
   final Map<Sfx, DateTime> _lastPlayed = {};
   AudioPlayer? _music;
   StreamSubscription<void>? _musicDone;
-  final Random _random = Random();
+  final Random _random;
   int? _currentTrack;
   final List<int> _queue = [];
 
@@ -192,7 +204,9 @@ class AudioService {
         _queue.add(_queue.removeAt(0));
       }
     }
-    return _currentTrack = _queue.removeAt(0);
+    final track = _currentTrack = _queue.removeAt(0);
+    onTrackStarted?.call(track);
+    return track;
   }
 
   Future<void> _playNext() async {
