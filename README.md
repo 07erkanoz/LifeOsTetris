@@ -145,6 +145,11 @@ tool/          Ses üretici
   ([assets/audio/music/CREDITS.md](assets/audio/music/CREDITS.md)).
 - **Ses efektleri ve ikon:** Bu proje için üretildi.
 
+## Lisans
+
+Kod, ses efektleri ve ikon [MIT lisansı](LICENSE) ile dağıtılır. Müzikler ve yazı tipi
+kendi lisanslarına tabidir ve MIT kapsamında değildir.
+
 ## Geliştirici
 
 **Erkan ÖZ** · [erkanoz.com](https://erkanoz.com) · LifeOS ailesinin bir parçası:
