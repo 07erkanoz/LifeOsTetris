@@ -63,13 +63,44 @@ class AudioService {
   double _duck = 1;
   bool _musicStarted = false;
 
+  /// Sound effects must never take Android audio focus: if they did, every
+  /// effect would make the music player lose focus and stop. They mix with
+  /// whatever is playing instead (on iOS the shared session mixes too).
+  static final AudioContext _sfxContext = AudioContext(
+    android: const AudioContextAndroid(
+      contentType: AndroidContentType.sonification,
+      usageType: AndroidUsageType.game,
+      audioFocus: AndroidAudioFocus.none,
+    ),
+    iOS: AudioContextConfig(focus: AudioContextConfigFocus.mixWithOthers).buildIOS(),
+  );
+
+  /// Only the music holds focus, so other apps' music pauses while we play.
+  static final AudioContext _musicContext = AudioContext(
+    android: const AudioContextAndroid(
+      contentType: AndroidContentType.music,
+      usageType: AndroidUsageType.game,
+      audioFocus: AndroidAudioFocus.gain,
+    ),
+    iOS: AudioContextConfig(focus: AudioContextConfigFocus.mixWithOthers).buildIOS(),
+  );
+
   Future<void> init() async {
     if (!enabled) return;
+    try {
+      await AudioPlayer.global.setAudioContext(_sfxContext);
+    } catch (e) {
+      debugPrint('Audio context failed: $e');
+    }
     try {
       await Future.wait(
         Sfx.values.map((s) async {
           final busy = s == Sfx.move || s == Sfx.soft || s == Sfx.rotate || s == Sfx.lock;
-          _pools[s] = await AudioPool.create(source: AssetSource('audio/sfx/${s.name}.wav'), maxPlayers: busy ? 4 : 2);
+          _pools[s] = await AudioPool.create(
+            source: AssetSource('audio/sfx/${s.name}.wav'),
+            maxPlayers: busy ? 4 : 2,
+            audioContext: _sfxContext,
+          );
         }),
       );
     } catch (e) {
@@ -104,7 +135,13 @@ class AudioService {
     if (!on) {
       _music?.pause().catchError((_) {});
     } else if (_musicStarted) {
-      _music?.resume().catchError((_) {});
+      final player = _music;
+      if (player == null) return;
+      if (player.state == PlayerState.completed || player.state == PlayerState.stopped) {
+        _playNext();
+      } else {
+        player.resume().catchError((_) {});
+      }
     }
   }
 
@@ -128,6 +165,7 @@ class AudioService {
     _musicStarted = true;
     try {
       _music = AudioPlayer();
+      await _music!.setAudioContext(_musicContext);
       await _music!.setReleaseMode(ReleaseMode.stop);
       _musicDone = _music!.onPlayerComplete.listen((_) => _playNext());
       await _playNext();

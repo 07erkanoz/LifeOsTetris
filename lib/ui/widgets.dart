@@ -142,15 +142,81 @@ class GlassIconButton extends StatelessWidget {
   }
 }
 
-/// Round on-screen control. Supports press-and-hold through [onDown]/[onUp].
-class ControlButton extends StatefulWidget {
-  const ControlButton({super.key, required this.icon, this.onDown, this.onUp, this.size = 56, this.primary = false});
+enum ControlGlyph { hold, left, right, rotate, drop }
 
-  final IconData icon;
+/// Crisp vector icons for the on-screen controls (font icons looked soft and
+/// thin on some Android screens).
+class _GlyphPainter extends CustomPainter {
+  _GlyphPainter(this.glyph, this.color);
+
+  final ControlGlyph glyph;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = size.width;
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = s * 0.12
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final fill = Paint()..color = color;
+    Offset p(double x, double y) => Offset(x * s, y * s);
+
+    switch (glyph) {
+      case ControlGlyph.left || ControlGlyph.right:
+        final flip = glyph == ControlGlyph.right ? -1.0 : 1.0;
+        final path = Path()
+          ..moveTo(s * (0.5 + 0.12 * flip), s * 0.22)
+          ..lineTo(s * (0.5 - 0.16 * flip), s * 0.5)
+          ..lineTo(s * (0.5 + 0.12 * flip), s * 0.78);
+        canvas.drawPath(path, stroke);
+      case ControlGlyph.drop:
+        for (final y in [0.14, 0.4]) {
+          canvas.drawPath(
+            Path()
+              ..moveTo(s * 0.24, s * y)
+              ..lineTo(s * 0.5, s * (y + 0.18))
+              ..lineTo(s * 0.76, s * y),
+            stroke,
+          );
+        }
+        canvas.drawLine(p(0.26, 0.86), p(0.74, 0.86), stroke);
+      case ControlGlyph.rotate:
+        final rect = Rect.fromCircle(center: p(0.5, 0.52), radius: s * 0.3);
+        canvas.drawArc(rect, -1.2, 4.9, false, stroke);
+        // Arrow head at the start of the arc (top right), pointing clockwise.
+        final tip = p(0.5 + 0.3 * 0.362, 0.52 - 0.3 * 0.932);
+        canvas.drawPath(
+          Path()
+            ..moveTo(tip.dx + s * 0.2, tip.dy - s * 0.02)
+            ..lineTo(tip.dx + s * 0.02, tip.dy - s * 0.02)
+            ..lineTo(tip.dx + s * 0.06, tip.dy + s * 0.17),
+          stroke,
+        );
+      case ControlGlyph.hold:
+        final box = RRect.fromRectAndRadius(Rect.fromLTRB(s * 0.2, s * 0.2, s * 0.8, s * 0.8), Radius.circular(s * 0.16));
+        canvas.drawRRect(box, stroke..strokeWidth = s * 0.1);
+        canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTRB(s * 0.37, s * 0.37, s * 0.63, s * 0.63), Radius.circular(s * 0.06)), fill);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GlyphPainter old) => old.glyph != glyph || old.color != color;
+}
+
+/// Round on-screen control with a glossy glass body. Supports press-and-hold
+/// through [onDown]/[onUp].
+class ControlButton extends StatefulWidget {
+  const ControlButton({super.key, required this.glyph, this.onDown, this.onUp, this.size = 58, this.primary = false, this.tooltip});
+
+  final ControlGlyph glyph;
   final VoidCallback? onDown;
   final VoidCallback? onUp;
   final double size;
   final bool primary;
+  final String? tooltip;
 
   @override
   State<ControlButton> createState() => _ControlButtonState();
@@ -174,35 +240,75 @@ class _ControlButtonState extends State<ControlButton> {
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
     final s = widget.size;
-    return Listener(
+    final primary = widget.primary;
+    final iconColor = primary ? Colors.white : (p.isDark ? const Color(0xFFDDE5F7) : const Color(0xFF3B4663));
+
+    final body = Container(
+      width: s,
+      height: s,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: primary
+            ? LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [lighten(p.accent1, 0.1), p.accent2])
+            : LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: p.isDark ? [const Color(0xFF2A3150), const Color(0xFF161B32)] : [Colors.white, const Color(0xFFE6EAF2)],
+              ),
+        boxShadow: [
+          BoxShadow(
+            color: primary
+                ? p.accent1.withValues(alpha: _pressed ? 0.75 : 0.45)
+                : (p.isDark ? const Color(0x99000000) : const Color(0x331E2850)),
+            blurRadius: primary ? 24 : 14,
+            offset: Offset(0, _pressed ? 3 : 7),
+          ),
+          if (_pressed && !primary) BoxShadow(color: p.accent1.withValues(alpha: 0.45), blurRadius: 18),
+        ],
+      ),
+      foregroundDecoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: _pressed
+              ? p.accent1.withValues(alpha: 0.9)
+              : (primary ? Colors.white.withValues(alpha: 0.35) : (p.isDark ? const Color(0x2EFFFFFF) : Colors.white)),
+          width: _pressed ? 2 : 1.2,
+        ),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Glossy top highlight.
+          Positioned(
+            top: s * 0.06,
+            child: Container(
+              width: s * 0.62,
+              height: s * 0.32,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.all(Radius.elliptical(s * 0.31, s * 0.16)),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white.withValues(alpha: primary ? 0.35 : (p.isDark ? 0.12 : 0.8)),
+                    Colors.white.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          CustomPaint(size: Size.square(s * (primary ? 0.44 : 0.4)), painter: _GlyphPainter(widget.glyph, iconColor)),
+        ],
+      ),
+    );
+
+    final button = Listener(
       onPointerDown: (_) => _down(),
       onPointerUp: (_) => _up(),
       onPointerCancel: (_) => _up(),
-      child: AnimatedScale(
-        scale: _pressed ? 0.9 : 1,
-        duration: const Duration(milliseconds: 80),
-        child: Container(
-          width: s,
-          height: s,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: widget.primary
-                ? LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [p.accent1, p.accent2])
-                : null,
-            color: widget.primary ? null : p.glass,
-            border: Border.all(color: widget.primary ? Colors.white.withValues(alpha: 0.25) : p.glassBorder, width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: widget.primary ? p.accent1.withValues(alpha: _pressed ? 0.7 : 0.45) : p.glassShadow,
-                blurRadius: widget.primary ? 26 : 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Icon(widget.icon, size: s * (widget.primary ? 0.46 : 0.42), color: widget.primary ? Colors.white : p.icon),
-        ),
-      ),
+      child: AnimatedScale(scale: _pressed ? 0.92 : 1, duration: const Duration(milliseconds: 70), child: body),
     );
+    return widget.tooltip == null ? button : Tooltip(message: widget.tooltip!, child: button);
   }
 }
 

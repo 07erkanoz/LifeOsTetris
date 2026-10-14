@@ -390,20 +390,22 @@ class _PhoneLayout extends StatelessWidget {
         ),
         Expanded(child: _BoardArea(c: c, padding: 10)),
         Padding(
-          padding: const EdgeInsets.only(bottom: 10, top: 2),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ControlButton(icon: Icons.swap_vert_rounded, onDown: c.hold),
-              const SizedBox(width: 12),
-              ControlButton(icon: Icons.chevron_left_rounded, onDown: c.pressLeft, onUp: c.releaseLeft),
-              const SizedBox(width: 12),
-              ControlButton(icon: Icons.rotate_right_rounded, onDown: c.rotateCw, size: 70, primary: true),
-              const SizedBox(width: 12),
-              ControlButton(icon: Icons.chevron_right_rounded, onDown: c.pressRight, onUp: c.releaseRight),
-              const SizedBox(width: 12),
-              ControlButton(icon: Icons.keyboard_double_arrow_down_rounded, onDown: c.hardDrop),
-            ],
+          padding: const EdgeInsets.fromLTRB(14, 2, 14, 10),
+          child: LayoutBuilder(
+            builder: (context, box) {
+              // Four regular buttons, one larger primary one, even gaps.
+              final size = ((box.maxWidth - 4 * 10) / 5.25).clamp(44.0, 62.0);
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ControlButton(glyph: ControlGlyph.hold, size: size, onDown: c.hold),
+                  ControlButton(glyph: ControlGlyph.left, size: size, onDown: c.pressLeft, onUp: c.releaseLeft),
+                  ControlButton(glyph: ControlGlyph.rotate, size: size * 1.22, onDown: c.rotateCw, primary: true),
+                  ControlButton(glyph: ControlGlyph.right, size: size, onDown: c.pressRight, onUp: c.releaseRight),
+                  ControlButton(glyph: ControlGlyph.drop, size: size, onDown: c.hardDrop),
+                ],
+              );
+            },
           ),
         ),
       ],
