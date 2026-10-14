@@ -190,7 +190,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 builder: (context, _) => LayoutBuilder(
                   builder: (context, box) {
                     final wide = box.maxWidth >= 640 && box.maxWidth > box.maxHeight * 1.05;
-                    return wide ? _DesktopLayout(c: controller) : _PhoneLayout(c: controller);
+                    if (!wide) return _PhoneLayout(c: controller);
+                    // Phones held sideways are wide but short: a gamepad-style
+                    // layout with the board using the full height.
+                    return box.maxHeight < 520 ? _LandscapeLayout(c: controller) : _DesktopLayout(c: controller);
                   },
                 ),
               ),
@@ -480,6 +483,161 @@ class _PhoneLayout extends StatelessWidget {
         else
           const SizedBox(height: 8),
       ],
+    );
+  }
+}
+
+/// Phone held sideways: board in the middle at full height, HUD and the
+/// move buttons on the left (left thumb), next pieces, icons and the
+/// rotate / drop / hold buttons on the right (right thumb).
+class _LandscapeLayout extends StatelessWidget {
+  const _LandscapeLayout({required this.c});
+
+  final GameController c;
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = c.settings;
+    final s = AppStrings.of(context);
+    final p = GamePalette.of(context);
+    final brightness = Theme.of(context).brightness;
+    return LayoutBuilder(
+      builder: (context, box) {
+        const pad = 8.0;
+        final cell = BoardGeometry.fit(Size(double.infinity, box.maxHeight - 2 * pad));
+        final boardWidth = cell * 10.7 + 2 * pad;
+        final side = max(0.0, (box.maxWidth - boardWidth) / 2);
+        final buttons = settings.showButtons;
+        final size = (side / 3.6).clamp(44.0, 58.0);
+
+        final left = Padding(
+          padding: const EdgeInsets.fromLTRB(14, 8, 10, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                height: 66,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      width: 66,
+                      child: _HoldCard(c: c, cell: 10, size: const Size(52, 30)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: GlassCard(
+                        glow: c.fx.levelPulse,
+                        padding: const EdgeInsets.fromLTRB(12, 7, 12, 7),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            CardLabel(s.scoreLabel),
+                            _ScoreText(c: c, size: 21),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Row(
+                                children: [
+                                  _Stat(s.levelLabel, '${c.game.level}'),
+                                  const SizedBox(width: 10),
+                                  _Stat(s.linesLabel, '${c.game.lines}'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (c.game.powersEnabled) ...[const SizedBox(height: 8), PowerBar(c: c)],
+              const Spacer(),
+              if (buttons)
+                Opacity(
+                  opacity: settings.buttonOpacity,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ControlButton(glyph: ControlGlyph.left, size: size, onDown: c.pressLeft, onUp: c.releaseLeft),
+                      ControlButton(glyph: ControlGlyph.right, size: size, onDown: c.pressRight, onUp: c.releaseRight),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        );
+
+        final right = Padding(
+          padding: const EdgeInsets.fromLTRB(10, 8, 14, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _NextCard(c: c, cell: 12, size: const Size(80, 30), count: 3),
+                  ),
+                  const SizedBox(width: 8),
+                  Column(
+                    children: [
+                      GlassIconButton(icon: Icons.pause_rounded, tooltip: s.pause, size: 34, onTap: c.togglePause),
+                      const SizedBox(height: 6),
+                      GlassIconButton(
+                        icon: settings.music ? Icons.music_note_rounded : Icons.music_off_rounded,
+                        tooltip: s.music,
+                        size: 34,
+                        onTap: () => settings.music = !settings.music,
+                      ),
+                      const SizedBox(height: 6),
+                      GlassIconButton(
+                        icon: brightness == Brightness.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                        tooltip: s.theme,
+                        size: 34,
+                        onTap: () => settings.toggleTheme(brightness),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const Spacer(),
+              if (buttons)
+                Opacity(
+                  opacity: settings.buttonOpacity,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      ControlButton(glyph: ControlGlyph.hold, size: size * 0.82, onDown: c.hold),
+                      ControlButton(glyph: ControlGlyph.drop, size: size, onDown: c.hardDrop),
+                      ControlButton(glyph: ControlGlyph.rotate, size: size * 1.18, onDown: c.rotateCw, primary: true),
+                    ],
+                  ),
+                )
+              else
+                Text(
+                  s.touchHint,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 10.5, height: 1.4, fontWeight: FontWeight.w600, color: p.label),
+                ),
+            ],
+          ),
+        );
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: left),
+            SizedBox(
+              width: boardWidth,
+              child: _BoardArea(c: c, padding: pad),
+            ),
+            Expanded(child: right),
+          ],
+        );
+      },
     );
   }
 }
@@ -800,11 +958,44 @@ class SettingsPanel extends StatelessWidget {
 
 // ---------------------------------------------------------------- overlays
 
+/// A phone held sideways (wide but short): menus switch to two columns.
+bool _isShortLandscape(BuildContext context) {
+  final size = MediaQuery.sizeOf(context);
+  return size.width > size.height * 1.2 && size.height < 520;
+}
+
 class _OverlayShell extends StatelessWidget {
-  const _OverlayShell({required this.children, this.maxWidth = 400});
+  const _OverlayShell({required this.children, this.landscapeTail = 0, this.maxWidth = 400});
 
   final List<Widget> children;
+
+  /// On a phone held sideways, the last [landscapeTail] children (usually
+  /// the buttons) move to a second column so nothing has to scroll.
+  final int landscapeTail;
   final double maxWidth;
+
+  bool _split(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    return landscapeTail > 0 && landscapeTail < children.length && size.width > size.height * 1.2 && size.height < 520;
+  }
+
+  Widget _content(BuildContext context) {
+    Widget column(List<Widget> items) =>
+        Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: items);
+    if (!_split(context)) return column(children);
+    final cut = children.length - landscapeTail;
+    final tail = children.sublist(cut);
+    // A leading spacer only made sense below the content.
+    if (tail.first is SizedBox && (tail.first as SizedBox).child == null) tail.removeAt(0);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: column(children.sublist(0, cut))),
+        const SizedBox(width: 24),
+        Expanded(child: column(tail)),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -821,12 +1012,8 @@ class _OverlayShell extends StatelessWidget {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxWidth),
-                child: GlassCard(
-                  radius: 28,
-                  padding: const EdgeInsets.fromLTRB(24, 26, 24, 22),
-                  child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
-                ),
+                constraints: BoxConstraints(maxWidth: _split(context) ? max(maxWidth, 760) : maxWidth),
+                child: GlassCard(radius: 28, padding: const EdgeInsets.fromLTRB(24, 26, 24, 22), child: _content(context)),
               ),
             ),
           ),
@@ -846,23 +1033,82 @@ class _StartOverlay extends StatelessWidget {
     final p = GamePalette.of(context);
     final s = AppStrings.of(context);
     final touch = Theme.of(context).platform == TargetPlatform.android || Theme.of(context).platform == TargetPlatform.iOS;
-    return _OverlayShell(
+    final superButton = Stack(
+      clipBehavior: Clip.none,
       children: [
-        const Center(
-          child: FittedBox(fit: BoxFit.scaleDown, child: LogoTitle(fontSize: 32)),
+        SizedBox(
+          width: double.infinity,
+          child: GradientButton(
+            key: const ValueKey('start-super'),
+            label: s.superTitle,
+            subtitle: s.superSubtitle,
+            icon: Icons.auto_awesome_rounded,
+            colors: const [Color(0xFFA855F7), Color(0xFF6366F1), Color(0xFF38BDF8)],
+            onTap: () => c.start(GameMode.superMode),
+          ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          s.tagline,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: p.muted, fontWeight: FontWeight.w600),
+        Positioned(
+          top: -9,
+          right: 14,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: const LinearGradient(colors: [Color(0xFFFDE047), Color(0xFFF97316)]),
+              boxShadow: const [BoxShadow(color: Color(0x66F97316), blurRadius: 10)],
+            ),
+            child: Text(
+              s.newBadge,
+              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF3B1D00), letterSpacing: 1),
+            ),
+          ),
         ),
-        const SizedBox(height: 18),
-        if (c.settings.topScore > 0) ...[
-          Row(
+      ],
+    );
+    final modes = <Widget>[
+      superButton,
+      const SizedBox(height: 12),
+      GradientButton(
+        key: const ValueKey('start-puzzle'),
+        label: s.puzzleTitle,
+        subtitle: s.puzzleSubtitle,
+        icon: Icons.extension_rounded,
+        colors: const [Color(0xFF14B8A6), Color(0xFF22C55E), Color(0xFFEAB308)],
+        onTap: () => BlocksScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics),
+      ),
+      const SizedBox(height: 16),
+      Center(child: CardLabel(s.classicTitle.toUpperCase())),
+      const SizedBox(height: 8),
+      Row(
+        children: [
+          Expanded(
+            child: GradientButton(
+              key: const ValueKey('start-classic'),
+              label: s.normal,
+              subtitle: s.normalSubtitle,
+              icon: Icons.bolt_rounded,
+              secondary: true,
+              onTap: () => c.start(GameMode.classic),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: GradientButton(
+              label: s.relaxed,
+              subtitle: s.relaxedShort,
+              icon: Icons.spa_rounded,
+              secondary: true,
+              onTap: () => c.start(GameMode.relaxed),
+            ),
+          ),
+        ],
+      ),
+    ];
+    final best = c.settings.topScore > 0
+        ? Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.emoji_events_rounded, color: const Color(0xFFFACC15), size: 20),
+              const Icon(Icons.emoji_events_rounded, color: Color(0xFFFACC15), size: 20),
               const SizedBox(width: 6),
               Text(
                 s.bestPrefix,
@@ -870,93 +1116,59 @@ class _StartOverlay extends StatelessWidget {
               ),
               GradientText(s.score(c.settings.topScore), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
             ],
+          )
+        : null;
+    final brand = <Widget>[
+      const Center(
+        child: FittedBox(fit: BoxFit.scaleDown, child: LogoTitle(fontSize: 32)),
+      ),
+      const SizedBox(height: 8),
+      Text(
+        s.tagline,
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 14, color: p.muted, fontWeight: FontWeight.w600),
+      ),
+      if (best != null) ...[const SizedBox(height: 14), best],
+    ];
+    final footer = <Widget>[
+      Text(
+        touch ? s.touchHint : s.keyboardHint,
+        textAlign: TextAlign.center,
+        style: TextStyle(fontSize: 12, color: p.label, fontWeight: FontWeight.w600, height: 1.5),
+      ),
+      const SizedBox(height: 14),
+      LanguageSegment(isTurkish: s.isTurkish, onChanged: (tr) => c.settings.language = tr ? AppLanguage.tr : AppLanguage.en),
+      const SizedBox(height: 4),
+      TextButton.icon(
+        onPressed: () => AboutPage.open(context, c.settings),
+        icon: Icon(Icons.info_outline_rounded, size: 16, color: p.muted),
+        label: Text(
+          s.about,
+          style: TextStyle(color: p.muted, fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+      ),
+    ];
+    // Phones held sideways: brand and settings on the left, modes on the right.
+    if (_isShortLandscape(context)) {
+      return _OverlayShell(
+        maxWidth: 780,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [...brand, const SizedBox(height: 14), ...footer]),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: modes),
+              ),
+            ],
           ),
-          const SizedBox(height: 18),
         ],
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            GradientButton(
-              key: const ValueKey('start-super'),
-              label: s.superTitle,
-              subtitle: s.superSubtitle,
-              icon: Icons.auto_awesome_rounded,
-              colors: const [Color(0xFFA855F7), Color(0xFF6366F1), Color(0xFF38BDF8)],
-              onTap: () => c.start(GameMode.superMode),
-            ),
-            Positioned(
-              top: -9,
-              right: 14,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  gradient: const LinearGradient(colors: [Color(0xFFFDE047), Color(0xFFF97316)]),
-                  boxShadow: const [BoxShadow(color: Color(0x66F97316), blurRadius: 10)],
-                ),
-                child: Text(
-                  s.newBadge,
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF3B1D00), letterSpacing: 1),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        GradientButton(
-          key: const ValueKey('start-puzzle'),
-          label: s.puzzleTitle,
-          subtitle: s.puzzleSubtitle,
-          icon: Icons.extension_rounded,
-          colors: const [Color(0xFF14B8A6), Color(0xFF22C55E), Color(0xFFEAB308)],
-          onTap: () => BlocksScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics),
-        ),
-        const SizedBox(height: 16),
-        Center(child: CardLabel(s.classicTitle.toUpperCase())),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: GradientButton(
-                key: const ValueKey('start-classic'),
-                label: s.normal,
-                subtitle: s.normalSubtitle,
-                icon: Icons.bolt_rounded,
-                secondary: true,
-                onTap: () => c.start(GameMode.classic),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: GradientButton(
-                label: s.relaxed,
-                subtitle: s.relaxedShort,
-                icon: Icons.spa_rounded,
-                secondary: true,
-                onTap: () => c.start(GameMode.relaxed),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 18),
-        Text(
-          touch ? s.touchHint : s.keyboardHint,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 12, color: p.label, fontWeight: FontWeight.w600, height: 1.5),
-        ),
-        const SizedBox(height: 14),
-        LanguageSegment(isTurkish: s.isTurkish, onChanged: (tr) => c.settings.language = tr ? AppLanguage.tr : AppLanguage.en),
-        const SizedBox(height: 4),
-        TextButton.icon(
-          onPressed: () => AboutPage.open(context, c.settings),
-          icon: Icon(Icons.info_outline_rounded, size: 16, color: p.muted),
-          label: Text(
-            s.about,
-            style: TextStyle(color: p.muted, fontSize: 13, fontWeight: FontWeight.w600),
-          ),
-        ),
-      ],
-    );
+      );
+    }
+    return _OverlayShell(children: [...brand, const SizedBox(height: 18), ...modes, const SizedBox(height: 18), ...footer]);
   }
 }
 
@@ -1052,6 +1264,7 @@ class _GameOverOverlay extends StatelessWidget {
       ),
     );
     return _OverlayShell(
+      landscapeTail: 4,
       children: [
         Text(
           s.gameOver,

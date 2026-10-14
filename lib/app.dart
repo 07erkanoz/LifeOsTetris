@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -43,7 +44,9 @@ class KuplerApp extends StatelessWidget {
             ),
             // Large system font sizes broke button layouts; keep text within
             // a range the game's fixed-size HUD can hold.
-            child: MediaQuery.withClampedTextScaling(minScaleFactor: 0.85, maxScaleFactor: 1.1, child: child!),
+            child: _SystemBarsByOrientation(
+              child: MediaQuery.withClampedTextScaling(minScaleFactor: 0.85, maxScaleFactor: 1.1, child: child!),
+            ),
           );
         },
         home: GameScreen(settings: settings, audio: audio, haptics: haptics),
@@ -60,4 +63,32 @@ class _AppScrollBehavior extends MaterialScrollBehavior {
 
   @override
   Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) => child;
+}
+
+/// Phones held sideways hide the status and navigation bars (they come back
+/// with a swipe from the edge) so the board gets the full height; upright,
+/// the game draws edge to edge behind them.
+class _SystemBarsByOrientation extends StatefulWidget {
+  const _SystemBarsByOrientation({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_SystemBarsByOrientation> createState() => _SystemBarsByOrientationState();
+}
+
+class _SystemBarsByOrientationState extends State<_SystemBarsByOrientation> {
+  Orientation? _applied;
+
+  static bool get _mobile => !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+
+  @override
+  Widget build(BuildContext context) {
+    final orientation = MediaQuery.orientationOf(context);
+    if (_mobile && orientation != _applied) {
+      _applied = orientation;
+      SystemChrome.setEnabledSystemUIMode(orientation == Orientation.landscape ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge);
+    }
+    return widget.child;
+  }
 }

@@ -202,11 +202,38 @@ class _BlocksScreenState extends State<BlocksScreen> with SingleTickerProviderSt
 // ---------------------------------------------------------------- shared
 
 class _Panel extends StatelessWidget {
-  const _Panel({required this.children, this.maxWidth = 420, this.scrim = false});
+  const _Panel({required this.children, this.landscapeTail = 0, this.maxWidth = 420, this.scrim = false});
 
   final List<Widget> children;
+
+  /// On a phone held sideways, the last [landscapeTail] children (usually
+  /// the buttons) move to a second column so nothing has to scroll.
+  final int landscapeTail;
   final double maxWidth;
   final bool scrim;
+
+  bool _split(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    return landscapeTail > 0 && landscapeTail < children.length && size.width > size.height * 1.2 && size.height < 520;
+  }
+
+  Widget _content(BuildContext context) {
+    Widget column(List<Widget> items) =>
+        Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: items);
+    if (!_split(context)) return column(children);
+    final cut = children.length - landscapeTail;
+    final tail = children.sublist(cut);
+    // A leading spacer only made sense below the content.
+    if (tail.first is SizedBox && (tail.first as SizedBox).child == null) tail.removeAt(0);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: column(children.sublist(0, cut))),
+        const SizedBox(width: 24),
+        Expanded(child: column(tail)),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -215,12 +242,8 @@ class _Panel extends StatelessWidget {
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: maxWidth),
-          child: GlassCard(
-            radius: 28,
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 22),
-            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
-          ),
+          constraints: BoxConstraints(maxWidth: _split(context) ? max(maxWidth, 760) : maxWidth),
+          child: GlassCard(radius: 28, padding: const EdgeInsets.fromLTRB(24, 24, 24, 22), child: _content(context)),
         ),
       ),
     );
@@ -283,6 +306,7 @@ class _Menu extends StatelessWidget {
     final next = settings.unlockedBlockLevel;
     final finished = next > BlockLevels.count;
     return _Panel(
+      landscapeTail: 6,
       children: [
         Row(
           children: [
@@ -570,9 +594,12 @@ class _PlayView extends StatelessWidget {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.c});
+  const _TopBar({required this.c, this.icons = true});
 
   final BlocksController c;
+
+  /// Theme and music buttons (moved elsewhere on short landscape screens).
+  final bool icons;
 
   @override
   Widget build(BuildContext context) {
@@ -596,17 +623,19 @@ class _TopBar extends StatelessWidget {
             ),
           ),
         ),
-        GlassIconButton(
-          icon: brightness == Brightness.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-          tooltip: s.theme,
-          onTap: () => settings.toggleTheme(brightness),
-        ),
-        const SizedBox(width: 8),
-        GlassIconButton(
-          icon: settings.music ? Icons.music_note_rounded : Icons.music_off_rounded,
-          tooltip: s.music,
-          onTap: () => settings.music = !settings.music,
-        ),
+        if (icons) ...[
+          GlassIconButton(
+            icon: brightness == Brightness.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+            tooltip: s.theme,
+            onTap: () => settings.toggleTheme(brightness),
+          ),
+          const SizedBox(width: 8),
+          GlassIconButton(
+            icon: settings.music ? Icons.music_note_rounded : Icons.music_off_rounded,
+            tooltip: s.music,
+            onTap: () => settings.music = !settings.music,
+          ),
+        ],
       ],
     );
   }
@@ -762,19 +791,48 @@ class _WideLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
     final s = AppStrings.of(context);
-    final width = MediaQuery.sizeOf(context).width;
-    final side = (width * 0.2).clamp(210.0, 280.0);
+    final settings = c.settings;
+    final brightness = Theme.of(context).brightness;
+    final size = MediaQuery.sizeOf(context);
+    // Phones held sideways: slimmer side panels so the board can use the
+    // full height; theme and music move to the bottom-left corner.
+    final short = size.height < 520;
+    final side = short ? (size.width * 0.22).clamp(150.0, 240.0) : (size.width * 0.2).clamp(210.0, 280.0);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
+      padding: short ? const EdgeInsets.fromLTRB(14, 8, 14, 8) : const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
       child: LayoutBuilder(
         builder: (context, box) {
-          final cell = BlocksGeometry.fit(min(box.maxWidth - 2 * side - 64, box.maxHeight - 24));
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(
-                width: side,
-                child: SingleChildScrollView(
+          final cell = BlocksGeometry.fit(min(box.maxWidth - 2 * side - (short ? 24 : 64), box.maxHeight - (short ? 4 : 24)));
+          final panel = short
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _TopBar(c: c, icons: false),
+                    const SizedBox(height: 10),
+                    Flexible(
+                      child: SingleChildScrollView(child: _Hud(c: c, vertical: true)),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        GlassIconButton(
+                          icon: settings.music ? Icons.music_note_rounded : Icons.music_off_rounded,
+                          tooltip: s.music,
+                          size: 36,
+                          onTap: () => settings.music = !settings.music,
+                        ),
+                        const SizedBox(width: 8),
+                        GlassIconButton(
+                          icon: brightness == Brightness.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                          tooltip: s.theme,
+                          size: 36,
+                          onTap: () => settings.toggleTheme(brightness),
+                        ),
+                      ],
+                    ),
+                  ],
+                )
+              : SingleChildScrollView(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -788,8 +846,11 @@ class _WideLayout extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
-              ),
+                );
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(width: side, child: panel),
               Expanded(
                 child: Center(
                   child: _Board(c: c, cell: cell),
@@ -1018,6 +1079,7 @@ class _LevelResult extends StatelessWidget {
     final won = game.status == BlockStatus.won;
     final last = level.number >= BlockLevels.count;
     return _Panel(
+      landscapeTail: won && !last ? 6 : 4,
       scrim: true,
       children: [
         Center(child: CardLabel(s.levelNumber(level.number).toUpperCase())),
@@ -1121,6 +1183,7 @@ class _EndlessOver extends StatelessWidget {
     final s = AppStrings.of(context);
     final game = c.game;
     return _Panel(
+      landscapeTail: 4,
       scrim: true,
       children: [
         Text(
