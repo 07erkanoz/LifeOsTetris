@@ -84,7 +84,7 @@ class BlocksController extends ChangeNotifier {
     _begin(() {
       game.startEndless();
       if (demo) {
-        game.debugSetBoard(['......ZT', '.....ZZT', '.....Z.T', 'O.....OT', 'OO....OT', 'I.....OT', 'JJJJJJ..', 'LL*LLL..']);
+        game.debugSetBoard(['......ZT', '.....ZZT', '.....Z.T', 'Z.....ZT', 'ZZ....ZT', 'I.....ZT', 'JJJJJJ..', 'LL*LLL..']);
         game.debugSetTray(['o2', 'i3h', 't1']);
       }
     });

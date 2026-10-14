@@ -43,7 +43,8 @@ class BlockShape {
 BlockShape _s(String id, List<String> rows, PieceType color, int weight, {int tier = 0}) =>
     BlockShape.parse(id, rows, color, weight, tier: tier);
 
-/// Every shape of the mode: the familiar block-puzzle set.
+/// Every shape of the mode: the familiar block-puzzle set. Yellow is left
+/// out on purpose: it belongs to the gold ★ blocks of the levels.
 final List<BlockShape> blockShapes = [
   _s('dot', ['#'], PieceType.t, 2),
   _s('i2h', ['##'], PieceType.s, 4),
@@ -54,10 +55,10 @@ final List<BlockShape> blockShapes = [
   _s('i4v', ['#', '#', '#', '#'], PieceType.i, 3, tier: 1),
   _s('i5h', ['#####'], PieceType.i, 2, tier: 2),
   _s('i5v', ['#', '#', '#', '#', '#'], PieceType.i, 2, tier: 2),
-  _s('o2', ['##', '##'], PieceType.o, 6),
-  _s('o3', ['###', '###', '###'], PieceType.o, 2, tier: 2),
-  _s('r23', ['###', '###'], PieceType.z, 2, tier: 1),
-  _s('r32', ['##', '##', '##'], PieceType.z, 2, tier: 1),
+  _s('o2', ['##', '##'], PieceType.z, 6),
+  _s('o3', ['###', '###', '###'], PieceType.t, 2, tier: 2),
+  _s('r23', ['###', '###'], PieceType.s, 2, tier: 1),
+  _s('r32', ['##', '##', '##'], PieceType.s, 2, tier: 1),
   _s('c1', ['##', '#.'], PieceType.l, 2),
   _s('c2', ['##', '.#'], PieceType.l, 2),
   _s('c3', ['#.', '##'], PieceType.l, 2),
