@@ -69,15 +69,15 @@ flutter:
 flutter_launcher_icons:
   image_path: assets/icon/icon.png
   android: true
-  adaptive_icon_background: "#0D1128"
+  adaptive_icon_background: "#2A2238"
   adaptive_icon_foreground: assets/icon/icon_foreground.png
   ios: true
   remove_alpha_ios: true
   web:
     generate: true
     image_path: assets/icon/icon.png
-    background_color: "#0A0D1A"
-    theme_color: "#0A0D1A"
+    background_color: "#2A2238"
+    theme_color: "#2A2238"
   # Windows needs every size in its .ico: see tool/make_windows_icon.py.
   windows:
     generate: false
