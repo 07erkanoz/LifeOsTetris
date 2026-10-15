@@ -260,7 +260,8 @@ class _HoldCard extends StatelessWidget {
                 GameIcon(Icons.touch_app_rounded, size: 11, color: GamePalette.of(context).label),
               ],
             ),
-            const SizedBox(height: 4),
+            // The gap gives way when a taller theme font fills the card.
+            const Flexible(child: SizedBox(height: 4)),
             PieceView(type: c.game.held, cell: cell, size: size, dimmed: !c.game.canHold, pop: c.fx.holdPulse),
           ],
         ),
@@ -286,7 +287,7 @@ class _NextCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           CardLabel(AppStrings.of(context).next),
-          const SizedBox(height: 4),
+          const Flexible(child: SizedBox(height: 4)),
           for (var i = 0; i < min(count, preview.length); i++)
             Opacity(
               opacity: i == 0 ? 1 : 0.75,
@@ -468,7 +469,15 @@ class _PhoneLayout extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         CardLabel(hud.label),
-                        _ScoreText(c: c, size: 24, text: hud.value),
+                        // Taller theme fonts (pixel, neon) would overflow
+                        // the fixed-height row: the score gives way first.
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: _ScoreText(c: c, size: 24, text: hud.value),
+                          ),
+                        ),
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Row(

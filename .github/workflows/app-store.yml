@@ -1,0 +1,55 @@
+name: App Store metadata
+
+# Sends ios/metadata/ (texts, screenshots) to App Store Connect and sets up the
+# public TestFlight link. Runs when the metadata or the script changes on main,
+# or by hand (Actions → App Store metadata → Run workflow).
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'status, sync or testflight (all: sync, then testflight)'
+        default: all
+  push:
+    branches: [main]
+    paths: ['ios/metadata/**', 'ios/app_store.py', '.github/workflows/app-store.yml']
+
+concurrency:
+  group: app-store-metadata
+  cancel-in-progress: false
+
+jobs:
+  app-store:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_CONTACT_EMAIL: ${{ secrets.ASC_CONTACT_EMAIL }}
+      ASC_CONTACT_PHONE: ${{ secrets.ASC_CONTACT_PHONE }}
+      COMMAND: ${{ inputs.command || 'all' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the API key
+        env:
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s\n' "$ASC_PRIVATE_KEY" > "$RUNNER_TEMP/keys/AuthKey_$ASC_KEY_ID.p8"
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/keys/AuthKey_$ASC_KEY_ID.p8" >> "$GITHUB_ENV"
+
+      - name: Store listing
+        if: env.COMMAND == 'all' || env.COMMAND == 'sync'
+        run: python3 ios/app_store.py sync
+
+      - name: TestFlight
+        if: always() && (env.COMMAND == 'all' || env.COMMAND == 'testflight')
+        run: python3 ios/app_store.py testflight
+
+      - name: Status
+        if: always()
+        run: python3 ios/app_store.py status
+
+      - name: Remove the API key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keys"

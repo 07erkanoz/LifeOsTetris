@@ -88,3 +88,32 @@ jobs:
       - name: Remove the API key
         if: always()
         run: rm -rf "$RUNNER_TEMP/keys"
+
+  # Once Apple has processed the upload, the build joins the public
+  # TestFlight group (on a cheap Linux runner: the wait can take a while).
+  public-link:
+    needs: testflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_CONTACT_EMAIL: ${{ secrets.ASC_CONTACT_EMAIL }}
+      ASC_CONTACT_PHONE: ${{ secrets.ASC_CONTACT_PHONE }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the API key
+        env:
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s\n' "$ASC_PRIVATE_KEY" > "$RUNNER_TEMP/keys/AuthKey_$ASC_KEY_ID.p8"
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/keys/AuthKey_$ASC_KEY_ID.p8" >> "$GITHUB_ENV"
+
+      - name: Add the build to the public TestFlight group
+        run: python3 ios/app_store.py testflight --build $(( ${{ github.run_number }} * 10 + ${{ github.run_attempt }} ))
+
+      - name: Remove the API key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keys"
