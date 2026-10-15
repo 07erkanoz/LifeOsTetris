@@ -64,22 +64,26 @@ jobs:
       - name: Prepare the Xcode project
         run: flutter build ios --release --config-only --build-number=$(( ${{ github.run_number }} * 10 + ${{ github.run_attempt }} ))
 
-      # The archive is left unsigned: signing it for development would need a
-      # registered device. The export below signs it for the App Store with
-      # Apple's cloud-managed distribution certificate (through the API key).
+      # A short-lived distribution certificate and App Store profile, made
+      # through the API key and removed again at the end.
+      - name: Set up signing
+        run: python3 ios/ci_signing.py setup
+
       - name: Archive
         run: |
           xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release \
             -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
-            CODE_SIGNING_ALLOWED=NO \
             archive
 
       - name: Upload to TestFlight
         run: |
           xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
-            -exportOptionsPlist ios/ExportOptions.plist -exportPath "$RUNNER_TEMP/export" \
-            -allowProvisioningUpdates \
+            -exportOptionsPlist "$EXPORT_OPTIONS" -exportPath "$RUNNER_TEMP/export" \
             -authenticationKeyPath "$ASC_KEY_PATH" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Remove the temporary certificate
+        if: always()
+        run: python3 ios/ci_signing.py cleanup
 
       - name: Remove the API key
         if: always()
