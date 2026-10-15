@@ -136,7 +136,23 @@ def categories(info):
     relationships = {'primaryCategory': rel('appCategories', META['primaryCategory'])}
     for key, cat in zip(['primarySubcategoryOne', 'primarySubcategoryTwo'], sub):
         relationships[key] = rel('appCategories', cat)
-    call('PATCH', f'/v1/appInfos/{info["id"]}', {'data': {'type': 'appInfos', 'id': info['id'], 'relationships': relationships}})
+
+    def patch(rels):
+        call('PATCH', f'/v1/appInfos/{info["id"]}', {'data': {'type': 'appInfos', 'id': info['id'], 'relationships': rels}})
+
+    try:
+        patch(relationships)
+    except ApiError:
+        # Find the relationship Apple refuses and list the ids it accepts.
+        refused = []
+        for key, value in relationships.items():
+            try:
+                patch({key: value})
+            except ApiError as e:
+                refused.append(f'{key}={value["data"]["id"]} ({e})')
+        if refused:
+            valid = [c['id'] for c in call('GET', f'/v1/appCategories/{META["primaryCategory"]}/subcategories?limit=50')['data']]
+            raise ApiError(f'refused: {"; ".join(refused)}. Subcategories of {META["primaryCategory"]}: {", ".join(valid)}')
     return f'{META["primaryCategory"]} / {", ".join(sub)}'
 
 
