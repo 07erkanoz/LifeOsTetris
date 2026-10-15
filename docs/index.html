@@ -2,21 +2,298 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LifeOS Küpler</title>
-<link rel="stylesheet" href="site.css">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LifeOS Küpler — Ücretsiz blok patlatma ve bulmaca oyunu</title>
+<meta name="description" content="LifeOS Küpler: düşen blokları dizip satırları patlattığın, süper güçlü, 100 bulmaca seviyeli ücretsiz blok oyunu. Reklamsız, internetsiz oynanır. Android, iPhone, Windows ve Linux için indir.">
+<meta name="keywords" content="blok oyunu, küp oyunu, blok bulmaca, satır patlatma, ücretsiz oyun, reklamsız oyun, Android oyun, iPhone oyun, Windows oyun, Linux oyun">
+<link rel="canonical" href="https://lifeos.com.tr/kupler/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#2a2238">
+<meta name="author" content="Erkan ÖZ">
+<link rel="icon" type="image/png" href="images/icon.png">
+<link rel="apple-touch-icon" href="images/icon.png">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="LifeOS">
+<meta property="og:locale" content="tr_TR">
+<meta property="og:url" content="https://lifeos.com.tr/kupler/">
+<meta property="og:title" content="LifeOS Küpler — Blokları diz, satırları patlat!">
+<meta property="og:description" content="Süper güçler, 100 bulmaca seviyesi, günlük görev ve dört tema. Ücretsiz ve reklamsız; Android, iPhone, Windows ve Linux.">
+<meta property="og:image" content="https://lifeos.com.tr/kupler/images/web/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="LifeOS Küpler oyunundan ekranlar">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="LifeOS Küpler — Blokları diz, satırları patlat!">
+<meta name="twitter:description" content="Ücretsiz, reklamsız blok patlatma ve bulmaca oyunu.">
+<meta name="twitter:image" content="https://lifeos.com.tr/kupler/images/web/og.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://api.github.com">
+<link rel="stylesheet" href="kupler.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": ["VideoGame", "SoftwareApplication"],
+      "@id": "https://lifeos.com.tr/kupler/#game",
+      "name": "LifeOS Küpler",
+      "alternateName": "Küpler",
+      "url": "https://lifeos.com.tr/kupler/",
+      "description": "Düşen blokları dizip satırları patlattığın, süper güçlü, 100 bulmaca seviyeli ücretsiz ve reklamsız blok oyunu.",
+      "image": "https://lifeos.com.tr/kupler/images/web/og.png",
+      "screenshot": [
+        "https://lifeos.com.tr/kupler/images/web/shot-tetris.webp",
+        "https://lifeos.com.tr/kupler/images/web/shot-bomb.webp",
+        "https://lifeos.com.tr/kupler/images/web/shot-puzzle.webp"
+      ],
+      "applicationCategory": "GameApplication",
+      "applicationSubCategory": "Puzzle",
+      "genre": ["Puzzle", "Blok oyunu"],
+      "gamePlatform": ["Android", "iOS", "iPadOS", "Windows", "Linux"],
+      "operatingSystem": "Android, iOS 15+, Windows 10+, Linux",
+      "inLanguage": ["tr", "en"],
+      "playMode": "SinglePlayer",
+      "isAccessibleForFree": true,
+      "offers": {"@type": "Offer", "price": "0", "priceCurrency": "TRY"},
+      "author": {"@type": "Person", "name": "Erkan ÖZ", "url": "https://erkanoz.com"},
+      "publisher": {"@type": "Organization", "name": "LifeOS", "url": "https://lifeos.com.tr/"}
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {"@type": "ListItem", "position": 1, "name": "LifeOS", "item": "https://lifeos.com.tr/"},
+        {"@type": "ListItem", "position": 2, "name": "LifeOS Küpler", "item": "https://lifeos.com.tr/kupler/"}
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {"@type": "Question", "name": "LifeOS Küpler ücretli mi?", "acceptedAnswer": {"@type": "Answer", "text": "Hayır. Oyun tamamen ücretsizdir; reklam, uygulama içi satın alma veya hesap yoktur."}},
+        {"@type": "Question", "name": "İnternet olmadan oynanır mı?", "acceptedAnswer": {"@type": "Answer", "text": "Evet. Oyun internet bağlantısı gerektirmez ve hiçbir veri göndermez."}},
+        {"@type": "Question", "name": "iPhone'a nasıl yüklerim?", "acceptedAnswer": {"@type": "Answer", "text": "App Store'dan ücretsiz TestFlight uygulamasını kurun, ardından bu sayfadaki iPhone bağlantısını açıp Kabul Et ve Yükle'ye dokunun."}},
+        {"@type": "Question", "name": "Android'de hangi APK'yı indirmeliyim?", "acceptedAnswer": {"@type": "Answer", "text": "Son yıllarda alınmış telefonlar için küçük arm64 sürümünü seçin. Eski bir telefonunuz varsa ya da kurulum hata verirse tüm telefonlar sürümünü indirin."}}
+      ]
+    }
+  ]
+}
+</script>
 </head>
 <body>
+
+<header class="top">
+  <div class="wrap top-row">
+    <a class="brand" href="/" aria-label="LifeOS ana sayfa">
+      <span class="brand-mark">LifeOS</span><span class="brand-sep">/</span><span class="brand-game">Küpler</span>
+    </a>
+    <nav class="top-nav" aria-label="Sayfa içi">
+      <a href="#modlar">Modlar</a>
+      <a href="#ekranlar">Ekranlar</a>
+      <a href="#sss">SSS</a>
+      <a class="btn btn-sm btn-yellow" href="#indir">İndir</a>
+    </nav>
+  </div>
+</header>
+
 <main>
-  <p class="hero"><img src="images/icon.png" width="96" height="96" alt=""></p>
-  <h1 class="center">LifeOS Küpler</h1>
-  <p class="center">Blokları diz, satırları patlat! · Stack the blocks, blast the lines!</p>
-  <p class="shots">
-    <img src="images/menu.jpg" alt="Menü">
-    <img src="images/dortlu.jpg" alt="Süper Küpler">
-    <img src="images/bulmaca.jpg" alt="Bulmaca Küpler">
-  </p>
-  <p class="center"><a href="support.html">Destek / Support</a> · <a href="privacy.html">Gizlilik / Privacy</a></p>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <img class="hero-icon" src="images/icon.png" width="88" height="88" alt="LifeOS Küpler simgesi">
+        <p class="eyebrow">Ücretsiz · Reklamsız · İnternetsiz</p>
+        <h1>LifeOS <span>Küpler</span></h1>
+        <p class="lead">Blokları diz, satırları patlat! Süper güçler, 100 bulmaca seviyesi, günlük görev ve dört farklı temayla bol efektli bir blok oyunu.</p>
+        <div class="hero-cta">
+          <a class="btn btn-yellow btn-lg" id="primary-download" href="#indir">
+            <span class="btn-icon" aria-hidden="true">▶</span>
+            <span><b id="primary-label">Ücretsiz indir</b><small id="primary-sub">Android · iPhone · Windows · Linux</small></span>
+          </a>
+          <a class="btn btn-ghost btn-lg" href="#indir">Tüm platformlar</a>
+        </div>
+        <ul class="platforms" aria-label="Desteklenen platformlar">
+          <li>Android</li><li>iPhone &amp; iPad</li><li>Windows</li><li>Linux</li>
+        </ul>
+      </div>
+      <div class="hero-phones" aria-hidden="true">
+        <img class="phone phone-back" src="images/web/shot-puzzle.webp" width="600" height="1304" alt="">
+        <img class="phone phone-front" src="images/web/shot-tetris.webp" width="600" height="1304" alt="">
+      </div>
+    </div>
+  </section>
+
+  <!-- Numbers -->
+  <section class="stats wrap" aria-label="Oyun hakkında kısaca">
+    <div><b>3</b><span>oyun modu</span></div>
+    <div><b>6</b><span>süper güç</span></div>
+    <div><b>100</b><span>bulmaca seviyesi</span></div>
+    <div><b>4</b><span>tema, koyu ve açık</span></div>
+  </section>
+
+  <!-- Modes -->
+  <section class="section" id="modlar">
+    <div class="wrap">
+      <h2>Üç oyun, tek uygulama</h2>
+      <p class="section-lead">Hızlı bir tur mu, kafa yoran bir bulmaca mı? Ruh haline göre seç.</p>
+      <div class="modes">
+        <article class="mode">
+          <img src="images/web/shot-bomb.webp" width="600" height="1304" loading="lazy" alt="Süper Küpler: bomba gücüyle nişan alma">
+          <div class="mode-body">
+            <h3><span class="tag tag-purple">✨</span> Süper Küpler</h3>
+            <p>Satır sildikçe enerji dolar, her 3 satırda bir güç kazanırsın. Güçleri doğru anda kullan, yığını temizle.</p>
+          </div>
+        </article>
+        <article class="mode">
+          <img src="images/web/shot-puzzle.webp" width="600" height="1304" loading="lazy" alt="Bulmaca Küpler: parça sürükleyip satır ve sütun patlatma">
+          <div class="mode-body">
+            <h3><span class="tag tag-teal">🧩</span> Bulmaca Küpler</h3>
+            <p>8×8 tahtada sürükle-bırak. Satır ve sütunlar birlikte patlar. 10 bölümde 100 seviye, Sonsuz, Bomba ve Macera modları.</p>
+          </div>
+        </article>
+        <article class="mode">
+          <img src="images/web/shot-pixel.webp" width="600" height="1304" loading="lazy" alt="Klasik Küpler: piksel temasıyla oyun">
+          <div class="mode-body">
+            <h3><span class="tag tag-yellow">🎮</span> Klasik Küpler</h3>
+            <p>Bildiğin düşen blok oyunu: tutma, hayalet parça, T-spin, kombo. Normal modda hız artar, Rahat modda sonsuza kadar sürer.</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Powers -->
+  <section class="section section-alt">
+    <div class="wrap">
+      <h2>Altı süper güç</h2>
+      <p class="section-lead">Süper Küpler'de güçler karışık sırayla gelir; altısı da gelmeden hiçbiri tekrar etmez.</p>
+      <ul class="powers">
+        <li><b>💣 Bomba</b><span>Düştüğü yerde 3×3 alanı patlatır.</span></li>
+        <li><b>🟪 Tekli blok</b><span>Tek kare; kapanmış delikleri doldurur.</span></li>
+        <li><b>🔩 Matkap</b><span>Blokların içinden geçip bütün sütunu yer.</span></li>
+        <li><b>⬇️ Yerçekimi</b><span>Havada kalan bloklar düşer, dolan satırlar silinir.</span></li>
+        <li><b>⏳ Ağır çekim</b><span>10 saniye boyunca her şey yavaşlar.</span></li>
+        <li><b>👻 Hayalet Çizgi</b><span>Yığının içinden süzülüp satırın boşluklarını doldurur.</span></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Screenshots -->
+  <section class="section" id="ekranlar">
+    <div class="wrap">
+      <h2>Ekran görüntüleri</h2>
+      <p class="section-lead">Parçacık patlamaları, şok dalgaları, kombo yazıları ve dört tema: Oyuncak HD, Oyuncak, Piksel, Neon.</p>
+    </div>
+    <div class="gallery" tabindex="0" aria-label="Ekran görüntüleri, yana kaydırın">
+      <img src="images/web/shot-menu.webp" width="600" height="1304" loading="lazy" alt="Ana menü">
+      <img src="images/web/shot-tetris.webp" width="600" height="1304" loading="lazy" alt="Dörtlü satır patlatma efekti">
+      <img src="images/web/shot-bomb.webp" width="600" height="1304" loading="lazy" alt="Bomba gücü">
+      <img src="images/web/shot-puzzle.webp" width="600" height="1304" loading="lazy" alt="Bulmaca Küpler">
+      <img src="images/web/shot-bombs.webp" width="600" height="1304" loading="lazy" alt="Bulmaca Küpler Bomba modu">
+      <img src="images/web/shot-pixel.webp" width="600" height="1304" loading="lazy" alt="Piksel teması">
+    </div>
+  </section>
+
+  <!-- Downloads -->
+  <section class="section section-alt" id="indir">
+    <div class="wrap">
+      <h2>İndir</h2>
+      <p class="section-lead">Hepsi ücretsiz. Dosyalar her yeni sürümde otomatik güncellenir<span id="release-date"></span>.</p>
+      <div class="downloads">
+        <article class="dl" data-platform="android">
+          <h3>Android</h3>
+          <p>Linki telefonda aç, APK'yı kur. “Bilinmeyen kaynaklar” izni istenebilir.</p>
+          <a class="btn btn-yellow" data-asset="LifeOS-Kupler-arm64.apk" href="https://github.com/07erkanoz/LifeOsTetris/releases/download/test-build/LifeOS-Kupler-arm64.apk">Modern telefonlar <small class="size"></small></a>
+          <a class="btn btn-ghost" data-asset="LifeOS-Kupler.apk" href="https://github.com/07erkanoz/LifeOsTetris/releases/download/test-build/LifeOS-Kupler.apk">Tüm telefonlar <small class="size"></small></a>
+        </article>
+        <article class="dl" data-platform="ios">
+          <h3>iPhone &amp; iPad</h3>
+          <p>Önce App Store'dan ücretsiz <a href="https://apps.apple.com/app/testflight/id899247664">TestFlight</a>'ı kur, sonra bağlantıyı aç.</p>
+          <a class="btn btn-yellow" href="https://testflight.apple.com/join/ZSxBje4v">TestFlight ile yükle</a>
+          <p class="note">iOS 15 veya üstü. App Store sürümü yakında.</p>
+        </article>
+        <article class="dl" data-platform="windows">
+          <h3>Windows</h3>
+          <p>Zip'i bir klasöre çıkar, <code>lifeos_kupler.exe</code>'yi çalıştır. SmartScreen uyarırsa <i>Ek bilgi → Yine de çalıştır</i>.</p>
+          <a class="btn btn-yellow" data-asset="LifeOS-Kupler-Windows.zip" href="https://github.com/07erkanoz/LifeOsTetris/releases/download/test-build/LifeOS-Kupler-Windows.zip">Windows için indir <small class="size"></small></a>
+        </article>
+        <article class="dl" data-platform="linux">
+          <h3>Linux</h3>
+          <p>Arşivi aç, <code>lifeos_kupler</code>'ı çalıştır. Arch için <a href="https://github.com/07erkanoz/LifeOsTetris/tree/main/packaging/arch">PKGBUILD</a> hazır.</p>
+          <a class="btn btn-yellow" data-asset="LifeOS-Kupler-Linux-x64.tar.gz" href="https://github.com/07erkanoz/LifeOsTetris/releases/download/test-build/LifeOS-Kupler-Linux-x64.tar.gz">Linux x64 için indir <small class="size"></small></a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section" id="sss">
+    <div class="wrap narrow">
+      <h2>Sık sorulanlar</h2>
+      <details><summary>LifeOS Küpler ücretli mi?</summary><p>Hayır. Oyun tamamen ücretsizdir; reklam, uygulama içi satın alma veya hesap yoktur.</p></details>
+      <details><summary>İnternet olmadan oynanır mı?</summary><p>Evet. Oyun internet bağlantısı gerektirmez ve hiçbir veri göndermez. Rekorların ve ayarların yalnızca cihazında saklanır. Ayrıntılar <a href="privacy.html">gizlilik politikasında</a>.</p></details>
+      <details><summary>iPhone'a nasıl yüklerim?</summary><p>App Store'dan ücretsiz TestFlight uygulamasını kur, ardından yukarıdaki iPhone bağlantısını açıp <i>Kabul Et</i> ve <i>Yükle</i>'ye dokun.</p></details>
+      <details><summary>Android'de hangi APK'yı indirmeliyim?</summary><p>Son yıllarda alınmış telefonlar için küçük <b>Modern telefonlar</b> sürümünü seç. Eski bir telefonun varsa ya da kurulum hata verirse <b>Tüm telefonlar</b> sürümünü indir.</p></details>
+      <details><summary>Bir hata buldum, nereye bildiririm?</summary><p><a href="support.html">Destek sayfasından</a> bize ulaşabilirsin.</p></details>
+    </div>
+  </section>
 </main>
+
+<footer class="foot">
+  <div class="wrap foot-row">
+    <p>© 2026 <a href="https://erkanoz.com">Erkan ÖZ</a> · <a href="/">LifeOS</a> ailesinin bir parçası</p>
+    <p><a href="privacy.html">Gizlilik</a> · <a href="support.html">Destek</a> · <a href="https://github.com/07erkanoz/LifeOsTetris">GitHub</a></p>
+  </div>
+</footer>
+
+<script>
+// Download links come from the GitHub release: sizes and the date are
+// filled in live, and the main button offers the visitor's own platform.
+// Without JavaScript (or if GitHub is unreachable) the fixed links work.
+(function () {
+  var ua = navigator.userAgent;
+  var iPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  var platform = /android/i.test(ua) ? 'android'
+    : (/iphone|ipad|ipod/i.test(ua) || iPadOS) ? 'ios'
+    : /windows/i.test(ua) ? 'windows'
+    : /linux|x11/i.test(ua) ? 'linux' : null;
+  var labels = {android: 'Android için indir', ios: 'iPhone için yükle', windows: 'Windows için indir', linux: 'Linux için indir'};
+  var card = platform && document.querySelector('.dl[data-platform="' + platform + '"]');
+  if (card) {
+    card.classList.add('dl-mine');
+    var first = card.querySelector('a.btn');
+    var btn = document.getElementById('primary-download');
+    btn.href = first.href;
+    document.getElementById('primary-label').textContent = labels[platform];
+    document.getElementById('primary-sub').textContent = 'Ücretsiz · başka platform için aşağı kaydır';
+  }
+
+  fetch('https://api.github.com/repos/07erkanoz/LifeOsTetris/releases/tags/test-build')
+    .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function (release) {
+      var newest = 0;
+      release.assets.forEach(function (a) {
+        document.querySelectorAll('[data-asset="' + a.name + '"]').forEach(function (el) {
+          el.href = a.browser_download_url;
+          var size = el.querySelector('.size');
+          if (size) size.textContent = Math.round(a.size / 1048576) + ' MB';
+        });
+        newest = Math.max(newest, Date.parse(a.updated_at));
+      });
+      if (newest) {
+        var d = new Date(newest).toLocaleDateString('tr-TR', {day: 'numeric', month: 'long', year: 'numeric'});
+        document.getElementById('release-date').textContent = ' · son güncelleme ' + d;
+      }
+      if (card && platform !== 'ios') {
+        var size = card.querySelector('.size');
+        if (size && size.textContent) document.getElementById('primary-sub').textContent = 'Ücretsiz · ' + size.textContent;
+      }
+    })
+    .catch(function () {});
+})();
+</script>
 </body>
 </html>
