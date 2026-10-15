@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/scoring.dart';
 import '../l10n/strings.dart';
+import '../theme/palette.dart';
 
 /// User preferences, best scores and lifetime stats, persisted with
 /// shared_preferences.
@@ -26,6 +27,7 @@ class Settings extends ChangeNotifier {
   bool _fullScreen = true;
   double _vibrationStrength = 0.5;
   bool _highRefreshRate = _desktop;
+  VisualTheme _visualTheme = VisualTheme.initial;
 
   /// Desktops draw at the monitor's rate by default; phones stay at 60 fps
   /// (cooler, longer battery) unless the player turns it on.
@@ -65,6 +67,7 @@ class Settings extends ChangeNotifier {
       s._fullScreen = prefs.getBool('fullScreen') ?? true;
       s._vibrationStrength = prefs.getDouble('vibrationStrength') ?? 0.5;
       s._highRefreshRate = prefs.getBool('highRefreshRate') ?? _desktop;
+      s._visualTheme = VisualTheme.parse(prefs.getString('visualTheme'));
       for (final m in GameMode.values) {
         s._best[m] = prefs.getInt('best_${m.name}') ?? 0;
       }
@@ -83,11 +86,16 @@ class Settings extends ChangeNotifier {
       s._totalLines = prefs.getInt('totalLines') ?? 0;
       s._totalSeconds = prefs.getInt('totalSeconds') ?? 0;
     }
+    applyVisualTheme(s._visualTheme);
     return s;
   }
 
   /// In-memory settings, used by tests.
-  factory Settings.memory() => Settings._(null);
+  factory Settings.memory() {
+    final s = Settings._(null);
+    applyVisualTheme(s._visualTheme);
+    return s;
+  }
 
   ThemeMode get themeMode => _themeMode;
   AppLanguage get language => _language;
@@ -102,6 +110,9 @@ class Settings extends ChangeNotifier {
   /// With the on-screen buttons off, still show hold and hard drop (hard to
   /// do reliably with gestures).
   bool get quickButtons => _quickButtons;
+
+  /// The look of the game (blocks, cards, keys, icons and type).
+  VisualTheme get visualTheme => _visualTheme;
   double get buttonOpacity => _buttonOpacity;
 
   /// Desktop: borderless full screen (Windows), on by default.
@@ -186,6 +197,10 @@ class Settings extends ChangeNotifier {
   set highRefreshRate(bool v) => _set(() => _highRefreshRate = v, () => _prefs?.setBool('highRefreshRate', v));
   set vibrationStrength(double v) => _set(() => _vibrationStrength = v, () => _prefs?.setDouble('vibrationStrength', v));
   set fullScreen(bool v) => _set(() => _fullScreen = v, () => _prefs?.setBool('fullScreen', v));
+  set visualTheme(VisualTheme v) => _set(() {
+    _visualTheme = v;
+    applyVisualTheme(v);
+  }, () => _prefs?.setString('visualTheme', v.name));
 
   /// Records a finished game. Returns true when [score] is a new best for
   /// [mode].

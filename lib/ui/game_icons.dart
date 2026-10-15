@@ -9,6 +9,7 @@ import '../theme/palette.dart';
 /// skin) and as 9×9 pixel art (pixel skin); the glass skin keeps Material
 /// icons.
 enum GameIconKind {
+  palette,
   pause,
   play,
   musicOn,
@@ -30,6 +31,7 @@ enum GameIconKind {
 }
 
 final Map<IconData, GameIconKind> _byMaterial = {
+  Icons.palette_rounded: GameIconKind.palette,
   Icons.pause_rounded: GameIconKind.pause,
   Icons.play_arrow_rounded: GameIconKind.play,
   Icons.music_note_rounded: GameIconKind.musicOn,
@@ -111,6 +113,17 @@ void paintPixelArt(Canvas canvas, double size, List<String> rows, Color color) {
 const _slash = ['#........', '.#.......', '..#......', '...#.....', '....#....', '.....#...', '......#..', '.......#.', '........#'];
 
 const Map<GameIconKind, List<String>> _pixelIcons = {
+  GameIconKind.palette: [
+    '..#####..',
+    '.#######.',
+    '##.###.##',
+    '#########',
+    '##.######',
+    '#######..',
+    '.####....',
+    '..###..#.',
+    '.......#.',
+  ],
   GameIconKind.pause: ['.........', '.##...##.', '.##...##.', '.##...##.', '.##...##.', '.##...##.', '.##...##.', '.##...##.', '.........'],
   GameIconKind.play: ['.........', '.##......', '.####....', '.######..', '.#######.', '.######..', '.####....', '.##......', '.........'],
   GameIconKind.musicOn: [
@@ -258,6 +271,17 @@ void paintToyIcon(Canvas canvas, double size, GameIconKind kind, Color color) {
   }
 
   switch (kind) {
+    case GameIconKind.palette:
+      final board = Path.combine(
+        PathOperation.difference,
+        Path()..addOval(Rect.fromLTRB(2.5 * k, 3 * k, 21.5 * k, 21 * k)),
+        Path()..addOval(Rect.fromCircle(center: o(16.5, 16), radius: 3 * k)),
+      );
+      canvas.drawPath(board, fill);
+      final hole = Paint()..color = Color.lerp(color, Colors.black, 0.55)!;
+      for (final (x, y) in [(8.0, 8.5), (12.5, 7.0), (16.8, 9.2), (7.0, 13.5)]) {
+        canvas.drawCircle(o(x, y), 1.7 * k, hole);
+      }
     case GameIconKind.pause:
       canvas.drawRRect(rr(5.5, 4.5, 10, 19.5, 2), fill);
       canvas.drawRRect(rr(14, 4.5, 18.5, 19.5, 2), fill);

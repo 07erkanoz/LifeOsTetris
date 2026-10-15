@@ -13,6 +13,7 @@ import 'package:lifeos_kupler/settings/settings.dart';
 import 'package:lifeos_kupler/ui/blocks_screen.dart';
 import 'package:lifeos_kupler/ui/game_screen.dart';
 import 'package:lifeos_kupler/ui/power_bar.dart';
+import 'package:lifeos_kupler/theme/palette.dart';
 import 'package:lifeos_kupler/ui/widgets.dart';
 
 void main() {
@@ -51,6 +52,36 @@ void main() {
       expect(find.byKey(const ValueKey('start-classic')), findsOneWidget);
     });
   }
+
+  testWidgets('every theme can be picked from the menu and played', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final settings = Settings.memory()..language = AppLanguage.tr;
+    await tester.pumpWidget(KuplerApp(settings: settings, audio: AudioService(enabled: false)));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    for (final theme in [VisualTheme.pixel, VisualTheme.neon, VisualTheme.toy, VisualTheme.toyHd]) {
+      await tester.tap(find.byKey(const ValueKey('open-themes')));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.byKey(ValueKey('theme-${theme.name}')).last);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(settings.visualTheme, theme);
+      expect(activeSkin, theme.skin);
+      await tester.tapAt(const Offset(5, 5));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.tap(find.byKey(const ValueKey('start-classic')));
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 33));
+      }
+      expect(tester.takeException(), isNull);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyP);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Menü'));
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+  });
 
   testWidgets('about page shows the developer', (tester) async {
     await pumpApp(tester, const Size(390, 844));

@@ -80,7 +80,7 @@ class BlocksBoardPainter extends CustomPainter {
 
   ui.Image _chrome() {
     final dpr = min(sprites.dpr, 2.0);
-    final key = '${geometry.cell}/${palette.isDark}/$dpr';
+    final key = '${geometry.cell}/${palette.skin.name}/${palette.isDark}/$dpr';
     final hit = _chromeCache[key];
     if (hit != null) return hit;
     if (_chromeCache.length >= 4) _chromeCache.remove(_chromeCache.keys.first)?.dispose();
@@ -97,6 +97,14 @@ class BlocksBoardPainter extends CustomPainter {
     final c = geometry.cell;
     final o = geometry.gridOrigin;
     final grid = Rect.fromLTWH(o.dx, o.dy, geometry.grid, geometry.grid);
+    if (palette.skin == GameSkin.toy) {
+      _paintToyFrame(canvas, grid);
+      return;
+    }
+    if (palette.skin == GameSkin.pixel) {
+      _paintPixelFrame(canvas, grid);
+      return;
+    }
     final frame = RRect.fromRectAndRadius(grid.inflate(geometry.pad), Radius.circular(c * 0.6));
     canvas.drawRRect(
       frame.shift(Offset(0, c * 0.4)),
@@ -128,6 +136,62 @@ class BlocksBoardPainter extends CustomPainter {
           ),
           slot,
         );
+      }
+    }
+  }
+
+  /// Toy box: ink outline, hard shadow and sunken sockets.
+  void _paintToyFrame(Canvas canvas, Rect grid) {
+    final c = geometry.cell;
+    final outline = max(2.0, c * 0.07);
+    final frame = RRect.fromRectAndRadius(grid.inflate(geometry.pad), Radius.circular(c * 0.45));
+    canvas.drawRRect(frame.shift(Offset(0, c * 0.14)), Paint()..color = palette.ink);
+    canvas.drawRRect(frame, Paint()..color = palette.frameFill);
+    canvas.drawRRect(
+      frame.deflate(outline / 2),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = outline
+        ..color = palette.ink,
+    );
+    final well = RRect.fromRectAndRadius(grid, Radius.circular(c * 0.3));
+    canvas.drawRRect(well, Paint()..color = palette.wellTop);
+    final slot = Paint()..color = palette.isDark ? Colors.white.withValues(alpha: 0.05) : palette.grid.withValues(alpha: 0.45);
+    final inset = c * 0.1;
+    for (var y = 0; y < _n; y++) {
+      for (var x = 0; x < _n; x++) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(grid.left + x * c + inset, grid.top + y * c + inset, c - 2 * inset, c - 2 * inset),
+            Radius.circular(c * 0.2),
+          ),
+          slot,
+        );
+      }
+    }
+    canvas.drawRRect(
+      well.deflate(outline * 0.35),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = outline * 0.7
+        ..color = palette.ink,
+    );
+  }
+
+  /// Arcade cabinet: square bevelled frame and a checkerboard grid.
+  void _paintPixelFrame(Canvas canvas, Rect grid) {
+    final c = geometry.cell;
+    final u = c / 8;
+    final frame = grid.inflate(geometry.pad);
+    canvas.drawRect(frame.shift(Offset(u * 1.5, u * 1.5)), Paint()..color = palette.ink);
+    canvas.drawRect(frame, Paint()..color = palette.frameBorder);
+    canvas.drawRect(frame.deflate(u), Paint()..color = palette.frameFill);
+    canvas.drawRect(grid.inflate(u * 0.75), Paint()..color = palette.ink);
+    canvas.drawRect(grid, Paint()..color = palette.wellTop);
+    final check = Paint()..color = palette.grid;
+    for (var y = 0; y < _n; y++) {
+      for (var x = 0; x < _n; x++) {
+        if ((x + y).isOdd) canvas.drawRect(Rect.fromLTWH(grid.left + x * c, grid.top + y * c, c, c), check);
       }
     }
   }

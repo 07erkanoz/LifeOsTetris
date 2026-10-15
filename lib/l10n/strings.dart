@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../core/game_events.dart';
 import '../core/scoring.dart';
+import '../theme/palette.dart';
 
 enum AppLanguage { system, tr, en }
 
@@ -92,6 +93,13 @@ class AppStrings {
   String get audioProblem => _t('Ses sorunu', 'Audio problem');
   String get vibrationStrength => _t('Titreşim gücü', 'Vibration strength');
   String get quickButtons => _t('Tut ve düşür butonları', 'Hold and drop buttons');
+  String get themeLabel => _t('Tema', 'Theme');
+  String themeName(VisualTheme theme) => switch (theme) {
+    VisualTheme.toyHd => _t('Oyuncak HD', 'Toy HD'),
+    VisualTheme.toy => _t('Oyuncak', 'Toy'),
+    VisualTheme.pixel => _t('Piksel', 'Pixel'),
+    VisualTheme.neon => 'Neon',
+  };
   String get dropShort => _t('DÜŞÜR', 'DROP');
   String get onScreenButtons => _t('Ekran butonları', 'On-screen buttons');
   String get buttonOpacity => _t('Buton görünürlüğü', 'Button visibility');

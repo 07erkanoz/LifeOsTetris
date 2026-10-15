@@ -14,16 +14,48 @@ enum GameSkin {
   pixel,
 }
 
-const String _skinName = String.fromEnvironment('KUPLER_SKIN', defaultValue: 'glass');
+/// The looks players can pick in the settings: a skin plus, for the toy
+/// skin, the detail of its blocks.
+enum VisualTheme {
+  toyHd(GameSkin.toy, hd: true),
+  toy(GameSkin.toy),
+  pixel(GameSkin.pixel),
+  neon(GameSkin.glass);
 
-/// The skin in use (picked at build time for now).
-final GameSkin activeSkin = GameSkin.values.firstWhere((s) => s.name == _skinName, orElse: () => GameSkin.glass);
+  const VisualTheme(this.skin, {this.hd = false});
+
+  final GameSkin skin;
+  final bool hd;
+
+  /// Development override (`--dart-define=KUPLER_THEME=pixel`) for
+  /// screenshots; otherwise the toy HD look.
+  static VisualTheme get initial => values.firstWhere((t) => t.name == _themeOverride, orElse: () => toyHd);
+
+  static VisualTheme parse(String? name) => values.firstWhere((t) => t.name == name, orElse: () => initial);
+}
+
+const String _themeOverride = String.fromEnvironment('KUPLER_THEME');
+
+/// The skin in use. Read by painters that have no [GamePalette] at hand;
+/// set through [applyVisualTheme] before the app rebuilds.
+GameSkin activeSkin = VisualTheme.initial.skin;
+
+/// Detailed ("HD") blocks: shaded faces, rim light and gloss on the toy
+/// brick shape instead of flat fills.
+bool hdBlocks = VisualTheme.initial.hd;
+
+void applyVisualTheme(VisualTheme theme) {
+  activeSkin = theme.skin;
+  hdBlocks = theme.hd;
+}
 
 /// Extra text scale of the skin's typeface (pixel type runs small).
 double get skinTextScale => activeSkin == GameSkin.pixel ? 1.15 : 1;
 
 /// Block colours of the active skin, shared by both themes.
-Map<PieceType, Color> get blockColors => switch (activeSkin) {
+Map<PieceType, Color> get blockColors => blockColorsOf(activeSkin);
+
+Map<PieceType, Color> blockColorsOf(GameSkin skin) => switch (skin) {
   GameSkin.glass => _glassBlocks,
   GameSkin.toy => _toyBlocks,
   GameSkin.pixel => _pixelBlocks,
@@ -71,7 +103,9 @@ const Map<PieceType, Color> _glassBlocks = {
   PieceType.gem: Color(0xFFFBBF24),
 };
 
-String get fontFamily => switch (activeSkin) {
+String get fontFamily => fontFamilyOf(activeSkin);
+
+String fontFamilyOf(GameSkin skin) => switch (skin) {
   GameSkin.glass => 'Inter',
   GameSkin.toy => 'Baloo2',
   GameSkin.pixel => 'Jersey10',
@@ -152,13 +186,17 @@ class GamePalette extends ThemeExtension<GamePalette> {
 
   LinearGradient get accentGradient => LinearGradient(colors: [accent1, accent2]);
 
-  static GamePalette get dark => switch (activeSkin) {
+  static GamePalette get dark => darkOf(activeSkin);
+
+  static GamePalette get light => lightOf(activeSkin);
+
+  static GamePalette darkOf(GameSkin skin) => switch (skin) {
     GameSkin.glass => glassDark,
     GameSkin.toy => toyDark,
     GameSkin.pixel => pixelDark,
   };
 
-  static GamePalette get light => switch (activeSkin) {
+  static GamePalette lightOf(GameSkin skin) => switch (skin) {
     GameSkin.glass => glassLight,
     GameSkin.toy => toyLight,
     GameSkin.pixel => pixelLight,

@@ -26,6 +26,7 @@ import 'about_page.dart';
 import 'blocks_screen.dart';
 import 'board_view.dart';
 import 'power_bar.dart';
+import 'theme_picker.dart';
 import 'widgets.dart';
 
 String formatTime(double seconds) {
@@ -424,7 +425,7 @@ class _PhoneLayout extends StatelessWidget {
                 Expanded(
                   child: GlassCard(
                     glow: c.fx.levelPulse,
-                    padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+                    padding: EdgeInsets.fromLTRB(12, GamePalette.of(context).flat ? 6 : 9, 12, GamePalette.of(context).flat ? 6 : 9),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -854,6 +855,8 @@ class SettingsPanel extends StatelessWidget {
       children: [
         CardLabel(s.settingsLabel),
         const SizedBox(height: 10),
+        ThemePicker(settings: settings),
+        const SizedBox(height: 10),
         ThemeSegment(
           isDark: isDark,
           lightLabel: s.light,
@@ -1183,13 +1186,28 @@ class _StartOverlay extends StatelessWidget {
       const SizedBox(height: 14),
       LanguageSegment(isTurkish: s.isTurkish, onChanged: (tr) => c.settings.language = tr ? AppLanguage.tr : AppLanguage.en),
       const SizedBox(height: 4),
-      TextButton.icon(
-        onPressed: () => AboutPage.open(context, c.settings),
-        icon: GameIcon(Icons.info_outline_rounded, size: 16, color: p.muted),
-        label: Text(
-          s.about,
-          style: TextStyle(color: p.muted, fontSize: 13, fontWeight: FontWeight.w600),
-        ),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          TextButton.icon(
+            key: const ValueKey('open-themes'),
+            onPressed: () => _ThemeSheet.open(context, c.settings),
+            icon: GameIcon(Icons.palette_rounded, size: 16, color: p.muted),
+            label: Text(
+              s.themeLabel,
+              style: TextStyle(color: p.muted, fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton.icon(
+            onPressed: () => AboutPage.open(context, c.settings),
+            icon: GameIcon(Icons.info_outline_rounded, size: 16, color: p.muted),
+            label: Text(
+              s.about,
+              style: TextStyle(color: p.muted, fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
     ];
     // Phones held sideways: brand and settings on the left, modes on the right.
@@ -1213,6 +1231,61 @@ class _StartOverlay extends StatelessWidget {
       );
     }
     return _OverlayShell(children: [...brand, const SizedBox(height: 18), ...modes, const SizedBox(height: 18), ...footer]);
+  }
+}
+
+/// Theme cards and the light / dark switch in a small dialog, opened from
+/// the start menu.
+class _ThemeSheet extends StatelessWidget {
+  const _ThemeSheet({required this.settings});
+
+  final Settings settings;
+
+  static Future<void> open(BuildContext context, Settings settings) => showDialog<void>(
+    context: context,
+    barrierColor: GamePalette.of(context).background.first.withValues(alpha: 0.7),
+    builder: (_) => _ThemeSheet(settings: settings),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    return ListenableBuilder(
+      listenable: settings,
+      builder: (context, _) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        insetPadding: const EdgeInsets.all(20),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          // Glass cards are see-through: back the dialog so the menu
+          // behind it does not show.
+          child: DecoratedBox(
+            decoration: BoxDecoration(color: GamePalette.of(context).background.first, borderRadius: BorderRadius.circular(24)),
+            child: GlassCard(
+              radius: 24,
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  CardLabel(s.themeLabel.toUpperCase()),
+                  const SizedBox(height: 12),
+                  ThemePicker(settings: settings),
+                  const SizedBox(height: 14),
+                  ThemeSegment(
+                    isDark: Theme.of(context).brightness == Brightness.dark,
+                    lightLabel: s.light,
+                    darkLabel: s.dark,
+                    onChanged: (dark) => settings.themeMode = dark ? ThemeMode.dark : ThemeMode.light,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

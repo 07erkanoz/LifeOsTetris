@@ -62,17 +62,12 @@ void paintBlock(Canvas canvas, Offset origin, double s, Color color, {required C
 }
 
 /// A block in the style of [palette]'s skin.
-void paintSkinBlock(Canvas canvas, Offset origin, double s, Color color, GamePalette palette) => switch (palette.skin) {
+void paintSkinBlock(Canvas canvas, Offset origin, double s, Color color, GamePalette palette, {bool? hd}) => switch (palette.skin) {
   GameSkin.glass => paintBlock(canvas, origin, s, color, shadeTarget: palette.shadeTarget, emissive: palette.isDark),
-  GameSkin.toy => hdBlocks ? paintToyBlockHd(canvas, origin, s, color, palette.ink) : paintToyBlock(canvas, origin, s, color, palette.ink),
+  GameSkin.toy =>
+    (hd ?? hdBlocks) ? paintToyBlockHd(canvas, origin, s, color, palette.ink) : paintToyBlock(canvas, origin, s, color, palette.ink),
   GameSkin.pixel => paintPixelBlock(canvas, origin, s, color, palette.ink),
 };
-
-const String _blockStyle = String.fromEnvironment('KUPLER_BLOCKS');
-
-/// Detailed ("HD") blocks: shaded faces, rim light and gloss on the toy
-/// brick shape instead of flat fills.
-bool hdBlocks = _blockStyle == 'hd';
 
 /// HD toy brick: the same outlined shape as [paintToyBlock], with a lit face
 /// gradient, bevelled rim, curved gloss, a shaded lip and soft side shading.
