@@ -563,13 +563,20 @@ class _LevelTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
     final tile = Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        gradient: current ? const LinearGradient(colors: [Color(0xFF14B8A6), Color(0xFF22C55E)]) : null,
-        color: current ? null : (locked ? p.track.withValues(alpha: 0.5) : p.glass),
-        border: Border.all(color: stars > 0 ? _gold.withValues(alpha: 0.7) : p.glassBorder),
-        boxShadow: current ? const [BoxShadow(color: Color(0x6614B8A6), blurRadius: 14)] : null,
-      ),
+      decoration: p.flat
+          ? flatCardDecoration(
+              p,
+              radius: 16,
+              depth: locked ? 0 : 3,
+              fill: current ? flatTone(_puzzleColors, p) : (locked ? p.track : p.glass),
+            )
+          : BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              gradient: current ? const LinearGradient(colors: [Color(0xFF14B8A6), Color(0xFF22C55E)]) : null,
+              color: current ? null : (locked ? p.track.withValues(alpha: 0.5) : p.glass),
+              border: Border.all(color: stars > 0 ? _gold.withValues(alpha: 0.7) : p.glassBorder),
+              boxShadow: current ? const [BoxShadow(color: Color(0x6614B8A6), blurRadius: 14)] : null,
+            ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -679,7 +686,7 @@ class _HudValue extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (icon != null) ...[Icon(icon, color: _gold, size: 22), const SizedBox(width: 2)],
+              if (icon != null) ...[GameIcon(icon!, color: _gold, size: 22), const SizedBox(width: 2)],
               Text(
                 value,
                 style: TextStyle(
@@ -992,11 +999,13 @@ class _TraySlot extends StatelessWidget {
       onPointerCancel: (_) => c.abortDrag(),
       child: Container(
         key: ValueKey('tray-$slot'),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          color: p.glass,
-          border: Border.all(color: p.glassBorder),
-        ),
+        decoration: p.flat
+            ? flatCardDecoration(p, radius: 18, depth: 3)
+            : BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                color: p.glass,
+                border: Border.all(color: p.glassBorder),
+              ),
         child: LayoutBuilder(
           builder: (context, box) {
             // Tray pieces are shown smaller than on the board.
@@ -1175,12 +1184,14 @@ class _PopStar extends StatelessWidget {
       builder: (context, t, child) => Transform.scale(scale: on ? t : 1, child: child),
       child: Padding(
         padding: EdgeInsets.only(bottom: big ? 10 : 0),
-        child: Icon(
-          Icons.star_rounded,
-          size: big ? 64 : 50,
-          color: on ? _gold : p.track,
-          shadows: on ? const [Shadow(color: Color(0x99F59E0B), blurRadius: 18)] : null,
-        ),
+        child: p.flat
+            ? GameIcon(Icons.star_rounded, size: big ? 64 : 50, color: on ? _gold : p.track)
+            : Icon(
+                Icons.star_rounded,
+                size: big ? 64 : 50,
+                color: on ? _gold : p.track,
+                shadows: on ? const [Shadow(color: Color(0x99F59E0B), blurRadius: 18)] : null,
+              ),
       ),
     );
   }

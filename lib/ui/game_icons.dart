@@ -10,6 +10,27 @@ import '../theme/palette.dart';
 /// icons.
 enum GameIconKind {
   palette,
+  back,
+  forward,
+  northEast,
+  grid,
+  layers,
+  volume,
+  shake,
+  timer,
+  gamepad,
+  speed,
+  phone,
+  person,
+  lock,
+  fire,
+  fullscreen,
+  quote,
+  heart,
+  dice,
+  blur,
+  infinity,
+
   pause,
   play,
   musicOn,
@@ -32,6 +53,27 @@ enum GameIconKind {
 
 final Map<IconData, GameIconKind> _byMaterial = {
   Icons.palette_rounded: GameIconKind.palette,
+  Icons.arrow_back_rounded: GameIconKind.back,
+  Icons.arrow_forward_rounded: GameIconKind.forward,
+  Icons.north_east_rounded: GameIconKind.northEast,
+  Icons.grid_view_rounded: GameIconKind.grid,
+  Icons.layers_rounded: GameIconKind.layers,
+  Icons.volume_up_rounded: GameIconKind.volume,
+  Icons.vibration_rounded: GameIconKind.shake,
+  Icons.timer_rounded: GameIconKind.timer,
+  Icons.sports_esports_rounded: GameIconKind.gamepad,
+  Icons.gamepad_rounded: GameIconKind.gamepad,
+  Icons.speed_rounded: GameIconKind.speed,
+  Icons.smartphone_rounded: GameIconKind.phone,
+  Icons.person_rounded: GameIconKind.person,
+  Icons.lock_rounded: GameIconKind.lock,
+  Icons.local_fire_department_rounded: GameIconKind.fire,
+  Icons.fullscreen_rounded: GameIconKind.fullscreen,
+  Icons.format_quote_rounded: GameIconKind.quote,
+  Icons.favorite_rounded: GameIconKind.heart,
+  Icons.casino_rounded: GameIconKind.dice,
+  Icons.blur_on_rounded: GameIconKind.blur,
+  Icons.all_inclusive_rounded: GameIconKind.infinity,
   Icons.pause_rounded: GameIconKind.pause,
   Icons.play_arrow_rounded: GameIconKind.play,
   Icons.music_note_rounded: GameIconKind.musicOn,
@@ -113,6 +155,106 @@ void paintPixelArt(Canvas canvas, double size, List<String> rows, Color color) {
 const _slash = ['#........', '.#.......', '..#......', '...#.....', '....#....', '.....#...', '......#..', '.......#.', '........#'];
 
 const Map<GameIconKind, List<String>> _pixelIcons = {
+  GameIconKind.back: ['.........', '....#....', '...##....', '..#######', '.########', '..#######', '...##....', '....#....', '.........'],
+  GameIconKind.forward: [
+    '.........',
+    '....#....',
+    '....##...',
+    '#######..',
+    '########.',
+    '#######..',
+    '....##...',
+    '....#....',
+    '.........',
+  ],
+  GameIconKind.northEast: [
+    '...######',
+    '......###',
+    '.....####',
+    '....###.#',
+    '...###..#',
+    '..###....',
+    '.###.....',
+    '###......',
+    '##.......',
+  ],
+  GameIconKind.grid: ['##.##.##.', '##.##.##.', '.........', '##.##.##.', '##.##.##.', '.........', '##.##.##.', '##.##.##.', '.........'],
+  GameIconKind.layers: [
+    '..#####..',
+    '..#####..',
+    '.........',
+    '.#######.',
+    '.#######.',
+    '.........',
+    '#########',
+    '#########',
+    '.........',
+  ],
+  GameIconKind.volume: [
+    '....#....',
+    '...##..#.',
+    '#####...#',
+    '#####.#.#',
+    '#####.#.#',
+    '#####...#',
+    '...##..#.',
+    '....#....',
+    '.........',
+  ],
+  GameIconKind.shake: ['#..###..#', '#.#...#.#', '..#...#..', '#.#...#.#', '#.#...#.#', '..#...#..', '#.#...#.#', '#..###..#', '.........'],
+  GameIconKind.timer: ['...###...', '....#....', '..#####..', '.#..#..#.', '#...#...#', '#...##..#', '#.......#', '.#.....#.', '..#####..'],
+  GameIconKind.gamepad: [
+    '.........',
+    '..#####..',
+    '.#######.',
+    '##.###.##',
+    '#...#.#.#',
+    '##.###.##',
+    '#########',
+    '##.....##',
+    '.........',
+  ],
+  GameIconKind.speed: ['.........', '..#####..', '.#.....#.', '#.....#.#', '#....#..#', '#...#...#', '#.......#', '.........', '.........'],
+  GameIconKind.phone: ['..#####..', '..#...#..', '..#...#..', '..#...#..', '..#...#..', '..#...#..', '..#####..', '..##.##..', '..#####..'],
+  GameIconKind.person: [
+    '...###...',
+    '..#####..',
+    '..#####..',
+    '...###...',
+    '.........',
+    '.#######.',
+    '#########',
+    '#########',
+    '#########',
+  ],
+  GameIconKind.lock: ['...###...', '..#...#..', '..#...#..', '.#######.', '.#######.', '.###.###.', '.###.###.', '.#######.', '.........'],
+  GameIconKind.fire: ['....#....', '...##....', '...###.#.', '..######.', '.###.###.', '.##...##.', '.##...##.', '..##.##..', '...###...'],
+  GameIconKind.fullscreen: [
+    '###...###',
+    '#.......#',
+    '#.......#',
+    '.........',
+    '.........',
+    '.........',
+    '#.......#',
+    '#.......#',
+    '###...###',
+  ],
+  GameIconKind.quote: ['.........', '.##...##.', '#..#.#..#', '#..#.#..#', '.###..###', '...#....#', '..#....#.', '.#....#..', '.........'],
+  GameIconKind.heart: ['.........', '.##...##.', '####.####', '#########', '#########', '.#######.', '..#####..', '...###...', '....#....'],
+  GameIconKind.dice: ['#########', '#.......#', '#.#...#.#', '#.......#', '#...#...#', '#.......#', '#.#...#.#', '#.......#', '#########'],
+  GameIconKind.blur: ['....#....', '..#...#..', '.........', '#..###..#', '...###...', '#..###..#', '.........', '..#...#..', '....#....'],
+  GameIconKind.infinity: [
+    '.........',
+    '.........',
+    '.##...##.',
+    '#..#.#..#',
+    '#...#...#',
+    '#..#.#..#',
+    '.##...##.',
+    '.........',
+    '.........',
+  ],
   GameIconKind.palette: [
     '..#####..',
     '.#######.',
@@ -271,6 +413,170 @@ void paintToyIcon(Canvas canvas, double size, GameIconKind kind, Color color) {
   }
 
   switch (kind) {
+    case GameIconKind.back || GameIconKind.forward:
+      canvas.save();
+      if (kind == GameIconKind.forward) {
+        canvas.translate(size, 0);
+        canvas.scale(-1, 1);
+      }
+      canvas.drawLine(o(5.5, 12), o(19, 12), stroke..strokeWidth = 3 * k);
+      canvas.drawPath(
+        Path()
+          ..moveTo(11 * k, 5.5 * k)
+          ..lineTo(4.5 * k, 12 * k)
+          ..lineTo(11 * k, 18.5 * k),
+        stroke,
+      );
+      canvas.restore();
+    case GameIconKind.northEast:
+      canvas.drawLine(o(6, 18), o(17.5, 6.5), stroke..strokeWidth = 3 * k);
+      canvas.drawPath(
+        Path()
+          ..moveTo(8.5 * k, 6 * k)
+          ..lineTo(18 * k, 6 * k)
+          ..lineTo(18 * k, 15.5 * k),
+        stroke,
+      );
+    case GameIconKind.grid:
+      for (final (x, y) in [(3.0, 3.0), (13.0, 3.0), (3.0, 13.0), (13.0, 13.0)]) {
+        canvas.drawRRect(rr(x, y, x + 8, y + 8, 2.2), fill);
+      }
+    case GameIconKind.layers:
+      canvas.drawPath(poly([12, 3, 21, 8, 12, 13, 3, 8]), fill);
+      canvas.drawPath(poly([12, 3, 21, 8, 12, 13, 3, 8]), stroke..strokeWidth = 1.6 * k);
+      stroke.strokeWidth = 2.6 * k;
+      canvas.drawPath(
+        Path()
+          ..moveTo(3.5 * k, 12.5 * k)
+          ..lineTo(12 * k, 17 * k)
+          ..lineTo(20.5 * k, 12.5 * k),
+        stroke,
+      );
+      canvas.drawPath(
+        Path()
+          ..moveTo(3.5 * k, 16.5 * k)
+          ..lineTo(12 * k, 21 * k)
+          ..lineTo(20.5 * k, 16.5 * k),
+        stroke,
+      );
+    case GameIconKind.volume:
+      canvas.drawPath(poly([3, 9, 7.5, 9, 12.5, 4.5, 12.5, 19.5, 7.5, 15, 3, 15]), fill);
+      stroke.strokeWidth = 2.4 * k;
+      canvas.drawArc(Rect.fromCircle(center: o(12.5, 12), radius: 4.5 * k), -0.9, 1.8, false, stroke);
+      canvas.drawArc(Rect.fromCircle(center: o(12.5, 12), radius: 8.5 * k), -0.9, 1.8, false, stroke);
+    case GameIconKind.shake:
+      canvas.drawRRect(rr(7.5, 3, 16.5, 21, 2.4), stroke..strokeWidth = 2.4 * k);
+      for (final x in [3.5, 20.5]) {
+        canvas.drawLine(o(x, 8), o(x, 16), stroke);
+      }
+    case GameIconKind.timer:
+      canvas.drawCircle(o(12, 13.5), 8 * k, stroke..strokeWidth = 2.4 * k);
+      canvas.drawLine(o(12, 13.5), o(12, 9), stroke..strokeWidth = 2.6 * k);
+      canvas.drawLine(o(9.5, 2.8), o(14.5, 2.8), stroke);
+    case GameIconKind.gamepad:
+      final pad = Path()
+        ..moveTo(6 * k, 7 * k)
+        ..lineTo(18 * k, 7 * k)
+        ..quadraticBezierTo(22 * k, 7 * k, 22.5 * k, 13 * k)
+        ..quadraticBezierTo(23 * k, 19 * k, 19 * k, 18.5 * k)
+        ..lineTo(5 * k, 18.5 * k)
+        ..quadraticBezierTo(1 * k, 19 * k, 1.5 * k, 13 * k)
+        ..quadraticBezierTo(2 * k, 7 * k, 6 * k, 7 * k)
+        ..close();
+      canvas.drawPath(pad, fill);
+      final hole = Paint()..color = Color.lerp(color, Colors.black, 0.55)!;
+      canvas.drawRect(Rect.fromLTRB(5 * k, 11.8 * k, 10 * k, 13.8 * k), hole);
+      canvas.drawRect(Rect.fromLTRB(6.5 * k, 10.3 * k, 8.5 * k, 15.3 * k), hole);
+      canvas.drawCircle(o(16, 11.5), 1.3 * k, hole);
+      canvas.drawCircle(o(18.6, 14), 1.3 * k, hole);
+    case GameIconKind.speed:
+      canvas.drawArc(Rect.fromCircle(center: o(12, 14), radius: 8.5 * k), pi * 0.85, pi * 1.3, false, stroke..strokeWidth = 2.6 * k);
+      canvas.drawLine(o(12, 14), o(16.5, 8.5), stroke..strokeWidth = 2.8 * k);
+      canvas.drawCircle(o(12, 14), 2 * k, fill);
+    case GameIconKind.phone:
+      canvas.drawRRect(rr(6.5, 2.5, 17.5, 21.5, 2.8), stroke..strokeWidth = 2.4 * k);
+      canvas.drawCircle(o(12, 18), 1.3 * k, fill);
+    case GameIconKind.person:
+      canvas.drawCircle(o(12, 7.5), 4.3 * k, fill);
+      canvas.drawPath(
+        Path()
+          ..moveTo(3.5 * k, 21 * k)
+          ..quadraticBezierTo(3.5 * k, 13.5 * k, 12 * k, 13.5 * k)
+          ..quadraticBezierTo(20.5 * k, 13.5 * k, 20.5 * k, 21 * k)
+          ..close(),
+        fill,
+      );
+    case GameIconKind.lock:
+      canvas.drawArc(Rect.fromLTRB(7.5 * k, 3 * k, 16.5 * k, 13 * k), pi, pi, false, stroke..strokeWidth = 2.6 * k);
+      canvas.drawLine(o(7.5, 8), o(7.5, 11), stroke);
+      canvas.drawLine(o(16.5, 8), o(16.5, 11), stroke);
+      canvas.drawRRect(rr(4.5, 10.5, 19.5, 21, 2.6), fill);
+      canvas.drawCircle(o(12, 15.2), 1.7 * k, Paint()..color = Color.lerp(color, Colors.black, 0.55)!);
+    case GameIconKind.fire:
+      final flame = Path()
+        ..moveTo(12 * k, 2 * k)
+        ..quadraticBezierTo(14 * k, 7 * k, 17.5 * k, 9.5 * k)
+        ..quadraticBezierTo(20.5 * k, 13 * k, 19 * k, 17 * k)
+        ..quadraticBezierTo(17 * k, 22 * k, 12 * k, 22 * k)
+        ..quadraticBezierTo(5 * k, 22 * k, 5 * k, 15.5 * k)
+        ..quadraticBezierTo(5 * k, 11 * k, 8.5 * k, 8.5 * k)
+        ..quadraticBezierTo(8.5 * k, 11.5 * k, 10.5 * k, 12 * k)
+        ..quadraticBezierTo(9.5 * k, 6 * k, 12 * k, 2 * k)
+        ..close();
+      canvas.drawPath(flame, fill);
+    case GameIconKind.fullscreen:
+      stroke.strokeWidth = 2.8 * k;
+      for (final (x, y, dx, dy) in [(4.0, 4.0, 1.0, 1.0), (20.0, 4.0, -1.0, 1.0), (4.0, 20.0, 1.0, -1.0), (20.0, 20.0, -1.0, -1.0)]) {
+        canvas.drawPath(
+          Path()
+            ..moveTo(x * k, (y + 5 * dy) * k)
+            ..lineTo(x * k, y * k)
+            ..lineTo((x + 5 * dx) * k, y * k),
+          stroke,
+        );
+      }
+    case GameIconKind.quote:
+      for (final x in [3.5, 13.0]) {
+        canvas.drawCircle(o(x + 3.5, 10), 3.5 * k, fill);
+        canvas.drawPath(poly([x + 3.5, 13.5, x + 7, 10, x + 3, 19.5]), fill);
+      }
+    case GameIconKind.heart:
+      final heart = Path()
+        ..moveTo(12 * k, 20.5 * k)
+        ..cubicTo(2 * k, 14 * k, 1.5 * k, 8 * k, 5 * k, 5.2 * k)
+        ..cubicTo(8 * k, 3 * k, 11 * k, 4.5 * k, 12 * k, 7 * k)
+        ..cubicTo(13 * k, 4.5 * k, 16 * k, 3 * k, 19 * k, 5.2 * k)
+        ..cubicTo(22.5 * k, 8 * k, 22 * k, 14 * k, 12 * k, 20.5 * k)
+        ..close();
+      canvas.drawPath(heart, fill);
+    case GameIconKind.dice:
+      canvas.drawRRect(rr(3, 3, 21, 21, 4.5), fill);
+      final pip = Paint()..color = Color.lerp(color, Colors.black, 0.6)!;
+      for (final (x, y) in [(7.5, 7.5), (16.5, 7.5), (12.0, 12.0), (7.5, 16.5), (16.5, 16.5)]) {
+        canvas.drawCircle(o(x, y), 1.8 * k, pip);
+      }
+    case GameIconKind.blur:
+      for (final (x, y, r) in [
+        (12.0, 12.0, 3.2),
+        (5.0, 12.0, 1.8),
+        (19.0, 12.0, 1.8),
+        (12.0, 5.0, 1.8),
+        (12.0, 19.0, 1.8),
+        (6.5, 6.5, 1.2),
+        (17.5, 6.5, 1.2),
+        (6.5, 17.5, 1.2),
+        (17.5, 17.5, 1.2),
+      ]) {
+        canvas.drawCircle(o(x, y), r * k, fill);
+      }
+    case GameIconKind.infinity:
+      final loop = Path()
+        ..moveTo(12 * k, 12 * k)
+        ..cubicTo(15 * k, 7 * k, 21.5 * k, 7 * k, 21.5 * k, 12 * k)
+        ..cubicTo(21.5 * k, 17 * k, 15 * k, 17 * k, 12 * k, 12 * k)
+        ..cubicTo(9 * k, 7 * k, 2.5 * k, 7 * k, 2.5 * k, 12 * k)
+        ..cubicTo(2.5 * k, 17 * k, 9 * k, 17 * k, 12 * k, 12 * k);
+      canvas.drawPath(loop, stroke..strokeWidth = 2.8 * k);
     case GameIconKind.palette:
       final board = Path.combine(
         PathOperation.difference,

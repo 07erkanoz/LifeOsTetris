@@ -1466,6 +1466,47 @@ class _BannerPill extends StatelessWidget {
       MotivationKind.linesMilestone => (Icons.layers_rounded, const [Color(0xFF22D3EE), Color(0xFF3B82F6)]),
       MotivationKind.praise => (Icons.star_rounded, [p.accent1, p.accent2]),
     };
+    if (p.flat) {
+      // One solid badge colour taken from the theme's own blocks.
+      final tone = switch (motivation.kind) {
+        MotivationKind.newBest || MotivationKind.scoreMilestone => blockColors[PieceType.o]!,
+        MotivationKind.combo || MotivationKind.backToBack => blockColors[PieceType.l]!,
+        MotivationKind.maxSpeed || MotivationKind.firstQuad => blockColors[PieceType.t]!,
+        MotivationKind.closeCall => blockColors[PieceType.s]!,
+        MotivationKind.linesMilestone => blockColors[PieceType.i]!,
+        MotivationKind.praise => p.accent1,
+      };
+      return Center(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(6, 6, 18, 6),
+          decoration: flatCardDecoration(p, radius: 40, depth: 3),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  shape: p.skin == GameSkin.pixel ? BoxShape.rectangle : BoxShape.circle,
+                  color: tone,
+                  border: Border.all(color: p.ink, width: 2),
+                ),
+                child: GameIcon(icon, size: 17, color: tone.computeLuminance() > 0.45 ? p.ink : Colors.white),
+              ),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(
+                  motivation.text(s),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: p.text),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Center(
       child: Container(
         padding: const EdgeInsets.all(1.6),
@@ -1519,16 +1560,18 @@ class _GhostLineHint extends StatelessWidget {
     return Center(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(40),
-          color: p.isDark ? const Color(0xF0111630) : const Color(0xF7FFFFFF),
-          border: Border.all(color: const Color(0xFFA855F7), width: 1.6),
-          boxShadow: const [BoxShadow(color: Color(0x66A855F7), blurRadius: 20)],
-        ),
+        decoration: p.flat
+            ? flatCardDecoration(p, radius: 40, depth: 3)
+            : BoxDecoration(
+                borderRadius: BorderRadius.circular(40),
+                color: p.isDark ? const Color(0xF0111630) : const Color(0xF7FFFFFF),
+                border: Border.all(color: const Color(0xFFA855F7), width: 1.6),
+                boxShadow: const [BoxShadow(color: Color(0x66A855F7), blurRadius: 20)],
+              ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const GameIcon(Icons.touch_app_rounded, size: 18, color: Color(0xFFC084FC)),
+            GameIcon(Icons.touch_app_rounded, size: 18, color: p.flat ? blockColors[PieceType.t]! : const Color(0xFFC084FC)),
             const SizedBox(width: 8),
             Flexible(
               child: Text(

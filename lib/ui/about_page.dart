@@ -158,17 +158,23 @@ class AboutPage extends StatelessWidget {
                 ),
               );
               final story = Container(
-                padding: const EdgeInsets.all(1.2),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(22),
-                  gradient: LinearGradient(colors: [p.accent1.withValues(alpha: 0.6), const Color(0xFFA855F7).withValues(alpha: 0.6)]),
-                ),
+                padding: EdgeInsets.all(p.flat ? 0 : 1.2),
+                decoration: p.flat
+                    ? flatCardDecoration(p, radius: 22)
+                    : BoxDecoration(
+                        borderRadius: BorderRadius.circular(22),
+                        gradient: LinearGradient(
+                          colors: [p.accent1.withValues(alpha: 0.6), const Color(0xFFA855F7).withValues(alpha: 0.6)],
+                        ),
+                      ),
                 child: Container(
                   padding: EdgeInsets.fromLTRB(20, 18, 20, 18),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(21),
-                    color: p.isDark ? const Color(0xF20E1226) : const Color(0xF7FFFFFF),
-                  ),
+                  decoration: p.flat
+                      ? null
+                      : BoxDecoration(
+                          borderRadius: BorderRadius.circular(21),
+                          color: p.isDark ? const Color(0xF20E1226) : const Color(0xF7FFFFFF),
+                        ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -273,11 +279,13 @@ class _Chip extends StatelessWidget {
     final p = GamePalette.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: p.glass,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: p.glassBorder),
-      ),
+      decoration: p.flat
+          ? flatCardDecoration(p, radius: 20, depth: 2)
+          : BoxDecoration(
+              color: p.glass,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: p.glassBorder),
+            ),
       child: Text(
         text,
         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.muted),
@@ -304,12 +312,14 @@ class _StatTile extends StatelessWidget {
           Container(
             width: 38,
             height: 38,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              gradient: LinearGradient(colors: colors),
-              boxShadow: [BoxShadow(color: colors.first.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4))],
-            ),
-            child: Icon(icon, color: Colors.white, size: 21),
+            decoration: p.flat
+                ? flatCardDecoration(p, radius: 14, fill: flatTone(colors, p), depth: 2)
+                : BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    gradient: LinearGradient(colors: colors),
+                    boxShadow: [BoxShadow(color: colors.first.withValues(alpha: 0.4), blurRadius: 12, offset: const Offset(0, 4))],
+                  ),
+            child: GameIcon(icon, color: p.flat && flatTone(colors, p).computeLuminance() > 0.45 ? p.ink : Colors.white, size: 21),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -353,17 +363,19 @@ class _DeveloperCard extends StatelessWidget {
         onTap: () => launchUrl(uri, mode: LaunchMode.externalApplication),
         child: Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            color: p.isDark ? const Color(0x0FFFFFFF) : Colors.white,
-            border: Border.all(color: colors.first.withValues(alpha: 0.5)),
-          ),
+          decoration: p.flat
+              ? flatCardDecoration(p, radius: 16, fill: p.keyFace, depth: 3)
+              : BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  color: p.isDark ? const Color(0x0FFFFFFF) : Colors.white,
+                  border: Border.all(color: colors.first.withValues(alpha: 0.5)),
+                ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  GameIcon(icon, size: 18, color: colors.first),
+                  GameIcon(icon, size: 18, color: p.flat ? flatTone(colors, p) : colors.first),
                   const Spacer(),
                   GameIcon(Icons.north_east_rounded, size: 14, color: p.label),
                 ],
@@ -389,18 +401,19 @@ class _DeveloperCard extends StatelessWidget {
     );
 
     return Container(
-      padding: const EdgeInsets.all(1.5),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: LinearGradient(colors: [p.accent1, p.accent2, const Color(0xFFA855F7)]),
-        boxShadow: [BoxShadow(color: p.accent2.withValues(alpha: 0.3), blurRadius: 26, offset: const Offset(0, 10))],
-      ),
+      padding: EdgeInsets.all(p.flat ? 0 : 1.5),
+      decoration: p.flat
+          ? flatCardDecoration(p, radius: 24, depth: 5)
+          : BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              gradient: LinearGradient(colors: [p.accent1, p.accent2, const Color(0xFFA855F7)]),
+              boxShadow: [BoxShadow(color: p.accent2.withValues(alpha: 0.3), blurRadius: 26, offset: const Offset(0, 10))],
+            ),
       child: Container(
         padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22.5),
-          color: p.isDark ? const Color(0xFF111630) : const Color(0xFFF8FAFD),
-        ),
+        decoration: p.flat
+            ? null
+            : BoxDecoration(borderRadius: BorderRadius.circular(22.5), color: p.isDark ? const Color(0xFF111630) : const Color(0xFFF8FAFD)),
         child: Column(
           children: [
             Row(
@@ -409,14 +422,26 @@ class _DeveloperCard extends StatelessWidget {
                   width: 62,
                   height: 62,
                   alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [p.accent1, p.accent2]),
-                    boxShadow: [BoxShadow(color: p.accent1.withValues(alpha: 0.5), blurRadius: 18)],
-                  ),
-                  child: const Text(
+                  decoration: p.flat
+                      ? BoxDecoration(
+                          shape: p.skin == GameSkin.pixel ? BoxShape.rectangle : BoxShape.circle,
+                          color: p.accent1,
+                          border: Border.all(color: p.ink, width: 2.5),
+                          boxShadow: [BoxShadow(color: p.ink, offset: const Offset(0, 3))],
+                        )
+                      : BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [p.accent1, p.accent2]),
+                          boxShadow: [BoxShadow(color: p.accent1.withValues(alpha: 0.5), blurRadius: 18)],
+                        ),
+                  child: Text(
                     'EÖ',
-                    style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 1),
+                    style: TextStyle(
+                      color: p.flat && p.accent1.computeLuminance() > 0.45 ? p.ink : Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -507,16 +532,20 @@ class _FallingBlocksPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [
-            palette.accent2.withValues(alpha: palette.isDark ? 0.35 : 0.18),
-            palette.accent1.withValues(alpha: 0),
-          ],
-        ).createShader(rect),
-    );
+    if (palette.flat) {
+      canvas.drawRect(rect, Paint()..color = palette.track);
+    } else {
+      canvas.drawRect(
+        rect,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              palette.accent2.withValues(alpha: palette.isDark ? 0.35 : 0.18),
+              palette.accent1.withValues(alpha: 0),
+            ],
+          ).createShader(rect),
+      );
+    }
     final t = anim.value;
     for (final (type, x, phase, speed, angle) in _pieces) {
       final y = ((phase + t * speed) % 1.0) * (size.height + 80) - 40;

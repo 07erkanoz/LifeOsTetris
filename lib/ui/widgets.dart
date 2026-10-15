@@ -106,7 +106,12 @@ class GradientText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
-    if (p.flat) return Text(text, style: style.copyWith(color: gradient?.colors.first ?? p.accent1));
+    if (p.flat) {
+      final tone = flatTone(gradient?.colors, p);
+      // Pixel tones are deep button colours; lift them for text on navy.
+      final color = p.skin == GameSkin.pixel && p.isDark && tone.computeLuminance() < 0.25 ? Color.lerp(tone, Colors.white, 0.4)! : tone;
+      return Text(text, style: style.copyWith(color: color));
+    }
     final g = gradient ?? p.accentGradient;
     return ShaderMask(
       shaderCallback: (rect) => g.createShader(rect),
@@ -736,6 +741,7 @@ Color flatTone(List<Color>? colors, GamePalette p) {
   return switch (first.toARGB32()) {
     0xFFA855F7 => toy ? const Color(0xFF9467E6) : const Color(0xFF7E2553),
     0xFF14B8A6 => toy ? const Color(0xFF2FB59A) : const Color(0xFF008751),
+    0xFFFDE047 || 0xFF38BDF8 || 0xFF7DD3FC => p.accent1,
     _ => first,
   };
 }

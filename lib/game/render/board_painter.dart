@@ -700,7 +700,10 @@ class FloaterPainter extends CustomPainter {
   static final Expando<Map<Floater, (double, List<(TextPainter, TextPainter)>)>> _layouts = Expando();
 
   (TextPainter, TextPainter) _layout(FloaterLine line, double c) {
-    final fontSize = line.size * c;
+    final flat = activeSkin != GameSkin.glass;
+    final pixel = activeSkin == GameSkin.pixel;
+    // Pixel type has a small em box.
+    final fontSize = line.size * c * (pixel ? 1.3 : 1);
     TextStyle style(Paint paint, {List<Shadow>? shadows}) => TextStyle(
       fontFamily: fontFamily,
       fontSize: fontSize,
@@ -715,10 +718,13 @@ class FloaterPainter extends CustomPainter {
         style: style(
           Paint()
             ..style = PaintingStyle.stroke
-            ..strokeWidth = max(2, fontSize * 0.14)
-            ..strokeJoin = StrokeJoin.round
+            ..strokeWidth = max(2, fontSize * (pixel ? 0.1 : 0.14))
+            ..strokeJoin = pixel ? StrokeJoin.miter : StrokeJoin.round
             ..color = _outline,
-          shadows: line.glow == null ? null : [Shadow(color: line.glow!.withValues(alpha: 0.85), blurRadius: fontSize * 0.6)],
+          // Flat skins: a hard drop shadow instead of a glow.
+          shadows: flat
+              ? [Shadow(color: _outline, offset: Offset(0, fontSize * 0.1))]
+              : (line.glow == null ? null : [Shadow(color: line.glow!.withValues(alpha: 0.85), blurRadius: fontSize * 0.6)]),
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -730,7 +736,10 @@ class FloaterPainter extends CustomPainter {
       [for (var i = 0; i < line.colors.length; i++) i / (line.colors.length - 1)],
     );
     final fill = TextPainter(
-      text: TextSpan(text: line.text, style: style(Paint()..shader = shader)),
+      text: TextSpan(
+        text: line.text,
+        style: style(flat ? (Paint()..color = line.colors[line.colors.length ~/ 2]) : (Paint()..shader = shader)),
+      ),
       textDirection: TextDirection.ltr,
     )..layout();
     return (stroke, fill);

@@ -1,4 +1,8 @@
 Inter font - Copyright 2016-2023 The Inter Project Authors (https://github.com/rsms/inter)
+Baloo 2 font - Copyright 2019 The Baloo 2 Project Authors (https://github.com/EkType/Baloo2)
+Jersey 10 font - Copyright 2023 The Soft Type Project Authors (https://github.com/scfried/soft-type-jersey)
+
+All three are licensed under the SIL Open Font License, Version 1.1, below.
 
 SIL OPEN FONT LICENSE Version 1.1
 

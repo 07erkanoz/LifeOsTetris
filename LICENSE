@@ -30,5 +30,5 @@ Third-party assets keep their own licences:
 - assets/audio/music/*  Music tracks by their respective artists, used under
   the Pixabay Content License and the Free To Use (freetouse.com) license.
   See assets/audio/music/CREDITS.md.
-- assets/fonts/*        Inter typeface, SIL Open Font License 1.1
-  (see assets/fonts/OFL.txt).
+- assets/fonts/*        Inter, Baloo 2 and Jersey 10 typefaces, SIL Open Font
+  License 1.1 (see assets/fonts/OFL.txt).

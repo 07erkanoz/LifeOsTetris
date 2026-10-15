@@ -93,8 +93,10 @@ Her modun rekoru ayrı tutulur.
 
 ## Özellikler
 
-- **Görünüm:** 2.5D "jelibon" bloklar, koyu ve açık tema, telefon ve masaüstü için ayrı
-  yerleşim. Tahta her ekrana tam oturur.
+- **Temalar:** Oyuncak HD, Oyuncak, Piksel ve Neon; her biri koyu ve açık modda. Bloklar,
+  kartlar, tuşlar, ikonlar ve yazı tipi temayla birlikte değişir. Ana menüdeki **Tema**
+  butonundan ya da ayarlardan seçilir.
+- **Görünüm:** Telefon ve masaüstü için ayrı yerleşim. Tahta her ekrana tam oturur.
 - **Efektler:** Parçacık patlamaları, ekran sarsıntısı, sert düşüş izleri, şok dalgaları,
   satır çökme ve seviye atlama animasyonları, "ÇİFT! / DÖRTLÜ! / KOMBO ×2" yazıları,
   hareketli arka plan.
@@ -159,7 +161,7 @@ tool/              Ses ve Windows ikonu üreticileri
 
 ## Üçüncü taraf içerikler
 
-- **Inter yazı tipi:** SIL Open Font License 1.1 ([assets/fonts/OFL.txt](assets/fonts/OFL.txt)).
+- **Inter, Baloo 2 ve Jersey 10 yazı tipleri:** SIL Open Font License 1.1 ([assets/fonts/OFL.txt](assets/fonts/OFL.txt)).
 - **Müzikler:** Pixabay ve Free To Use (freetouse.com) parçaları; kendi lisanslarına tabidir
   ([assets/audio/music/CREDITS.md](assets/audio/music/CREDITS.md)).
 - **Ses efektleri ve ikon:** Bu proje için üretildi.
@@ -168,7 +170,7 @@ tool/              Ses ve Windows ikonu üreticileri
 
 © 2026 Erkan ÖZ. **Tüm hakları saklıdır.** Kaynak kodu, grafikler, ikon, ses efektleri ve
 oyun tasarımı izinsiz kopyalanamaz, değiştirilemez, dağıtılamaz veya satılamaz. Ayrıntılar
-için [LICENSE](LICENSE) dosyasına bakın. Müzikler ve yazı tipi kendi lisanslarına tabidir.
+için [LICENSE](LICENSE) dosyasına bakın. Müzikler ve yazı tipleri kendi lisanslarına tabidir.
 
 ## Geliştirici
 
