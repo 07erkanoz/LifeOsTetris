@@ -260,7 +260,7 @@ class AppStrings {
   String get superGroup => _t('SÜPER', 'SUPER');
   String get puzzleGroup => _t('BULMACA', 'PUZZLE');
   String get levelsCard => _t('Seviyeler', 'Levels');
-  String get levelsCardSubtitle => _t('100 seviye, ★ blokları topla', '100 levels, collect the ★ blocks');
+  String get levelsCardSubtitle => _t('100 seviye, yıldız topla', '100 levels, collect stars');
   String get endlessCardSubtitle => _t('Yer kaldıkça yerleştir', 'Place pieces while there is room');
   String get adventureTitle => _t('Macera', 'Adventure');
   String get adventureSubtitle => _t('Bölümleri bitir, resmi tamamla', 'Finish chapters, complete the picture');

@@ -477,7 +477,7 @@ class _ModesPage extends StatelessWidget {
                               crossAxisCount: columns,
                               mainAxisSpacing: 12,
                               crossAxisSpacing: 12,
-                              mainAxisExtent: 160,
+                              mainAxisExtent: 164,
                             ),
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
