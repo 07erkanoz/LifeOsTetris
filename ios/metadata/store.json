@@ -2,7 +2,7 @@
   "_comment": "App Store and TestFlight texts. A push to main that changes ios/metadata/ sends them to App Store Connect (workflow: App Store metadata). Limits: name and subtitle 30 characters, keywords 100, promotionalText 170, description 4000.",
   "copyright": "2026 Erkan ÖZ",
   "primaryCategory": "GAMES",
-  "subcategories": ["GAMES_PUZZLE", "GAMES_ARCADE"],
+  "subcategories": ["GAMES_PUZZLE", "GAMES_CASUAL"],
   "supportUrl": "https://lifeos.com.tr/kupler/support.html",
   "marketingUrl": "https://lifeos.com.tr/kupler/",
   "privacyPolicyUrl": "https://lifeos.com.tr/kupler/privacy.html",
