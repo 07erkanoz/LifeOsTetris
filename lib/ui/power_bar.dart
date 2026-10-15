@@ -7,6 +7,7 @@ import '../game/fx/effects.dart';
 import '../game/game_controller.dart';
 import '../l10n/strings.dart';
 import '../theme/palette.dart';
+import 'game_icons.dart';
 import 'widgets.dart';
 
 /// Energy meter plus all six powers of Süper Küpler, each with how many the
@@ -105,7 +106,7 @@ class PowerBar extends StatelessWidget {
                 width: 40,
                 height: 40,
                 child: CustomPaint(
-                  painter: _EnergyRingPainter(energy: energy, pulse: pulse, track: p.track),
+                  painter: _EnergyRingPainter(energy: energy, pulse: pulse, track: p.track, palette: p),
                   child: Center(
                     child: Text(
                       '$energy/${TetrisGame.energyPerPower}',
@@ -183,8 +184,11 @@ class _PowerTile extends StatelessWidget {
       size: Size.square(size),
       painter: _PowerKeyPainter(
         type: type,
-        color: owned ? Color.lerp(colors.first, colors.last, 0.55)! : (p.isDark ? const Color(0xFF2B3152) : const Color(0xFFD9DEEA)),
-        glyphColor: owned ? Colors.white : p.icon.withValues(alpha: 0.55),
+        color: owned
+            ? (p.flat ? blockColors[_powerTone[type]]! : Color.lerp(colors.first, colors.last, 0.55)!)
+            : (p.flat ? p.track : (p.isDark ? const Color(0xFF2B3152) : const Color(0xFFD9DEEA))),
+        glyphColor: owned ? Colors.white : p.icon.withValues(alpha: p.flat ? 0.4 : 0.55),
+        ink: p.flat ? p.ink : null,
         dark: p.isDark,
         glow: active ? 0.35 + 0.65 * pop : 0,
       ),
@@ -214,9 +218,9 @@ class _PowerTile extends StatelessWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            color: p.isDark ? const Color(0xFF111630) : Colors.white,
-                            border: Border.all(color: colors.last, width: 1.5),
+                            borderRadius: BorderRadius.circular(p.skin == GameSkin.pixel ? 0 : 10),
+                            color: p.flat ? p.glass : (p.isDark ? const Color(0xFF111630) : Colors.white),
+                            border: Border.all(color: p.flat ? p.ink : colors.last, width: p.flat ? 2 : 1.5),
                           ),
                           child: Text(
                             '×$count',
@@ -264,9 +268,20 @@ class _PowerTile extends StatelessWidget {
   }
 }
 
+/// Block colour each power borrows in the flat skins, so the bar uses the
+/// same palette as the board.
+const Map<PowerType, PieceType> _powerTone = {
+  PowerType.bomb: PieceType.z,
+  PowerType.single: PieceType.mono,
+  PowerType.drill: PieceType.o,
+  PowerType.gravity: PieceType.s,
+  PowerType.slowMotion: PieceType.i,
+  PowerType.ghostLine: PieceType.t,
+};
+
 /// A power drawn as a jelly keycap in its colours with its glyph on top.
 class _PowerKeyPainter extends CustomPainter {
-  _PowerKeyPainter({required this.type, required this.color, required this.glyphColor, required this.dark, this.glow = 0});
+  _PowerKeyPainter({required this.type, required this.color, required this.glyphColor, required this.dark, this.glow = 0, this.ink});
 
   final PowerType type;
   final Color color;
@@ -274,15 +289,32 @@ class _PowerKeyPainter extends CustomPainter {
   final bool dark;
   final double glow;
 
+  /// Outline colour of the flat skins (null for glass).
+  final Color? ink;
+
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
     paintKeycap(canvas, rect, color, pressed: false, dark: dark, glow: glow);
+    if (activeSkin == GameSkin.pixel) {
+      final face = keycapFace(rect, pressed: false);
+      final g = min(face.width, face.height) * 0.56;
+      final at = Offset(face.center.dx - g / 2, face.center.dy - g / 2);
+      canvas.save();
+      canvas.translate(at.dx + g / 9, at.dy + g / 9);
+      paintPixelArt(canvas, g, pixelPowerIcons[type]!, ink ?? Colors.black);
+      canvas.restore();
+      canvas.save();
+      canvas.translate(at.dx, at.dy);
+      paintPixelArt(canvas, g, pixelPowerIcons[type]!, glyphColor);
+      canvas.restore();
+      return;
+    }
     final face = keycapFace(rect, pressed: false);
     final g = min(face.width, face.height) * 1.3;
     canvas.save();
     canvas.translate(face.center.dx - g / 2, face.center.dy - g / 2 + g * 0.04);
-    PowerGlyphPainter(type, color: Colors.black.withValues(alpha: 0.25)).paint(canvas, Size.square(g));
+    PowerGlyphPainter(type, color: ink ?? Colors.black.withValues(alpha: 0.25)).paint(canvas, Size.square(g));
     canvas.restore();
     canvas.save();
     canvas.translate(face.center.dx - g / 2, face.center.dy - g / 2);
@@ -292,20 +324,54 @@ class _PowerKeyPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _PowerKeyPainter old) =>
-      old.type != type || old.color != color || old.glyphColor != glyphColor || old.dark != dark || old.glow != glow;
+      old.type != type || old.color != color || old.glyphColor != glyphColor || old.dark != dark || old.glow != glow || old.ink != ink;
 }
 
 /// Three arcs around the energy count, lit one per cleared line.
 class _EnergyRingPainter extends CustomPainter {
-  _EnergyRingPainter({required this.energy, required this.pulse, required this.track});
+  _EnergyRingPainter({required this.energy, required this.pulse, required this.track, required this.palette});
 
   final int energy;
   final double pulse;
   final Color track;
+  final GamePalette palette;
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = (Offset.zero & size).deflate(3);
+    if (palette.flat) {
+      // Solid segments with an ink outline, no glow.
+      const n = TetrisGame.energyPerPower;
+      const gap = 0.42;
+      const sweep = 2 * pi / n - gap;
+      final cap = palette.skin == GameSkin.pixel ? StrokeCap.butt : StrokeCap.round;
+      for (var i = 0; i < n; i++) {
+        final start = -pi / 2 + gap / 2 + i * 2 * pi / n;
+        canvas.drawArc(
+          rect,
+          start,
+          sweep,
+          false,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 8.5
+            ..strokeCap = cap
+            ..color = palette.ink,
+        );
+        canvas.drawArc(
+          rect,
+          start,
+          sweep,
+          false,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 4.5
+            ..strokeCap = cap
+            ..color = i < energy ? Color.lerp(palette.accent1, Colors.white, 0.4 * pulse)! : track,
+        );
+      }
+      return;
+    }
     const n = TetrisGame.energyPerPower;
     const gap = 0.32;
     const sweep = 2 * pi / n - gap;
@@ -338,7 +404,8 @@ class _EnergyRingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _EnergyRingPainter old) => old.energy != energy || old.pulse != pulse || old.track != track;
+  bool shouldRepaint(covariant _EnergyRingPainter old) =>
+      old.energy != energy || old.pulse != pulse || old.track != track || old.palette != palette;
 }
 
 /// White vector icon for each power.

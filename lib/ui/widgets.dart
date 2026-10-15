@@ -7,6 +7,9 @@ import '../core/tetromino.dart';
 import '../game/render/background_painter.dart';
 import '../game/render/block_sprites.dart';
 import '../theme/palette.dart';
+import 'game_icons.dart';
+
+export 'game_icons.dart' show GameIcon;
 
 /// Phones and tablets: vibration and on-screen buttons only make sense there.
 bool get isMobilePlatform => !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
@@ -24,6 +27,13 @@ class GlassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
+    if (p.flat) {
+      return Container(
+        padding: padding,
+        decoration: flatCardDecoration(p, radius: radius, glow: glow),
+        child: child,
+      );
+    }
     return Container(
       padding: padding,
       decoration: BoxDecoration(
@@ -44,6 +54,28 @@ class GlassCard extends StatelessWidget {
   }
 }
 
+/// Card of the flat skins: solid fill, ink outline and a hard shadow (toy),
+/// or a chamfered pixel frame (pixel).
+Decoration flatCardDecoration(GamePalette p, {double radius = 20, double glow = 0, Color? fill, double depth = 4}) {
+  final border = Color.lerp(p.glassBorder, p.accent1, glow)!;
+  if (p.skin == GameSkin.pixel) {
+    return ShapeDecoration(
+      color: fill ?? p.glass,
+      shape: BeveledRectangleBorder(
+        borderRadius: BorderRadius.circular(6),
+        side: BorderSide(color: border, width: 3),
+      ),
+      shadows: [BoxShadow(color: p.glassShadow, offset: Offset(depth * 0.75, depth * 0.75))],
+    );
+  }
+  return BoxDecoration(
+    color: fill ?? p.glass,
+    borderRadius: BorderRadius.circular(radius * 0.8),
+    border: Border.all(color: border, width: 2.5),
+    boxShadow: [BoxShadow(color: p.glassShadow, offset: Offset(0, depth))],
+  );
+}
+
 class CardLabel extends StatelessWidget {
   const CardLabel(this.text, {super.key});
 
@@ -57,7 +89,9 @@ class CardLabel extends StatelessWidget {
       text,
       maxLines: 1,
       softWrap: false,
-      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1.6, color: GamePalette.of(context).label),
+      style: GamePalette.of(context).flat
+          ? TextStyle(fontSize: 12, height: 1.1, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: GamePalette.of(context).label)
+          : TextStyle(fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1.6, color: GamePalette.of(context).label),
     ),
   );
 }
@@ -71,7 +105,9 @@ class GradientText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final g = gradient ?? GamePalette.of(context).accentGradient;
+    final p = GamePalette.of(context);
+    if (p.flat) return Text(text, style: style.copyWith(color: gradient?.colors.first ?? p.accent1));
+    final g = gradient ?? p.accentGradient;
     return ShaderMask(
       shaderCallback: (rect) => g.createShader(rect),
       blendMode: BlendMode.srcIn,
@@ -108,6 +144,7 @@ class LogoTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
+    if (p.flat) return _flat(p);
     final style = TextStyle(fontSize: fontSize, fontWeight: FontWeight.w800, letterSpacing: -0.3, color: p.text);
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -116,6 +153,61 @@ class LogoTitle extends StatelessWidget {
         SizedBox(width: fontSize * 0.35),
         Text('LifeOS ', style: style),
         GradientText('Küpler', style: style),
+      ],
+    );
+  }
+}
+
+extension on LogoTitle {
+  /// Sticker-like word mark: ink outline and a hard drop shadow.
+  Widget _flat(GamePalette p) {
+    final pixel = p.skin == GameSkin.pixel;
+    final size = pixel ? fontSize * 0.95 : fontSize * 1.05;
+    Widget word(String text, Color color) {
+      final base = TextStyle(fontSize: size, fontWeight: FontWeight.w800, height: 1.1, letterSpacing: pixel ? 1 : 0);
+      return Stack(
+        children: [
+          Transform.translate(
+            offset: Offset(pixel ? size * 0.08 : 0, size * 0.09),
+            child: Text(
+              text,
+              style: base.copyWith(
+                foreground: Paint()
+                  ..style = PaintingStyle.stroke
+                  ..strokeWidth = pixel ? 0.01 : size * 0.16
+                  ..strokeJoin = StrokeJoin.round
+                  ..color = p.ink,
+              ),
+            ),
+          ),
+          if (pixel)
+            Transform.translate(
+              offset: Offset(size * 0.08, size * 0.09),
+              child: Text(text, style: base.copyWith(color: p.ink)),
+            ),
+          if (!pixel)
+            Text(
+              text,
+              style: base.copyWith(
+                foreground: Paint()
+                  ..style = PaintingStyle.stroke
+                  ..strokeWidth = size * 0.16
+                  ..strokeJoin = StrokeJoin.round
+                  ..color = p.ink,
+              ),
+            ),
+          Text(text, style: base.copyWith(color: color)),
+        ],
+      );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PieceView(type: PieceType.t, cell: fontSize * 0.42, size: Size(fontSize * 1.4, fontSize)),
+        SizedBox(width: fontSize * 0.3),
+        word('LifeOS ', p.isDark ? p.text : Colors.white),
+        word('Küpler', p.accent1),
       ],
     );
   }
@@ -133,6 +225,23 @@ class GlassIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
+    if (p.flat) {
+      final button = GestureDetector(
+        onTap: onTap,
+        child: CustomPaint(
+          size: Size.square(size),
+          painter: _KeycapPainter(color: p.keyFace, pressed: false, dark: p.isDark, palette: p),
+          child: SizedBox.square(
+            dimension: size,
+            child: Align(
+              alignment: const Alignment(0, -0.25),
+              child: GameIcon(icon, size: size * 0.46, color: p.keyGlyph),
+            ),
+          ),
+        ),
+      );
+      return tooltip == null ? button : Tooltip(message: tooltip!, child: button);
+    }
     final button = GestureDetector(
       onTap: onTap,
       child: GlassCard(
@@ -150,6 +259,24 @@ class GlassIconButton extends StatelessWidget {
 
 enum ControlGlyph { hold, left, right, rotate, drop }
 
+const Map<ControlGlyph, List<String>> _pixelGlyphs = {
+  ControlGlyph.left: ['.........', '....#....', '...##....', '..#######', '.########', '..#######', '...##....', '....#....', '.........'],
+  ControlGlyph.right: ['.........', '....#....', '....##...', '#######..', '########.', '#######..', '....##...', '....#....', '.........'],
+  ControlGlyph.rotate: [
+    '..####.#.',
+    '.#....##.',
+    '#....###.',
+    '#........',
+    '#.......#',
+    '#.......#',
+    '.#.....#.',
+    '..#####..',
+    '.........',
+  ],
+  ControlGlyph.drop: ['.#######.', '..#####..', '...###...', '....#....', '.#######.', '..#####..', '...###...', '....#....', '#########'],
+  ControlGlyph.hold: ['#########', '#.......#', '#.......#', '#..###..#', '#..###..#', '#..###..#', '#.......#', '#.......#', '#########'],
+};
+
 /// Crisp vector icons for the on-screen controls (font icons looked soft and
 /// thin on some Android screens).
 class _GlyphPainter extends CustomPainter {
@@ -160,6 +287,10 @@ class _GlyphPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (activeSkin == GameSkin.pixel) {
+      paintPixelArt(canvas, size.width, _pixelGlyphs[glyph]!, color);
+      return;
+    }
     final s = size.width;
     final stroke = Paint()
       ..color = color
@@ -216,6 +347,16 @@ class _GlyphPainter extends CustomPainter {
 /// glossy top face, a soft rim and highlight, matching the game's blocks.
 /// When [pressed] the top face sinks onto its base.
 void paintKeycap(Canvas canvas, Rect rect, Color color, {required bool pressed, required bool dark, double glow = 0, double alpha = 1}) {
+  switch (activeSkin) {
+    case GameSkin.toy:
+      _paintToyKey(canvas, rect, color, pressed: pressed, glow: glow);
+      return;
+    case GameSkin.pixel:
+      _paintPixelKey(canvas, rect, color, pressed: pressed, glow: glow);
+      return;
+    case GameSkin.glass:
+      break;
+  }
   final depth = rect.height * 0.09;
   final radius = Radius.circular(min(rect.width, rect.height) * 0.32);
   final sink = pressed ? depth * 0.75 : 0.0;
@@ -274,8 +415,70 @@ void paintKeycap(Canvas canvas, Rect rect, Color color, {required bool pressed, 
   );
 }
 
+Color get _ink => (GamePalette.dark.isDark ? GamePalette.dark : GamePalette.light).ink;
+
+/// Toy key: flat face on a darker lip, ink outline; sinks when pressed.
+void _paintToyKey(Canvas canvas, Rect rect, Color color, {required bool pressed, double glow = 0}) {
+  final ink = _ink;
+  final depth = rect.height * 0.12;
+  final outline = max(2.0, rect.height * 0.045);
+  final radius = Radius.circular(min(rect.width, rect.height) * 0.3);
+  final sink = pressed ? depth * 0.8 : 0.0;
+  final body = RRect.fromRectAndRadius(Rect.fromLTRB(rect.left, rect.top + sink, rect.right, rect.bottom), radius);
+  final face = RRect.fromRectAndRadius(Rect.fromLTRB(rect.left, rect.top + sink, rect.right, rect.bottom - depth), radius);
+  canvas.drawRRect(body, Paint()..color = ink);
+  canvas.drawRRect(body.deflate(outline), Paint()..color = Color.lerp(color, ink, 0.38)!);
+  canvas.drawRRect(face.deflate(outline), Paint()..color = Color.lerp(color, Colors.white, 0.25 * glow)!);
+}
+
+/// Pixel key: square bevel with a black border; the bevel flips when pressed.
+void _paintPixelKey(Canvas canvas, Rect rect, Color color, {required bool pressed, double glow = 0}) {
+  final u = max(2.0, (rect.height / 16).roundToDouble());
+  final depth = u * 2;
+  final sink = pressed ? depth : 0.0;
+  final body = Rect.fromLTRB(rect.left, rect.top + sink, rect.right, rect.bottom - depth + sink);
+  final ink = _ink;
+  if (!pressed) canvas.drawRect(Rect.fromLTRB(rect.left + u, rect.top + depth, rect.right + 0, rect.bottom), Paint()..color = ink);
+  final chamfer = Path()
+    ..moveTo(body.left + u, body.top)
+    ..lineTo(body.right - u, body.top)
+    ..lineTo(body.right - u, body.top + u)
+    ..lineTo(body.right, body.top + u)
+    ..lineTo(body.right, body.bottom - u)
+    ..lineTo(body.right - u, body.bottom - u)
+    ..lineTo(body.right - u, body.bottom)
+    ..lineTo(body.left + u, body.bottom)
+    ..lineTo(body.left + u, body.bottom - u)
+    ..lineTo(body.left, body.bottom - u)
+    ..lineTo(body.left, body.top + u)
+    ..lineTo(body.left + u, body.top + u)
+    ..close();
+  canvas.drawPath(chamfer, Paint()..color = ink);
+  final inner = body.deflate(u);
+  final face = Color.lerp(color, Colors.white, 0.3 * glow)!;
+  canvas.drawRect(inner, Paint()..color = face);
+  final light = Paint()..color = Color.lerp(face, Colors.white, 0.4)!;
+  final dark = Paint()..color = Color.lerp(face, Colors.black, 0.35)!;
+  canvas.drawRect(Rect.fromLTWH(inner.left, inner.top, inner.width, u), pressed ? dark : light);
+  canvas.drawRect(Rect.fromLTWH(inner.left, inner.top, u, inner.height), pressed ? dark : light);
+  canvas.drawRect(Rect.fromLTWH(inner.left, inner.bottom - u, inner.width, u), pressed ? light : dark);
+  canvas.drawRect(Rect.fromLTWH(inner.right - u, inner.top, u, inner.height), pressed ? light : dark);
+}
+
 /// The face of a keycap painted by [paintKeycap] (for placing its glyph).
 Rect keycapFace(Rect rect, {required bool pressed}) {
+  switch (activeSkin) {
+    case GameSkin.toy:
+      final depth = rect.height * 0.12;
+      final sink = pressed ? depth * 0.8 : 0.0;
+      return Rect.fromLTRB(rect.left, rect.top + sink, rect.right, rect.bottom - depth + sink);
+    case GameSkin.pixel:
+      final depth = max(2.0, (rect.height / 16).roundToDouble()) * 2;
+      final sink = pressed ? depth : 0.0;
+      return Rect.fromLTRB(rect.left, rect.top + sink, rect.right, rect.bottom - depth + sink);
+    case GameSkin.glass:
+      break;
+  }
   final depth = rect.height * 0.09;
   final sink = pressed ? depth * 0.75 : 0.0;
   return Rect.fromLTRB(rect.left, rect.top + sink, rect.right, rect.bottom - depth + sink);
@@ -290,7 +493,11 @@ class _KeycapPainter extends CustomPainter {
     this.glyphColor = Colors.white,
     this.glyphScale = 0.42,
     this.alpha = 1,
+    this.palette,
   });
+
+  /// Only used to pick ink for the flat skins.
+  final GamePalette? palette;
 
   final Color color;
   final bool pressed;
@@ -313,10 +520,12 @@ class _KeycapPainter extends CustomPainter {
     canvas.save();
     canvas.translate(face.center.dx - g / 2, face.center.dy - g / 2);
     // A soft drop shadow lifts the glyph off the face.
-    canvas.save();
-    canvas.translate(0, g * 0.05);
-    _GlyphPainter(glyph, Colors.black.withValues(alpha: 0.22)).paint(canvas, Size.square(g));
-    canvas.restore();
+    if (activeSkin == GameSkin.glass) {
+      canvas.save();
+      canvas.translate(0, g * 0.05);
+      _GlyphPainter(glyph, Colors.black.withValues(alpha: 0.22)).paint(canvas, Size.square(g));
+      canvas.restore();
+    }
     _GlyphPainter(glyph, glyphColor).paint(canvas, Size.square(g));
     canvas.restore();
   }
@@ -382,8 +591,8 @@ class _ControlButtonState extends State<ControlButton> {
     final p = GamePalette.of(context);
     final s = widget.size;
     final primary = widget.primary;
-    final color = primary ? const Color(0xFF3B82F6) : (p.isDark ? const Color(0xFF3A4370) : const Color(0xFFE4E9F4));
-    final glyphColor = primary || p.isDark ? Colors.white : const Color(0xFF3B4663);
+    final color = primary ? p.keyPrimary : p.keyFace;
+    final glyphColor = primary ? p.keyPrimaryGlyph : p.keyGlyph;
     final label = widget.label;
 
     Widget body;
@@ -397,7 +606,7 @@ class _ControlButtonState extends State<ControlButton> {
           glyph: widget.glyph,
           glyphColor: glyphColor,
           glyphScale: primary ? 0.46 : 0.42,
-          alpha: primary ? max(0.85, keycapGlass) : keycapGlass,
+          alpha: p.flat ? 1 : (primary ? max(0.85, keycapGlass) : keycapGlass),
         ),
       );
     } else {
@@ -405,7 +614,7 @@ class _ControlButtonState extends State<ControlButton> {
       body = SizedBox(
         height: s,
         child: CustomPaint(
-          painter: _KeycapPainter(color: color, pressed: _pressed, dark: p.isDark, alpha: keycapGlass),
+          painter: _KeycapPainter(color: color, pressed: _pressed, dark: p.isDark, alpha: p.flat ? 1 : keycapGlass),
           child: Padding(
             padding: EdgeInsets.fromLTRB(s * 0.32, face.top, s * 0.4, s - face.bottom),
             child: Row(
@@ -461,6 +670,7 @@ class GradientButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
+    if (p.flat) return _flat(context, p);
     final fg = secondary ? p.text : Colors.white;
     final gradient = colors ?? [p.accent1, p.accent2];
     return GestureDetector(
@@ -518,6 +728,71 @@ class GradientButton extends StatelessWidget {
   }
 }
 
+/// Solid colours the flat skins use instead of the glass gradients.
+Color flatTone(List<Color>? colors, GamePalette p) {
+  final first = colors?.first;
+  if (first == null) return p.accent1;
+  final toy = p.skin == GameSkin.toy;
+  return switch (first.toARGB32()) {
+    0xFFA855F7 => toy ? const Color(0xFF9467E6) : const Color(0xFF7E2553),
+    0xFF14B8A6 => toy ? const Color(0xFF2FB59A) : const Color(0xFF008751),
+    _ => first,
+  };
+}
+
+extension on GradientButton {
+  Widget _flat(BuildContext context, GamePalette p) {
+    final tone = secondary ? p.keyFace : flatTone(colors, p);
+    final light = tone.computeLuminance() > 0.45;
+    final fg = secondary ? p.text : (light ? p.ink : Colors.white);
+    final textShadow = !secondary && !light && p.skin == GameSkin.toy
+        ? [Shadow(color: p.ink.withValues(alpha: 0.6), offset: const Offset(0, 2))]
+        : null;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: width,
+        padding: EdgeInsets.symmetric(horizontal: subtitle == null ? 14 : 18, vertical: subtitle == null ? 12 : 10),
+        decoration: flatCardDecoration(p, radius: 20, fill: tone, depth: 5),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (icon != null) ...[GameIcon(icon!, color: fg, size: subtitle == null ? 22 : 26), const SizedBox(width: 10)],
+            Flexible(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: icon == null ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+                children: [
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: TextStyle(color: fg, fontSize: 19, height: 1.15, fontWeight: FontWeight.w800, shadows: textShadow),
+                    ),
+                  ),
+                  if (subtitle != null)
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        subtitle!,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: TextStyle(color: fg.withValues(alpha: 0.85), fontSize: 13, height: 1.15, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class ToggleRow extends StatelessWidget {
   const ToggleRow({super.key, required this.label, required this.value, required this.onChanged, this.icon});
 
@@ -536,7 +811,7 @@ class ToggleRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
           children: [
-            if (icon != null) ...[Icon(icon, size: 18, color: p.muted), const SizedBox(width: 10)],
+            if (icon != null) ...[GameIcon(icon!, size: 18, color: p.muted), const SizedBox(width: 10)],
             Expanded(
               child: Text(
                 label,
@@ -550,9 +825,10 @@ class ToggleRow extends StatelessWidget {
               padding: const EdgeInsets.all(3),
               alignment: value ? Alignment.centerRight : Alignment.centerLeft,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                gradient: value ? LinearGradient(colors: [p.accent1, p.accent2]) : null,
-                color: value ? null : p.track,
+                borderRadius: BorderRadius.circular(p.skin == GameSkin.pixel ? 2 : 12),
+                gradient: value && !p.flat ? LinearGradient(colors: [p.accent1, p.accent2]) : null,
+                color: value ? (p.flat ? p.accent1 : null) : p.track,
+                border: p.flat ? Border.all(color: p.ink, width: 2) : null,
               ),
               child: Container(
                 width: 18,
@@ -582,9 +858,13 @@ class SegmentedPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
+    final flat = p.flat;
+    final selectedFg = flat && p.accent1.computeLuminance() > 0.45 ? p.ink : Colors.white;
     return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(color: p.track, borderRadius: BorderRadius.circular(12)),
+      padding: EdgeInsets.all(flat ? 4 : 3),
+      decoration: flat
+          ? flatCardDecoration(p, radius: 16, fill: p.track, depth: 0)
+          : BoxDecoration(color: p.track, borderRadius: BorderRadius.circular(12)),
       child: Row(
         children: [
           for (var i = 0; i < options.length; i++) ...[
@@ -595,12 +875,25 @@ class SegmentedPicker extends StatelessWidget {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(9),
-                    gradient: i == selected ? LinearGradient(colors: [p.accent1, p.accent2]) : null,
-                  ),
+                  decoration: flat
+                      ? (i == selected
+                            ? (p.skin == GameSkin.pixel
+                                  ? ShapeDecoration(
+                                      color: p.accent1,
+                                      shape: const BeveledRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(4))),
+                                    )
+                                  : BoxDecoration(
+                                      color: p.accent1,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: p.ink, width: 2),
+                                    ))
+                            : null)
+                      : BoxDecoration(
+                          borderRadius: BorderRadius.circular(9),
+                          gradient: i == selected ? LinearGradient(colors: [p.accent1, p.accent2]) : null,
+                        ),
                   child: IconTheme(
-                    data: IconThemeData(size: 16, color: i == selected ? Colors.white : p.muted),
+                    data: IconThemeData(size: 16, color: i == selected ? (flat ? selectedFg : Colors.white) : p.muted),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -610,7 +903,11 @@ class SegmentedPicker extends StatelessWidget {
                             options[i].$1,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: i == selected ? Colors.white : p.muted),
+                            style: TextStyle(
+                              fontSize: flat ? 15 : 13,
+                              fontWeight: FontWeight.w700,
+                              color: i == selected ? (flat ? selectedFg : Colors.white) : p.muted,
+                            ),
                           ),
                         ),
                       ],
@@ -636,7 +933,7 @@ class ThemeSegment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SegmentedPicker(
-    options: [(lightLabel, const Icon(Icons.light_mode_rounded)), (darkLabel, const Icon(Icons.dark_mode_rounded))],
+    options: [(lightLabel, const GameIcon(Icons.light_mode_rounded)), (darkLabel, const GameIcon(Icons.dark_mode_rounded))],
     selected: isDark ? 1 : 0,
     onChanged: (i) => onChanged(i == 1),
   );
@@ -651,7 +948,7 @@ class LanguageSegment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SegmentedPicker(
-    options: const [('Türkçe', Icon(Icons.translate_rounded)), ('English', Icon(Icons.language_rounded))],
+    options: const [('Türkçe', GameIcon(Icons.translate_rounded)), ('English', GameIcon(Icons.language_rounded))],
     selected: isTurkish ? 0 : 1,
     onChanged: (i) => onChanged(i == 0),
   );

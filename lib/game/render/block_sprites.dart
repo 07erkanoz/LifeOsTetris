@@ -61,6 +61,56 @@ void paintBlock(Canvas canvas, Offset origin, double s, Color color, {required C
   canvas.drawCircle(Offset(x + w * 0.8, y + s * 0.2), s * 0.045, Paint()..color = Colors.white.withValues(alpha: 0.9));
 }
 
+/// A block in the style of [palette]'s skin.
+void paintSkinBlock(Canvas canvas, Offset origin, double s, Color color, GamePalette palette) => switch (palette.skin) {
+  GameSkin.glass => paintBlock(canvas, origin, s, color, shadeTarget: palette.shadeTarget, emissive: palette.isDark),
+  GameSkin.toy => paintToyBlock(canvas, origin, s, color, palette.ink),
+  GameSkin.pixel => paintPixelBlock(canvas, origin, s, color, palette.ink),
+};
+
+/// Flat toy brick: ink outline, a darker lip at the bottom and one short
+/// shine stroke. No gradients or glow.
+void paintToyBlock(Canvas canvas, Offset origin, double s, Color color, Color ink) {
+  final g = s * 0.03, w = s - 2 * g;
+  final outline = max(1.4, s * 0.075);
+  final x = origin.dx + g, y = origin.dy + g;
+  final r = Radius.circular(s * 0.22);
+  final body = RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, w), r);
+  final lip = s * 0.17;
+  canvas.drawRRect(body, Paint()..color = Color.lerp(color, ink, 0.32)!);
+  canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, w - lip), r), Paint()..color = color);
+  final shine = Paint()
+    ..color = Colors.white.withValues(alpha: 0.75)
+    ..strokeWidth = s * 0.085
+    ..strokeCap = StrokeCap.round;
+  canvas.drawLine(Offset(x + s * 0.24, y + s * 0.21), Offset(x + s * 0.44, y + s * 0.21), shine);
+  canvas.drawCircle(Offset(x + s * 0.2, y + s * 0.36), s * 0.042, Paint()..color = Colors.white.withValues(alpha: 0.75));
+  canvas.drawRRect(
+    body.deflate(outline / 2),
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = outline
+      ..color = ink,
+  );
+}
+
+/// Bevelled pixel-art block on an 8×8 grid: light top/left edges, dark
+/// bottom/right edges, one highlight pixel, black border.
+void paintPixelBlock(Canvas canvas, Offset origin, double s, Color color, Color ink) {
+  final u = s / 8;
+  final o = origin;
+  Rect px(double x, double y, double w, double h) => Rect.fromLTWH(o.dx + x * u, o.dy + y * u, w * u, h * u);
+  canvas.drawRect(px(0, 0, 8, 8), Paint()..color = ink);
+  canvas.drawRect(px(0.5, 0.5, 7, 7), Paint()..color = color);
+  final light = Paint()..color = Color.lerp(color, Colors.white, 0.5)!;
+  final dark = Paint()..color = Color.lerp(color, Colors.black, 0.38)!;
+  canvas.drawRect(px(0.5, 0.5, 7, 1), light);
+  canvas.drawRect(px(0.5, 0.5, 1, 7), light);
+  canvas.drawRect(px(0.5, 6.5, 7, 1), dark);
+  canvas.drawRect(px(6.5, 0.5, 1, 7), dark);
+  canvas.drawRect(px(1.5, 1.5, 1, 1), Paint()..color = Colors.white);
+}
+
 /// Round black bomb with a red glow, a fuse and a spark.
 void paintBomb(Canvas canvas, Offset origin, double s) {
   final c = origin + Offset(s * 0.48, s * 0.56);
@@ -110,7 +160,29 @@ void paintBomb(Canvas canvas, Offset origin, double s) {
 }
 
 /// Golden puzzle target: a gold block with a white star.
-void paintGem(Canvas canvas, Offset origin, double s, {required Color shadeTarget}) {
+void paintGem(Canvas canvas, Offset origin, double s, {required Color shadeTarget, GamePalette? palette}) {
+  if (palette != null && palette.flat) {
+    paintSkinBlock(canvas, origin, s, blockColors[PieceType.gem]!, palette);
+    final c = origin + Offset(s * 0.5, s * (palette.skin == GameSkin.toy ? 0.43 : 0.5));
+    final star = Path();
+    for (var i = 0; i < 10; i++) {
+      final a = -pi / 2 + i * pi / 5;
+      final r = i.isEven ? s * 0.24 : s * 0.1;
+      final p = c + Offset(cos(a) * r, sin(a) * r);
+      i == 0 ? star.moveTo(p.dx, p.dy) : star.lineTo(p.dx, p.dy);
+    }
+    star.close();
+    canvas.drawPath(star, Paint()..color = Colors.white);
+    canvas.drawPath(
+      star,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(1.0, s * 0.05)
+        ..strokeJoin = palette.skin == GameSkin.pixel ? StrokeJoin.miter : StrokeJoin.round
+        ..color = palette.ink,
+    );
+    return;
+  }
   canvas.drawRRect(
     RRect.fromRectAndRadius(Rect.fromLTWH(origin.dx + s * 0.02, origin.dy + s * 0.02, s * 0.96, s * 0.96), Radius.circular(s * 0.26)),
     Paint()
@@ -184,22 +256,24 @@ class BlockSprites {
         (c, o) => switch (type) {
           PieceType.bomb => paintBomb(c, o, cell),
           PieceType.drill => paintDrill(c, o, cell),
-          PieceType.gem => paintGem(c, o, cell, shadeTarget: palette.shadeTarget),
-          _ => paintBlock(c, o, cell, blockColors[type]!, shadeTarget: palette.shadeTarget, emissive: palette.isDark),
+          PieceType.gem => paintGem(c, o, cell, shadeTarget: palette.shadeTarget, palette: palette),
+          _ => paintSkinBlock(c, o, cell, blockColors[type]!, palette),
         },
       );
       _ghost[type] = _render((c, o) => _paintGhost(c, o, blockColors[type]!));
       _aura[type] = _render((c, o) => _paintAura(c, o, blockColors[type]!));
     }
     gray = _render(
-      (c, o) => paintBlock(
-        c,
-        o,
-        cell,
-        palette.isDark ? const Color(0xFF475069) : const Color(0xFF9AA3B8),
-        shadeTarget: palette.shadeTarget,
-        emissive: false,
-      ),
+      (c, o) => palette.flat
+          ? paintSkinBlock(c, o, cell, palette.isDark ? const Color(0xFF6A6080) : const Color(0xFFB7AEC2), palette)
+          : paintBlock(
+              c,
+              o,
+              cell,
+              palette.isDark ? const Color(0xFF475069) : const Color(0xFF9AA3B8),
+              shadeTarget: palette.shadeTarget,
+              emissive: false,
+            ),
     );
     white = _render(_paintWhite);
   }
@@ -227,7 +301,7 @@ class BlockSprites {
   /// Shared sprites for a cell size; a handful of sizes are kept alive.
   static BlockSprites of(double cell, double dpr, GamePalette palette) {
     final rounded = (cell * 2).roundToDouble() / 2;
-    final key = '$rounded@$dpr/${palette.isDark}';
+    final key = '$rounded@$dpr/${palette.skin.name}/${palette.isDark}';
     final hit = _cache.remove(key);
     if (hit != null) return _cache[key] = hit;
     if (_cache.length >= 16) {
@@ -250,7 +324,12 @@ class BlockSprites {
 
   void _paintGhost(Canvas canvas, Offset o, Color color) {
     final g = cell * 0.1, w = cell - 2 * g;
-    final rrect = RRect.fromRectAndRadius(Rect.fromLTWH(o.dx + g, o.dy + g, w, w), Radius.circular(cell * 0.2));
+    final radius = switch (palette.skin) {
+      GameSkin.pixel => 0.0,
+      GameSkin.toy => cell * 0.22,
+      GameSkin.glass => cell * 0.2,
+    };
+    final rrect = RRect.fromRectAndRadius(Rect.fromLTWH(o.dx + g, o.dy + g, w, w), Radius.circular(radius));
     canvas.drawRRect(rrect, Paint()..color = color.withValues(alpha: palette.isDark ? 0.13 : 0.15));
     final stroke = Paint()
       ..style = PaintingStyle.stroke
@@ -266,6 +345,8 @@ class BlockSprites {
   }
 
   void _paintAura(Canvas canvas, Offset o, Color color) {
+    // Flat skins keep pieces crisp: no glow.
+    if (palette.flat) return;
     final rrect = RRect.fromRectAndRadius(
       Rect.fromLTWH(o.dx + cell * 0.1, o.dy + cell * 0.1, cell * 0.8, cell * 0.8),
       Radius.circular(cell * 0.25),

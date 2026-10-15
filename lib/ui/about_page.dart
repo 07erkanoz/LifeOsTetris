@@ -134,7 +134,7 @@ class AboutPage extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         child: Row(
                           children: [
-                            Icon(Icons.music_note_rounded, size: 18, color: p.accent1),
+                            GameIcon(Icons.music_note_rounded, size: 18, color: p.accent1),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
@@ -172,7 +172,7 @@ class AboutPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.format_quote_rounded, color: p.accent1, size: 28),
+                      GameIcon(Icons.format_quote_rounded, color: p.accent1, size: 28),
                       for (final (i, paragraph) in s.aboutStory.indexed)
                         Padding(
                           padding: EdgeInsets.only(top: i == 0 ? 4 : 12),
@@ -363,9 +363,9 @@ class _DeveloperCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(icon, size: 18, color: colors.first),
+                  GameIcon(icon, size: 18, color: colors.first),
                   const Spacer(),
-                  Icon(Icons.north_east_rounded, size: 14, color: p.label),
+                  GameIcon(Icons.north_east_rounded, size: 14, color: p.label),
                 ],
               ),
               const SizedBox(height: 8),

@@ -44,6 +44,32 @@ class BackgroundBasePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
+    switch (palette.skin) {
+      case GameSkin.toy:
+        // Flat colour with a loose dot pattern, like printed card stock.
+        canvas.drawRect(rect, Paint()..color = palette.background.first);
+        final dot = Paint()..color = palette.pattern;
+        const step = 22.0;
+        for (var y = 0; y * step < size.height + step; y++) {
+          for (var x = 0; x * step < size.width + step; x++) {
+            canvas.drawCircle(Offset(x * step + (y.isOdd ? step / 2 : 0), y * step), 2.2, dot);
+          }
+        }
+        return;
+      case GameSkin.pixel:
+        // Flat colour with big faint checks.
+        canvas.drawRect(rect, Paint()..color = palette.background.first);
+        final check = Paint()..color = palette.pattern;
+        const step = 24.0;
+        for (var y = 0; y * step < size.height; y++) {
+          for (var x = 0; x * step < size.width; x++) {
+            if ((x + y).isEven) canvas.drawRect(Rect.fromLTWH(x * step, y * step, step, step), check);
+          }
+        }
+        return;
+      case GameSkin.glass:
+        break;
+    }
     canvas.drawRect(rect, Paint()..shader = ui.Gradient.linear(rect.topLeft, rect.bottomRight, palette.background, const [0, 0.55, 1]));
     final glowCenters = [
       Offset(size.width * 0.15, size.height * 0.12),
@@ -87,7 +113,20 @@ class BackgroundPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
     final t = fx.time;
-    if (palette.isDark) {
+    if (palette.skin == GameSkin.pixel && palette.isDark) {
+      // Square, blinking pixel stars.
+      final star = Paint();
+      for (final s in _stars) {
+        final on = sin(t * s.rate + s.phase) > -0.3;
+        if (!on && effectsEnabled) continue;
+        star.color = Colors.white.withValues(alpha: 0.35 + 0.25 * (s.size - 0.6));
+        final px = s.size > 1.4 ? 3.0 : 2.0;
+        canvas.drawRect(
+          Rect.fromLTWH((s.x * size.width / 3).roundToDouble() * 3, (s.y * size.height / 3).roundToDouble() * 3, px, px),
+          star,
+        );
+      }
+    } else if (palette.isDark && !palette.flat) {
       final star = Paint();
       for (final s in _stars) {
         final twinkle = 0.35 + 0.65 * (0.5 + 0.5 * sin(t * s.rate + s.phase));
@@ -96,7 +135,7 @@ class BackgroundPainter extends CustomPainter {
       }
     }
 
-    if (effectsEnabled) {
+    if (effectsEnabled && !palette.flat) {
       final cell = sprites.cell;
       for (final f in _floating) {
         final y = ((f.y - t * f.speed) % 1.2 + 1.2) % 1.2 - 0.1;

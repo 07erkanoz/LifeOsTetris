@@ -249,7 +249,7 @@ class _HoldCard extends StatelessWidget {
               children: [
                 Flexible(child: CardLabel(AppStrings.of(context).hold)),
                 const SizedBox(width: 3),
-                Icon(Icons.touch_app_rounded, size: 11, color: GamePalette.of(context).label),
+                GameIcon(Icons.touch_app_rounded, size: 11, color: GamePalette.of(context).label),
               ],
             ),
             const SizedBox(height: 4),
@@ -358,6 +358,8 @@ class _BoardArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
+      // Pixel art is drawn flat, like an arcade screen.
+      final tilt = GamePalette.of(context).skin == GameSkin.pixel ? 0.0 : this.tilt;
       final width = box.maxWidth - 2 * padding, height = box.maxHeight - 2 * padding;
       // The tilt (pivoting on the bottom edge, with perspective) makes the
       // board look shorter than its layout box. Size it so that what is seen
@@ -1087,14 +1089,21 @@ class _StartOverlay extends StatelessWidget {
           right: 14,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: const LinearGradient(colors: [Color(0xFFFDE047), Color(0xFFF97316)]),
-              boxShadow: const [BoxShadow(color: Color(0x66F97316), blurRadius: 10)],
-            ),
+            decoration: p.flat
+                ? flatCardDecoration(p, radius: 12, fill: p.accent1, depth: 2)
+                : BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    gradient: const LinearGradient(colors: [Color(0xFFFDE047), Color(0xFFF97316)]),
+                    boxShadow: const [BoxShadow(color: Color(0x66F97316), blurRadius: 10)],
+                  ),
             child: Text(
               s.newBadge,
-              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF3B1D00), letterSpacing: 1),
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                color: p.flat ? p.ink : const Color(0xFF3B1D00),
+                letterSpacing: 1,
+              ),
             ),
           ),
         ),
@@ -1143,7 +1152,7 @@ class _StartOverlay extends StatelessWidget {
         ? Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.emoji_events_rounded, color: Color(0xFFFACC15), size: 20),
+              const GameIcon(Icons.emoji_events_rounded, color: Color(0xFFFACC15), size: 20),
               const SizedBox(width: 6),
               Text(
                 s.bestPrefix,
@@ -1176,7 +1185,7 @@ class _StartOverlay extends StatelessWidget {
       const SizedBox(height: 4),
       TextButton.icon(
         onPressed: () => AboutPage.open(context, c.settings),
-        icon: Icon(Icons.info_outline_rounded, size: 16, color: p.muted),
+        icon: GameIcon(Icons.info_outline_rounded, size: 16, color: p.muted),
         label: Text(
           s.about,
           style: TextStyle(color: p.muted, fontSize: 13, fontWeight: FontWeight.w600),
@@ -1239,7 +1248,7 @@ class _PauseOverlay extends StatelessWidget {
     ];
     final about = TextButton.icon(
       onPressed: () => AboutPage.open(context, c.settings),
-      icon: Icon(Icons.info_outline_rounded, size: 16, color: p.muted),
+      icon: GameIcon(Icons.info_outline_rounded, size: 16, color: p.muted),
       label: Text(
         s.about,
         style: TextStyle(color: p.muted, fontSize: 13, fontWeight: FontWeight.w600),
@@ -1408,7 +1417,7 @@ class _BannerPill extends StatelessWidget {
                   shape: BoxShape.circle,
                   gradient: LinearGradient(colors: colors),
                 ),
-                child: Icon(icon, size: 18, color: Colors.white),
+                child: GameIcon(icon, size: 18, color: Colors.white),
               ),
               const SizedBox(width: 10),
               Flexible(
@@ -1446,7 +1455,7 @@ class _GhostLineHint extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.touch_app_rounded, size: 18, color: Color(0xFFC084FC)),
+            const GameIcon(Icons.touch_app_rounded, size: 18, color: Color(0xFFC084FC)),
             const SizedBox(width: 8),
             Flexible(
               child: Text(

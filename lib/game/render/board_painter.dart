@@ -93,7 +93,7 @@ class BoardPainter extends CustomPainter {
 
   ui.Image _chrome(Rect well) {
     final dpr = min(sprites.dpr, 2.0);
-    final key = '${geometry.cell}/${palette.isDark}/$dpr';
+    final key = '${geometry.cell}/${palette.skin.name}/${palette.isDark}/$dpr';
     final hit = _chromeCache[key];
     if (hit != null) return hit;
     if (_chromeCache.length >= 4) _chromeCache.remove(_chromeCache.keys.first)?.dispose();
@@ -109,6 +109,16 @@ class BoardPainter extends CustomPainter {
   }
 
   void _paintFrame(Canvas canvas, Rect well) {
+    switch (palette.skin) {
+      case GameSkin.toy:
+        _paintToyFrame(canvas, well);
+        return;
+      case GameSkin.pixel:
+        _paintPixelFrame(canvas, well);
+        return;
+      case GameSkin.glass:
+        break;
+    }
     final c = geometry.cell;
     final frame = RRect.fromRectAndRadius(well.inflate(geometry.framePad), Radius.circular(c * 0.8));
     canvas.drawRRect(
@@ -138,6 +148,56 @@ class BoardPainter extends CustomPainter {
     }
     for (var y = 1; y < TetrisGame.visibleHeight; y++) {
       canvas.drawLine(Offset(4, y * c), Offset(well.right - 4, y * c), grid);
+    }
+  }
+
+  /// Toy box: thick ink outline, hard shadow, flat well with dot grid.
+  void _paintToyFrame(Canvas canvas, Rect well) {
+    final c = geometry.cell;
+    final outline = max(2.0, c * 0.12);
+    final frame = RRect.fromRectAndRadius(well.inflate(geometry.framePad), Radius.circular(c * 0.7));
+    canvas.drawRRect(frame.shift(Offset(0, c * 0.28)), Paint()..color = palette.ink);
+    canvas.drawRRect(frame, Paint()..color = palette.frameFill);
+    canvas.drawRRect(
+      frame.deflate(outline / 2),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = outline
+        ..color = palette.ink,
+    );
+    final wellRRect = RRect.fromRectAndRadius(well, Radius.circular(c * 0.4));
+    canvas.drawRRect(wellRRect, Paint()..color = palette.wellTop);
+    canvas.drawRRect(
+      wellRRect.deflate(outline * 0.35),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = outline * 0.7
+        ..color = palette.ink,
+    );
+    final dot = Paint()..color = palette.grid;
+    for (var x = 1; x < TetrisGame.width; x++) {
+      for (var y = 1; y < TetrisGame.visibleHeight; y++) {
+        canvas.drawCircle(Offset(x * c, y * c), max(1.2, c * 0.06), dot);
+      }
+    }
+  }
+
+  /// Arcade cabinet: square bevelled frame, flat well with a faint
+  /// checkerboard instead of grid lines.
+  void _paintPixelFrame(Canvas canvas, Rect well) {
+    final c = geometry.cell;
+    final u = c / 8;
+    final frame = well.inflate(geometry.framePad);
+    canvas.drawRect(frame.shift(Offset(u * 2, u * 2)), Paint()..color = palette.ink);
+    canvas.drawRect(frame, Paint()..color = palette.frameBorder);
+    canvas.drawRect(frame.deflate(u), Paint()..color = palette.frameFill);
+    canvas.drawRect(well.inflate(u), Paint()..color = palette.ink);
+    canvas.drawRect(well, Paint()..color = palette.wellTop);
+    final check = Paint()..color = palette.grid;
+    for (var x = 0; x < TetrisGame.width; x++) {
+      for (var y = 0; y < TetrisGame.visibleHeight; y++) {
+        if ((x + y).isOdd) canvas.drawRect(Rect.fromLTWH(x * c, y * c, c, c), check);
+      }
     }
   }
 

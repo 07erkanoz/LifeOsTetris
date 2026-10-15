@@ -45,7 +45,21 @@ class KuplerApp extends StatelessWidget {
             // Large system font sizes broke button layouts; keep text within
             // a range the game's fixed-size HUD can hold.
             child: _SystemBarsByOrientation(
-              child: MediaQuery.withClampedTextScaling(minScaleFactor: 0.85, maxScaleFactor: 1.1, child: child!),
+              child: MediaQuery.withClampedTextScaling(
+                minScaleFactor: 0.85,
+                maxScaleFactor: 1.1,
+                child: Builder(
+                  builder: (context) {
+                    // Pixel type has a small em box: scale it up to match.
+                    if (skinTextScale == 1) return child!;
+                    final mq = MediaQuery.of(context);
+                    return MediaQuery(
+                      data: mq.copyWith(textScaler: TextScaler.linear(mq.textScaler.scale(1) * skinTextScale)),
+                      child: child!,
+                    );
+                  },
+                ),
+              ),
             ),
           );
         },

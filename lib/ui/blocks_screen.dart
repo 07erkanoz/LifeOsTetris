@@ -299,7 +299,8 @@ class _Stars extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      for (var i = 0; i < 3; i++) Icon(Icons.star_rounded, size: size, color: i < count ? _gold : (off ?? GamePalette.of(context).track)),
+      for (var i = 0; i < 3; i++)
+        GameIcon(Icons.star_rounded, size: size, color: i < count ? _gold : (off ?? GamePalette.of(context).track)),
     ],
   );
 }
@@ -387,7 +388,7 @@ class _Menu extends StatelessWidget {
         const SizedBox(height: 8),
         TextButton.icon(
           onPressed: () => AboutPage.open(context, settings),
-          icon: Icon(Icons.info_outline_rounded, size: 16, color: p.muted),
+          icon: GameIcon(Icons.info_outline_rounded, size: 16, color: p.muted),
           label: Text(
             s.about,
             style: TextStyle(color: p.muted, fontSize: 13, fontWeight: FontWeight.w600),
@@ -489,7 +490,7 @@ class _LevelSelectState extends State<_LevelSelect> {
                   const Expanded(
                     child: Align(alignment: Alignment.centerLeft, child: _Title(size: 24)),
                   ),
-                  const Icon(Icons.star_rounded, color: _gold, size: 20),
+                  const GameIcon(Icons.star_rounded, color: _gold, size: 20),
                   const SizedBox(width: 2),
                   Text(
                     '${settings.totalBlockStars}/${BlockLevels.count * 3}',
@@ -573,7 +574,7 @@ class _LevelTile extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           locked
-              ? Icon(Icons.lock_rounded, size: 18, color: p.label)
+              ? GameIcon(Icons.lock_rounded, size: 18, color: p.label)
               : Text(
                   '$number',
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: current ? Colors.white : p.text),
