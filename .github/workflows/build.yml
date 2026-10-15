@@ -50,6 +50,29 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      # Every APK is signed with the same upload key, so a new build installs
+      # over the previous one. Without the secrets (e.g. pull requests from
+      # forks) Gradle falls back to the throwaway debug key.
+      - name: Set up release signing key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] \
+            || [ -z "$ANDROID_KEY_ALIAS" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo "::warning::Android signing secrets are missing; the APKs are signed with a debug key and will not install over earlier builds."
+            exit 0
+          fi
+          KEYSTORE="$RUNNER_TEMP/upload-keystore.jks"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"
+          {
+            echo "storeFile=$KEYSTORE"
+            echo "storePassword=$ANDROID_KEYSTORE_PASSWORD"
+            echo "keyAlias=$ANDROID_KEY_ALIAS"
+            echo "keyPassword=$ANDROID_KEY_PASSWORD"
+          } > android/key.properties
       - run: flutter build apk --release
       - name: Rename universal APK
         run: cp build/app/outputs/flutter-apk/app-release.apk LifeOS-Kupler.apk

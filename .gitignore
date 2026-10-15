@@ -46,3 +46,8 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Signing keys must never be committed (see tool/make_android_keystore.ps1).
+key.properties
+*.jks
+*.keystore

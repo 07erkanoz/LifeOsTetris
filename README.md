@@ -143,6 +143,13 @@ flutter build apk --release  # Android
 | `--dart-define=KUPLER_DEMO=true` | Oyunu neredeyse dolu tahtayla başlatır (efekt demosu) |
 | `--dart-define=KUPLER_DEMO_SUPER=true` | Süper Küpler'i birkaç güçle başlatır |
 | `--dart-define=KUPLER_DEMO_BLOCKS=true` | Doğrudan Bulmaca Küpler'i açar; Sonsuz mod hazır bir tahtayla başlar |
+| `powershell -ExecutionPolicy Bypass -File tool\make_android_keystore.ps1` | Android yükleme anahtarını (upload keystore) oluşturur ve GitHub secret'larına yükler (bir kez çalıştırılır) |
+
+**Android imzalama:** Sürüm derlemeleri `android/key.properties` dosyasındaki anahtarla
+imzalanır; dosya yoksa debug anahtarı kullanılır. CI bu dosyayı `ANDROID_KEYSTORE_BASE64`,
+`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` ve `ANDROID_KEY_PASSWORD` secret'larından yazar,
+böylece her APK aynı anahtarla imzalanır ve eskisinin üzerine kurulabilir. Anahtar
+`%USERPROFILE%\.android-keys\lifeos-kupler\` klasöründe durur; bu klasörü yedekle, depoya asla ekleme.
 
 ### Proje yapısı
 
