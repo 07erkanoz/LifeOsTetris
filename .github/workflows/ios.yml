@@ -1,11 +1,13 @@
 name: iOS TestFlight
 
 # macOS minutes are expensive, so not every push builds for iOS: it runs by
-# hand (Actions → iOS TestFlight → Run workflow) or for a pushed "ios-*" tag.
+# hand (Actions → iOS TestFlight → Run workflow) or when ios/testflight.txt
+# changes on main (bump the number in it to send a new build).
 on:
   workflow_dispatch:
   push:
-    tags: ['ios-*']
+    branches: [main]
+    paths: ['ios/testflight.txt']
 
 concurrency:
   group: ios-testflight
