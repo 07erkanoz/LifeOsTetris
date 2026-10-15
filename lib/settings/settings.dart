@@ -21,7 +21,7 @@ class Settings extends ChangeNotifier {
   bool _effects = true;
   bool _shake = true;
   bool _vibration = true;
-  bool _showButtons = true;
+  bool _showButtons = !_desktop;
   double _buttonOpacity = 0.9;
   bool _fullScreen = true;
   double _vibrationStrength = 0.5;
@@ -64,7 +64,8 @@ class Settings extends ChangeNotifier {
       s._effects = prefs.getBool('effects') ?? true;
       s._shake = prefs.getBool('shake') ?? true;
       s._vibration = prefs.getBool('vibration') ?? true;
-      s._showButtons = prefs.getBool('showButtons') ?? true;
+      // Desktops play with the keyboard: on-screen buttons start off there.
+      s._showButtons = prefs.getBool('showButtons') ?? !_desktop;
       s._buttonOpacity = prefs.getDouble('buttonOpacity') ?? 0.9;
       s._fullScreen = prefs.getBool('fullScreen') ?? true;
       s._vibrationStrength = prefs.getDouble('vibrationStrength') ?? 0.5;

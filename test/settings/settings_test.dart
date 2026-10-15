@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifeos_kupler/l10n/strings.dart';
@@ -76,5 +77,15 @@ void main() {
     s.visualTheme = VisualTheme.toyHd;
     expect(hdBlocks, isTrue);
     expect(GamePalette.light.skin, GameSkin.toy);
+  });
+
+  test('desktops start without on-screen buttons, phones with them', () {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    final desktop = Settings.memory();
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    final phone = Settings.memory();
+    debugDefaultTargetPlatformOverride = null;
+    expect(desktop.showButtons, isFalse);
+    expect(phone.showButtons, isTrue);
   });
 }

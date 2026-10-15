@@ -971,7 +971,9 @@ class SettingsPanel extends StatelessWidget {
             slider(settings.vibrationStrength, 0, 1, (v) => settings.vibrationStrength = v),
           ],
         ],
-        if (!compact && isMobilePlatform) ...[
+        // A small desktop window uses the phone layouts, buttons included,
+        // so the switch is offered everywhere.
+        if (!compact) ...[
           ToggleRow(
             label: s.onScreenButtons,
             icon: Icons.gamepad_rounded,
