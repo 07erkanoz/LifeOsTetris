@@ -18,7 +18,8 @@ package() {
   cp -r LifeOS-Kupler/. "$pkgdir/opt/lifeos-kupler/"
   install -d "$pkgdir/usr/bin"
   ln -s /opt/lifeos-kupler/lifeos_kupler "$pkgdir/usr/bin/lifeos-kupler"
-  install -Dm644 LifeOS-Kupler/lifeos-kupler.desktop "$pkgdir/usr/share/applications/lifeos-kupler.desktop"
-  install -Dm644 LifeOS-Kupler/lifeos-kupler.png "$pkgdir/usr/share/icons/hicolor/256x256/apps/lifeos-kupler.png"
+  # Named after the application id: desktops find the window's icon by it.
+  install -Dm644 LifeOS-Kupler/com.lifeos.lifeos_kupler.desktop "$pkgdir/usr/share/applications/com.lifeos.lifeos_kupler.desktop"
+  install -Dm644 LifeOS-Kupler/com.lifeos.lifeos_kupler.png "$pkgdir/usr/share/icons/hicolor/256x256/apps/com.lifeos.lifeos_kupler.png"
   install -Dm644 LifeOS-Kupler/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

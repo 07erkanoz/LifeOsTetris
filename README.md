@@ -37,7 +37,9 @@
   makepkg -si          # uygulama menüsünde "LifeOS Küpler" olarak görünür
   ```
 - **Diğer Linux dağıtımları:** `tar.gz` dosyasını aç ve `LifeOS-Kupler/lifeos_kupler` dosyasını
-  çalıştır. Gerekenler: GTK 3 ve GStreamer (base + good eklentileri; yoksa oyun sessiz çalışır).
+  çalıştır. İlk açılışta uygulama menüsüne ikonlu bir kısayol ekler. Gerekenler: GTK 3 ve
+  GStreamer (base + good eklentileri; yoksa oyun sessiz çalışır).
+- Linux'ta da oyun tam ekran açılır; **F11** veya **Alt+Enter** pencereye geçirir.
 
 Bunlar test derlemeleridir ve `main` dalına yapılan her gönderimde otomatik olarak
 yenilenir ([Releases → Test sürümü](https://github.com/07erkanoz/LifeOsTetris/releases/tag/test-build)).

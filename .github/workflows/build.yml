@@ -107,8 +107,10 @@ jobs:
         run: |
           mkdir -p LifeOS-Kupler
           cp -r build/linux/x64/release/bundle/. LifeOS-Kupler/
-          cp packaging/linux/lifeos-kupler.desktop LifeOS-Kupler/
-          cp linux/runner/resources/app_icon.png LifeOS-Kupler/lifeos-kupler.png
+          # Named after the application id so desktops match the window to
+          # its entry (and icon).
+          cp packaging/linux/com.lifeos.lifeos_kupler.desktop LifeOS-Kupler/
+          cp linux/runner/resources/app_icon.png LifeOS-Kupler/com.lifeos.lifeos_kupler.png
           cp LICENSE LifeOS-Kupler/
           tar -czf LifeOS-Kupler-Linux-x64.tar.gz LifeOS-Kupler
       - uses: actions/upload-artifact@v4
