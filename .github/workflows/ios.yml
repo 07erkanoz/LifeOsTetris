@@ -1,9 +1,11 @@
 name: iOS TestFlight
 
-# Started by hand (Actions → iOS TestFlight → Run workflow): macOS minutes
-# are expensive, so not every push builds for iOS.
+# macOS minutes are expensive, so not every push builds for iOS: it runs by
+# hand (Actions → iOS TestFlight → Run workflow) or for a pushed "ios-*" tag.
 on:
   workflow_dispatch:
+  push:
+    tags: ['ios-*']
 
 concurrency:
   group: ios-testflight
