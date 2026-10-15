@@ -1,0 +1,10 @@
+# Lock and half-downloaded files of the sync script stay private.
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+# latest.json changes with every build: browsers must ask again.
+<Files "latest.json">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-cache"
+  </IfModule>
+</Files>
