@@ -359,8 +359,9 @@ class ControlButton extends StatefulWidget {
   State<ControlButton> createState() => _ControlButtonState();
 }
 
-/// Body opacity of the secondary keys (1 = solid jelly, lower = glass).
-const double keycapGlass = int.fromEnvironment('KUPLER_KEY_ALPHA', defaultValue: 100) / 100;
+/// Body opacity of the secondary keys: tinted glass that lets the backdrop
+/// show through (the rotate key stays mostly solid).
+const double keycapGlass = 0.45;
 
 class _ControlButtonState extends State<ControlButton> {
   bool _pressed = false;
