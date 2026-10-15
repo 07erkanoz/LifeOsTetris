@@ -298,7 +298,7 @@ class BoardPainter extends CustomPainter {
     final collapseT = fx.collapseProgress;
     final clearing = game.status == GameStatus.clearing ? game.clearingRows : const <int>[];
     final p = game.clearProgress;
-    final grayT = fx.gameOverAge < 0 ? -1.0 : fx.gameOverAge / EffectsEngine.gameOverGrayDuration;
+    final grayT = fx.gameOverAge < 0 || fx.finishedWon ? -1.0 : fx.gameOverAge / EffectsEngine.gameOverGrayDuration;
 
     for (var y = _h; y < TetrisGame.height; y++) {
       final yv = y - _h;

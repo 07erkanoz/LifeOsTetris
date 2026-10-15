@@ -44,7 +44,8 @@ class KuplerApp extends StatelessWidget {
             ),
             // Large system font sizes broke button layouts; keep text within
             // a range the game's fixed-size HUD can hold.
-            child: _SystemBarsByOrientation(
+            child: _AppShell(
+              audio: audio,
               child: MediaQuery.withClampedTextScaling(
                 minScaleFactor: 0.85,
                 maxScaleFactor: 1.1,
@@ -79,30 +80,53 @@ class _AppScrollBehavior extends MaterialScrollBehavior {
   Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) => child;
 }
 
-/// Phones held sideways hide the status and navigation bars (they come back
-/// with a swipe from the edge) so the board gets the full height; upright,
-/// the game draws edge to edge behind them.
-class _SystemBarsByOrientation extends StatefulWidget {
-  const _SystemBarsByOrientation({required this.child});
+/// Full screen on phones: the status and navigation bars stay hidden (a
+/// swipe from the edge shows them for a moment), in every orientation.
+/// Android brings them back after the app was in the background, so they
+/// are hidden again on return. Music stops while the app is away.
+class _AppShell extends StatefulWidget {
+  const _AppShell({required this.audio, required this.child});
 
+  final AudioService audio;
   final Widget child;
 
   @override
-  State<_SystemBarsByOrientation> createState() => _SystemBarsByOrientationState();
+  State<_AppShell> createState() => _AppShellState();
 }
 
-class _SystemBarsByOrientationState extends State<_SystemBarsByOrientation> {
-  Orientation? _applied;
-
+class _AppShellState extends State<_AppShell> with WidgetsBindingObserver {
   static bool get _mobile => !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
 
-  @override
-  Widget build(BuildContext context) {
-    final orientation = MediaQuery.orientationOf(context);
-    if (_mobile && orientation != _applied) {
-      _applied = orientation;
-      SystemChrome.setEnabledSystemUIMode(orientation == Orientation.landscape ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge);
-    }
-    return widget.child;
+  void _hideBars() {
+    if (_mobile) SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _hideBars();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        widget.audio.inBackground = false;
+        _hideBars();
+      case AppLifecycleState.hidden || AppLifecycleState.paused || AppLifecycleState.detached:
+        widget.audio.inBackground = true;
+      case AppLifecycleState.inactive:
+        break;
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }

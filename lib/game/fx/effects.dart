@@ -188,6 +188,9 @@ class EffectsEngine implements BackdropFx {
   /// Seconds since game over, or -1 while playing.
   double gameOverAge = -1;
   bool shattered = false;
+
+  /// The run ended by reaching its goal: no grey-out, no shatter.
+  bool finishedWon = false;
   static const gameOverGrayDuration = 0.8;
 
   // Active piece smoothing.
@@ -220,6 +223,7 @@ class EffectsEngine implements BackdropFx {
     levelWaveAge = -1;
     gameOverAge = -1;
     shattered = false;
+    finishedWon = false;
     offsetX = offsetY = rotatePop = 0;
     spawnAge = 1;
     _lastActiveY = null;
@@ -275,7 +279,7 @@ class EffectsEngine implements BackdropFx {
     }
     if (gameOverAge >= 0) {
       gameOverAge += dt;
-      if (!shattered && gameOverAge > gameOverGrayDuration + 0.15) _shatter(game);
+      if (!shattered && !finishedWon && gameOverAge > gameOverGrayDuration + 0.15) _shatter(game);
     }
 
     final decay = exp(-dt * 26);
@@ -405,6 +409,22 @@ class EffectsEngine implements BackdropFx {
         _collapse(rows);
       case LevelUp(:final level):
         _levelUp(level, speedingUp: game.mode.speedsUp && level <= speedCapLevel);
+      case GameOver(won: true):
+        gameOverAge = 0;
+        shattered = false;
+        finishedWon = true;
+        addTrauma(0.3);
+        pulseColor = const Color(0xFFFBBF24);
+        pulse = 1;
+        floaters.add(
+          Floater(5, 8, [
+            FloaterLine(game.mode == GameMode.ultra ? strings.timeUp : strings.challengeDone, 1.4, const [
+              Color(0xFFFFFFFF),
+              Color(0xFFFDE047),
+              Color(0xFFF59E0B),
+            ], glow: const Color(0xFFF59E0B)),
+          ], duration: 2.2),
+        );
       case GameOver():
         gameOverAge = 0;
         shattered = false;

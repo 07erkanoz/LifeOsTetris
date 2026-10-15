@@ -29,19 +29,27 @@ const _puzzleColors = [Color(0xFF14B8A6), Color(0xFF22C55E), Color(0xFFEAB308)];
 /// "Bulmaca Küpler": drag-and-drop block puzzle with 100 levels and an
 /// endless mode. Opened from the main menu as its own screen.
 class BlocksScreen extends StatefulWidget {
-  const BlocksScreen({super.key, required this.settings, required this.audio, this.haptics});
+  const BlocksScreen({super.key, required this.settings, required this.audio, this.haptics, this.daily = false});
 
   final Settings settings;
   final AudioService audio;
   final Haptics? haptics;
 
-  static Future<void> open(BuildContext context, {required Settings settings, required AudioService audio, Haptics? haptics}) =>
-      Navigator.of(context).push(
-        PageRouteBuilder<void>(
-          pageBuilder: (_, _, _) => BlocksScreen(settings: settings, audio: audio, haptics: haptics),
-          transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
-        ),
-      );
+  /// Opens straight into today's daily puzzle.
+  final bool daily;
+
+  static Future<void> open(
+    BuildContext context, {
+    required Settings settings,
+    required AudioService audio,
+    Haptics? haptics,
+    bool daily = false,
+  }) => Navigator.of(context).push(
+    PageRouteBuilder<void>(
+      pageBuilder: (_, _, _) => BlocksScreen(settings: settings, audio: audio, haptics: haptics, daily: daily),
+      transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
+    ),
+  );
 
   @override
   State<BlocksScreen> createState() => _BlocksScreenState();
@@ -60,6 +68,7 @@ class _BlocksScreenState extends State<BlocksScreen> with SingleTickerProviderSt
     _ticker.start();
     // The square board works sideways too.
     OrientationLock.any();
+    if (widget.daily) c.startDaily();
   }
 
   @override
@@ -354,11 +363,15 @@ class _Menu extends StatelessWidget {
           style: TextStyle(fontSize: 13, height: 1.45, color: p.muted, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 18),
+        DailyPuzzleButton(settings: settings, onTap: c.startDaily),
+        const SizedBox(height: 10),
         if (c.savedSummary case final saved?) ...[
           GradientButton(
             key: const ValueKey('blocks-resume'),
             label: s.resumeGame,
-            subtitle: saved.level == null
+            subtitle: saved.daily
+                ? s.resumeDaily(saved.movesLeft)
+                : saved.level == null
                 ? s.resumeBlocksEndless(s.endlessMode, saved.score)
                 : s.resumeBlocksLevel(saved.level!, saved.movesLeft),
             icon: Icons.play_arrow_rounded,
@@ -652,7 +665,7 @@ class _TopBar extends StatelessWidget {
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: GradientText(
-                c.isEndless ? s.endlessMode : s.levelNumber(c.level!.number),
+                c.isDaily ? s.dailyTitle : (c.isEndless ? s.endlessMode : s.levelNumber(c.level!.number)),
                 gradient: const LinearGradient(colors: _puzzleColors),
                 style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
               ),
@@ -1115,12 +1128,13 @@ class _LevelResult extends StatelessWidget {
     final game = c.game;
     final level = c.level!;
     final won = game.status == BlockStatus.won;
-    final last = level.number >= BlockLevels.count;
+    final daily = c.isDaily;
+    final last = daily || level.number >= BlockLevels.count;
     return _Panel(
       landscapeTail: won && !last ? 6 : 4,
       scrim: true,
       children: [
-        Center(child: CardLabel(s.levelNumber(level.number).toUpperCase())),
+        Center(child: CardLabel((daily ? s.dailyTitle : s.levelNumber(level.number)).toUpperCase())),
         const SizedBox(height: 8),
         Text(
           won ? s.levelCompleteTitle : (game.loss == BlockLoss.outOfMoves ? s.outOfMovesTitle : s.noRoomTitle),
@@ -1170,13 +1184,43 @@ class _LevelResult extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: GradientButton(label: s.newBoard, icon: Icons.casino_rounded, secondary: true, onTap: c.restart),
+              child: daily
+                  ? GradientButton(label: s.menu, icon: Icons.home_rounded, secondary: true, onTap: c.openMenu)
+                  : GradientButton(label: s.newBoard, icon: Icons.casino_rounded, secondary: true, onTap: c.restart),
             ),
           ],
         ),
-        const SizedBox(height: 10),
-        GradientButton(label: s.levelsMode, icon: Icons.grid_view_rounded, secondary: true, onTap: c.openLevels),
+        if (!daily) ...[
+          const SizedBox(height: 10),
+          GradientButton(label: s.levelsMode, icon: Icons.grid_view_rounded, secondary: true, onTap: c.openLevels),
+        ],
       ],
+    );
+  }
+}
+
+/// "Günlük Görev": today's puzzle, the streak, and whether it is done.
+class DailyPuzzleButton extends StatelessWidget {
+  const DailyPuzzleButton({super.key, required this.settings, required this.onTap});
+
+  final Settings settings;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final now = DateTime.now();
+    final stars = settings.dailyStars(now);
+    final streak = settings.dailyStreak(now);
+    final parts = [stars > 0 ? '${s.dailyDone} ${'★' * stars}' : s.dailySubtitle(now), if (streak > 0) s.streakDays(streak)];
+    return GradientButton(
+      key: const ValueKey('daily-puzzle'),
+      label: s.dailyTitle,
+      subtitle: parts.join(' · '),
+      icon: Icons.calendar_today_rounded,
+      colors: stars > 0 ? null : const [Color(0xFFFDE047), Color(0xFFF97316)],
+      secondary: stars > 0,
+      onTap: onTap,
     );
   }
 }

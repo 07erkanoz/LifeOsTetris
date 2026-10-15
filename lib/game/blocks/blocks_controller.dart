@@ -36,6 +36,13 @@ class BlocksController extends ChangeNotifier {
   BlocksView view = BlocksView.menu;
   bool paused = false;
   BlockLevel? level;
+
+  /// Day of the daily puzzle being played (null for levels and endless).
+  DateTime? dailyDay;
+  bool get isDaily => dailyDay != null;
+
+  /// Today's date; tests may move it.
+  DateTime Function() today = DateTime.now;
   int lastStars = 0;
   bool newRecord = false;
   double playTime = 0;
@@ -82,6 +89,7 @@ class BlocksController extends ChangeNotifier {
   }
 
   void startEndless() {
+    dailyDay = null;
     level = null;
     _begin(() {
       game.startEndless();
@@ -94,6 +102,7 @@ class BlocksController extends ChangeNotifier {
 
   /// Plays level [number] on a freshly generated board.
   void startLevel(int number) {
+    dailyDay = null;
     final n = number.clamp(1, BlockLevels.count);
     final next = BlockLevels.generate(n);
     level = next;
@@ -111,7 +120,26 @@ class BlocksController extends ChangeNotifier {
 
   /// Replays the current mode: same level number on a new board, or a new
   /// endless game.
-  void restart() => isEndless ? startEndless() : startLevel(level!.number);
+  void restart() => isDaily ? startDaily() : (isEndless ? startEndless() : startLevel(level!.number));
+
+  /// Today's daily puzzle: the same board and pieces for every player,
+  /// built from the date. It gets harder through the week.
+  void startDaily() {
+    final now = today();
+    final day = DateTime(now.year, now.month, now.day);
+    final next = dailyLevel(day);
+    level = next;
+    _begin(() {
+      dailyDay = day;
+      game.startLevel(next, random: Random(dailySeed(day)));
+    });
+  }
+
+  static int dailySeed(DateTime day) => day.year * 10000 + day.month * 100 + day.day;
+
+  /// Monday plays like level 15, Sunday like level 65.
+  static BlockLevel dailyLevel(DateTime day) =>
+      BlockLevels.generate(const [15, 22, 30, 38, 45, 55, 65][day.weekday - 1], random: Random(dailySeed(day)));
 
   // ------------------------------------------------------------ saving
 
@@ -119,26 +147,32 @@ class BlocksController extends ChangeNotifier {
   /// app is closed). Bulmaca is turn based, so every placement saves.
   void saveProgress() {
     if (demo || view != BlocksView.playing || game.status != BlockStatus.playing) return;
-    settings.savedBlocks = jsonEncode({'game': game.toSave(), 'playTime': playTime});
+    settings.savedBlocks = jsonEncode({
+      'game': game.toSave(),
+      'playTime': playTime,
+      if (dailyDay != null) 'daily': dailyDay!.toIso8601String(),
+    });
   }
 
   String? _summaryOf;
-  ({int? level, int movesLeft, int score})? _summary;
+  ({int? level, int movesLeft, int score, bool daily})? _summary;
 
   /// Level (null for endless), moves left and score of the saved game.
-  ({int? level, int movesLeft, int score})? get savedSummary {
+  ({int? level, int movesLeft, int score, bool daily})? get savedSummary {
     final raw = settings.savedBlocks;
     if (raw == null) return null;
     if (raw != _summaryOf) {
       _summaryOf = raw;
       try {
-        final g = (jsonDecode(raw) as Map)['game'] as Map;
+        final data = jsonDecode(raw) as Map;
+        final g = data['game'] as Map;
         final lv = g['level'] as Map?;
         final moves = g['moves'] as int;
         _summary = (
           level: lv?['number'] as int?,
           movesLeft: lv == null ? 0 : max(0, (lv['moveLimit'] as int) - moves),
           score: g['score'] as int,
+          daily: data['daily'] != null,
         );
       } catch (_) {
         _summary = null;
@@ -162,6 +196,8 @@ class BlocksController extends ChangeNotifier {
         game.startEndless();
       }
       level = game.level;
+      final daily = (data as Map)['daily'] as String?;
+      dailyDay = daily == null ? null : DateTime.tryParse(daily);
     }, keepSave: true);
     return true;
   }
@@ -270,7 +306,7 @@ class BlocksController extends ChangeNotifier {
           audio.play(Sfx.levelup);
           audio.duck = 0.5;
           if (settings.vibration) haptics.celebrate();
-          settings.recordBlockLevel(level!.number, stars);
+          isDaily ? settings.recordDaily(dailyDay!, stars) : settings.recordBlockLevel(level!.number, stars);
           settings.recordBlocksGame(endless: false, score: game.score, lines: game.lines, seconds: playTime);
         case BlocksGameOver():
           _endAge = 0;

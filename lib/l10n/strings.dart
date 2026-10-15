@@ -221,7 +221,48 @@ class AppStrings {
     GameMode.classic => classic,
     GameMode.relaxed => relaxed,
     GameMode.superMode => superTitle,
+    GameMode.sprint => sprintTitle,
+    GameMode.ultra => ultraTitle,
+    GameMode.dig => digTitle,
   };
+
+  // ------------------------------------------------------------ challenges
+
+  String get challengesLabel => _t('MEYDAN OKUMA', 'CHALLENGES');
+  String get sprintTitle => _t('Hız Koşusu', 'Speed Run');
+  String get ultraTitle => _t('3 Dakika', '3 Minutes');
+  String get digTitle => _t('Kazı', 'Dig');
+  String get sprintSubtitle => _t('${GameMode.sprintLines} satır, en kısa süre', '${GameMode.sprintLines} lines, fastest time');
+  String get ultraSubtitle => _t('3 dakikada en yüksek skor', 'Best score in 3 minutes');
+  String get digSubtitle => _t('${GameMode.digRows} gri satırı kaz', 'Dig through ${GameMode.digRows} grey rows');
+  String get leftLabel => _t('KALAN', 'LEFT');
+  String get challengeDone => _t('Tamamlandı!', 'Complete!');
+  String get timeUp => _t('Süre doldu!', "Time's up!");
+  String get challengeFailed => _t('Tamamlanamadı', 'Not finished');
+  String get bestTimePrefix => _t('En iyi süre: ', 'Best time: ');
+
+  /// 83.4 s → "1:23.4".
+  String clock(double seconds, {bool tenths = true}) {
+    final s = seconds < 0 ? 0.0 : seconds;
+    final whole = tenths ? s.floor() : s.ceil();
+    final m = whole ~/ 60, sec = whole % 60;
+    final base = '$m:${sec.toString().padLeft(2, '0')}';
+    return tenths ? '$base.${((s - s.floor()) * 10).floor()}' : base;
+  }
+
+  // ------------------------------------------------------------ daily puzzle
+
+  String get dailyTitle => _t('Günlük Görev', 'Daily Puzzle');
+  String dailySubtitle(DateTime day) =>
+      _t('${day.day} ${_monthsTr[day.month - 1]} bulmacası', '${_monthsEn[day.month - 1]} ${day.day} puzzle');
+  String streakDays(int n) => _t('$n günlük seri', '$n-day streak');
+  String get dailyDone => _t('Bugünkü görev tamam', "Today's puzzle is done");
+  String get dailyNew => _t('Yeni görev', 'New puzzle');
+  String get dailyTomorrow => _t('Yarın yeni görev', 'New puzzle tomorrow');
+  String resumeDaily(int movesLeft) => _t('Günlük Görev · $movesLeft hamle kaldı', 'Daily Puzzle · $movesLeft moves left');
+
+  static const _monthsTr = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+  static const _monthsEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   // ------------------------------------------------------------ bulmaca küpler
 

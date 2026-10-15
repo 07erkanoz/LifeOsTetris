@@ -9,6 +9,7 @@ import '../theme/palette.dart';
 /// skin) and as 9×9 pixel art (pixel skin); the glass skin keeps Material
 /// icons.
 enum GameIconKind {
+  calendar,
   palette,
   back,
   forward,
@@ -52,6 +53,7 @@ enum GameIconKind {
 }
 
 final Map<IconData, GameIconKind> _byMaterial = {
+  Icons.calendar_today_rounded: GameIconKind.calendar,
   Icons.palette_rounded: GameIconKind.palette,
   Icons.arrow_back_rounded: GameIconKind.back,
   Icons.arrow_forward_rounded: GameIconKind.forward,
@@ -155,6 +157,17 @@ void paintPixelArt(Canvas canvas, double size, List<String> rows, Color color) {
 const _slash = ['#........', '.#.......', '..#......', '...#.....', '....#....', '.....#...', '......#..', '.......#.', '........#'];
 
 const Map<GameIconKind, List<String>> _pixelIcons = {
+  GameIconKind.calendar: [
+    '.#.....#.',
+    '#########',
+    '#########',
+    '#.......#',
+    '#.##.##.#',
+    '#.......#',
+    '#.##.##.#',
+    '#.......#',
+    '#########',
+  ],
   GameIconKind.back: ['.........', '....#....', '...##....', '..#######', '.########', '..#######', '...##....', '....#....', '.........'],
   GameIconKind.forward: [
     '.........',
@@ -413,6 +426,16 @@ void paintToyIcon(Canvas canvas, double size, GameIconKind kind, Color color) {
   }
 
   switch (kind) {
+    case GameIconKind.calendar:
+      canvas.drawRRect(rr(3, 4.5, 21, 21, 3), stroke..strokeWidth = 2.4 * k);
+      canvas.drawRRect(rr(3, 4.5, 21, 9.5, 3), fill);
+      canvas.drawRect(Rect.fromLTRB(3 * k, 7.5 * k, 21 * k, 9.5 * k), fill);
+      stroke.strokeWidth = 2.6 * k;
+      canvas.drawLine(o(8, 2.5), o(8, 6), stroke);
+      canvas.drawLine(o(16, 2.5), o(16, 6), stroke);
+      for (final (x, y) in [(8.0, 13.5), (12.0, 13.5), (16.0, 13.5), (8.0, 17.5), (12.0, 17.5)]) {
+        canvas.drawRRect(rr(x - 1.4, y - 1.4, x + 1.4, y + 1.4, 0.6), fill);
+      }
     case GameIconKind.back || GameIconKind.forward:
       canvas.save();
       if (kind == GameIconKind.forward) {

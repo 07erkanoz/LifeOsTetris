@@ -278,7 +278,8 @@ class GameController extends ChangeNotifier {
       game.slowMotion > 0,
       (fx.energyPulse * 4).round(),
       (fx.powerPulse * 4).round(),
-      playTime.floor(),
+      // Challenge clocks show tenths of a second.
+      mode.isChallenge ? (game.time * 10).floor() : playTime.floor(),
       showGameOver,
       (fx.holdPulse * 4).round(),
       (fx.scorePulse * 4).round(),
@@ -298,7 +299,13 @@ class GameController extends ChangeNotifier {
       _haptic(e);
       if (e is GameOver) {
         settings.savedGame = null;
-        newRecord = settings.recordGame(mode: mode, score: game.score, lines: game.lines, seconds: playTime);
+        newRecord = settings.recordGame(
+          mode: mode,
+          score: game.score,
+          lines: game.lines,
+          seconds: mode.recordsTime ? game.time : playTime,
+          won: e.won,
+        );
         audio.duck = 0.4;
       }
     }
@@ -333,6 +340,8 @@ class GameController extends ChangeNotifier {
         audio.play(Sfx.tspin, volume: 0.7);
       case LevelUp():
         audio.play(Sfx.levelup);
+      case GameOver(won: true):
+        audio.play(Sfx.perfect);
       case GameOver():
         audio.play(Sfx.gameover);
       case PowerEarned():
@@ -369,6 +378,8 @@ class GameController extends ChangeNotifier {
       case LinesCleared(:final count, :final perfectClear):
         count >= 4 || perfectClear ? haptics.celebrate() : haptics.medium();
       case LevelUp():
+        haptics.celebrate();
+      case GameOver(won: true):
         haptics.celebrate();
       case GameOver() || BombExploded():
         haptics.heavy();

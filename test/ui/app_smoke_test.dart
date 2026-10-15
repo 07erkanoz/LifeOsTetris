@@ -16,6 +16,8 @@ import 'package:lifeos_kupler/ui/power_bar.dart';
 import 'package:lifeos_kupler/theme/palette.dart';
 import 'package:lifeos_kupler/ui/widgets.dart';
 
+Settings settings(WidgetTester tester) => (tester.widget(find.byType(KuplerApp)) as KuplerApp).settings;
+
 void main() {
   Future<void> pumpApp(WidgetTester tester, Size size, {AppLanguage language = AppLanguage.tr}) async {
     tester.view.physicalSize = size;
@@ -114,6 +116,35 @@ void main() {
     expect(c.game.score, score);
     expect(c.game.paused, isTrue);
     expect(find.text('Duraklatıldı'), findsOneWidget);
+  });
+
+  testWidgets('challenge modes start from the menu with their own HUD', (tester) async {
+    await pumpApp(tester, const Size(390, 844));
+    expect(find.text('MEYDAN OKUMA'), findsOneWidget);
+    for (final (mode, label) in [(GameMode.sprint, 'KALAN'), (GameMode.ultra, 'SÜRE'), (GameMode.dig, 'SATIR')]) {
+      await tester.ensureVisible(find.byKey(ValueKey('start-${mode.name}')));
+      await tester.tap(find.byKey(ValueKey('start-${mode.name}')));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 33));
+      }
+      final c = (tester.state(find.byType(GameScreen)) as dynamic).controller as GameController;
+      expect(c.mode, mode);
+      expect(find.text(label), findsWidgets);
+      expect(tester.takeException(), isNull);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyP);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Menü'));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(settings(tester).savedGame, isNotNull);
+    }
+  });
+
+  testWidgets('the daily puzzle opens from the main menu', (tester) async {
+    await pumpApp(tester, const Size(390, 844));
+    await tester.tap(find.byKey(const ValueKey('daily-puzzle')));
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Günlük Görev'), findsWidgets);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('about page shows the developer', (tester) async {

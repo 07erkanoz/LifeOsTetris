@@ -52,6 +52,9 @@ class TetrisGame {
   int score = 0;
   int lines = 0;
   late int level;
+
+  /// Seconds of play (pauses excluded): the clock of the challenge modes.
+  double time = 0;
   int _combo = -1;
   bool _backToBackActive = false;
 
@@ -168,6 +171,8 @@ class TetrisGame {
     _canHold = true;
     score = 0;
     lines = 0;
+    time = 0;
+    won = false;
     level = startLevel;
     _combo = -1;
     _backToBackActive = false;
@@ -193,9 +198,32 @@ class TetrisGame {
     _bag = PieceBag(s);
     _powerRandom = Random(s);
     _reset();
+    if (this.mode == GameMode.dig) _fillGarbage(Random(s));
     status = GameStatus.playing;
     _spawn(_bag.next());
   }
+
+  /// "Kazı": [GameMode.digRows] grey rows at the bottom, one hole each. The
+  /// hole mostly moves from row to row, so each row needs its own piece.
+  void _fillGarbage(Random rng) {
+    var hole = rng.nextInt(width);
+    for (var i = 0; i < GameMode.digRows; i++) {
+      if (i > 0 && rng.nextDouble() < 0.75) hole = (hole + 1 + rng.nextInt(width - 1)) % width;
+      _board[height - 1 - i] = [for (var x = 0; x < width; x++) x == hole ? null : PieceType.mono];
+    }
+  }
+
+  /// Garbage rows still on the board ("Kazı").
+  int get garbageLeft => _board.where((row) => row.contains(PieceType.mono)).length;
+
+  /// Lines still to clear in "Hız Koşusu".
+  int get sprintLinesLeft => max(0, GameMode.sprintLines - lines);
+
+  /// Seconds left in "3 Dakika".
+  double get ultraTimeLeft => max(0, GameMode.ultraSeconds - time);
+
+  /// Whether the run ended by reaching its goal.
+  bool won = false;
 
   /// Abandons the current game and returns to the menu state.
   void abandon() {
@@ -227,6 +255,7 @@ class TetrisGame {
       'powers': {for (final e in _powers.entries) e.key.name: e.value},
       'powerQueue': [for (final p in _powerQueue) p.name],
       'slowMotion': _slowMotion,
+      'time': time,
       'clearing': status == GameStatus.clearing ? _clearingRows : null,
     };
   }
@@ -263,6 +292,7 @@ class TetrisGame {
     }
     _powerQueue.addAll([for (final p in (save['powerQueue'] as List? ?? const [])) PowerType.values.byName(p as String)]);
     _slowMotion = (save['slowMotion'] as num? ?? 0).toDouble();
+    time = (save['time'] as num? ?? 0).toDouble();
     final clearing = save['clearing'] as List?;
     if (clearing != null && clearing.isNotEmpty) {
       _clearingRows = clearing.cast<int>();
@@ -284,6 +314,12 @@ class TetrisGame {
 
   void update(double dt) {
     if (!isRunning) return;
+    time += dt;
+    if (mode == GameMode.ultra && time >= GameMode.ultraSeconds) {
+      time = GameMode.ultraSeconds;
+      _finish();
+      return;
+    }
 
     if (status == GameStatus.clearing) {
       _clearTimer -= dt;
@@ -763,6 +799,10 @@ class TetrisGame {
     status = GameStatus.playing;
     _events.add(RowsCollapsed(rows));
     _canHold = true;
+    if ((mode == GameMode.sprint && lines >= GameMode.sprintLines) || (mode == GameMode.dig && garbageLeft == 0)) {
+      _finish();
+      return;
+    }
     _spawnNext();
   }
 
@@ -770,6 +810,15 @@ class TetrisGame {
     status = GameStatus.over;
     _softDrop = false;
     _events.add(const GameOver());
+  }
+
+  /// A challenge reached its goal.
+  void _finish() {
+    status = GameStatus.over;
+    won = true;
+    _active = null;
+    _softDrop = false;
+    _events.add(const GameOver(won: true));
   }
 
   // ---------------------------------------------------------------- testing

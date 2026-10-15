@@ -38,6 +38,8 @@ class Settings extends ChangeNotifier {
           defaultTargetPlatform == TargetPlatform.linux ||
           defaultTargetPlatform == TargetPlatform.macOS);
   final Map<GameMode, int> _best = {for (final m in GameMode.values) m: 0};
+  final Map<GameMode, double> _bestTime = {};
+  final Map<String, int> _dailyStars = {};
   int _gamesPlayed = 0;
   int _totalLines = 0;
   int _totalSeconds = 0;
@@ -72,6 +74,13 @@ class Settings extends ChangeNotifier {
       s._savedBlocks = prefs.getString('savedBlocks');
       for (final m in GameMode.values) {
         s._best[m] = prefs.getInt('best_${m.name}') ?? 0;
+        final time = prefs.getDouble('bestTime_${m.name}');
+        if (time != null) s._bestTime[m] = time;
+      }
+      for (final entry in (prefs.getString('dailyStars') ?? '').split(',')) {
+        final parts = entry.split(':');
+        final stars = parts.length == 2 ? int.tryParse(parts[1]) : null;
+        if (stars != null) s._dailyStars[parts[0]] = stars;
       }
       // Scores from the first test builds were stored without a mode.
       final legacy = prefs.getInt('bestScore');
@@ -159,6 +168,41 @@ class Settings extends ChangeNotifier {
 
   int bestScore(GameMode mode) => _best[mode]!;
 
+  /// Fastest finish of a timed challenge ("Hız Koşusu", "Kazı"), if any.
+  double? bestTime(GameMode mode) => _bestTime[mode];
+
+  // ------------------------------------------------------------ daily puzzle
+
+  /// Key of a calendar day, like "2026-10-15".
+  static String dayKey(DateTime day) =>
+      '${day.year.toString().padLeft(4, '0')}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+
+  /// Stars earned on the daily puzzle of [day] (0 = not solved).
+  int dailyStars(DateTime day) => _dailyStars[dayKey(day)] ?? 0;
+
+  /// Days in a row with a solved daily puzzle, counting back from [today]
+  /// (or from yesterday while today's is still open).
+  int dailyStreak(DateTime today) {
+    var day = DateTime(today.year, today.month, today.day);
+    if (dailyStars(day) == 0) day = day.subtract(const Duration(days: 1));
+    var streak = 0;
+    while (dailyStars(day) > 0) {
+      streak++;
+      day = DateTime(day.year, day.month, day.day - 1);
+    }
+    return streak;
+  }
+
+  /// Saves a solved daily puzzle, keeping the best star count.
+  void recordDaily(DateTime day, int stars) {
+    final key = dayKey(day);
+    if (stars <= (_dailyStars[key] ?? 0)) return;
+    _set(
+      () => _dailyStars[key] = stars,
+      () => _prefs?.setString('dailyStars', _dailyStars.entries.map((e) => '${e.key}:${e.value}').join(',')),
+    );
+  }
+
   // ------------------------------------------------------------ bulmaca küpler
 
   /// Best endless score of Bulmaca Küpler.
@@ -223,19 +267,20 @@ class Settings extends ChangeNotifier {
     applyVisualTheme(v);
   }, () => _prefs?.setString('visualTheme', v.name));
 
-  /// Records a finished game. Returns true when [score] is a new best for
-  /// [mode].
-  bool recordGame({required GameMode mode, required int score, required int lines, required double seconds}) {
-    final record = score > _best[mode]!;
+  /// Records a finished game. Returns true when it is a new best for [mode]:
+  /// the highest score, or for timed challenges the fastest [won] run.
+  bool recordGame({required GameMode mode, required int score, required int lines, required double seconds, bool won = false}) {
+    final bestTime = _bestTime[mode];
+    final record = mode.recordsTime ? won && (bestTime == null || seconds < bestTime) : score > _best[mode]!;
     _set(
       () {
-        if (record) _best[mode] = score;
+        if (record) mode.recordsTime ? _bestTime[mode] = seconds : _best[mode] = score;
         _gamesPlayed++;
         _totalLines += lines;
         _totalSeconds += seconds.round();
       },
       () {
-        if (record) _prefs?.setInt('best_${mode.name}', score);
+        if (record) mode.recordsTime ? _prefs?.setDouble('bestTime_${mode.name}', seconds) : _prefs?.setInt('best_${mode.name}', score);
         _prefs?.setInt('gamesPlayed', _gamesPlayed);
         _prefs?.setInt('totalLines', _totalLines);
         _prefs?.setInt('totalSeconds', _totalSeconds);

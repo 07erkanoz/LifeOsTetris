@@ -97,7 +97,11 @@ class LevelUp extends GameEvent {
 }
 
 class GameOver extends GameEvent {
-  const GameOver();
+  const GameOver({this.won = false});
+
+  /// A challenge reached its goal (lines, time or the last garbage row)
+  /// instead of the stack topping out.
+  final bool won;
 }
 
 // ------------------------------------------------------------ powers

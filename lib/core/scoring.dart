@@ -12,10 +12,29 @@ enum GameMode {
   relaxed,
 
   /// "Süper Küpler": classic speed plus the energy bar and power-ups.
-  superMode;
+  superMode,
+
+  /// "Hız Koşusu": clear [sprintLines] lines as fast as possible.
+  sprint,
+
+  /// "3 Dakika": the best score in [ultraSeconds] seconds.
+  ultra,
+
+  /// "Kazı": dig through [digRows] rows of garbage as fast as possible.
+  dig;
+
+  static const int sprintLines = 40;
+  static const double ultraSeconds = 180;
+  static const int digRows = 10;
 
   bool get hasPowers => this == GameMode.superMode;
-  bool get speedsUp => this == GameMode.classic || this == GameMode.superMode;
+  bool get speedsUp => this != GameMode.relaxed;
+
+  /// Short goal-driven runs, listed apart from the endless modes.
+  bool get isChallenge => this == GameMode.sprint || this == GameMode.ultra || this == GameMode.dig;
+
+  /// The record is the fastest finish (lower is better), not the score.
+  bool get recordsTime => this == GameMode.sprint || this == GameMode.dig;
 }
 
 /// Level at which classic mode reaches its top speed.

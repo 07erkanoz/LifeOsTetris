@@ -203,7 +203,7 @@ class AudioService {
     _musicOn = on;
     if (!on) {
       _music?.pause().catchError((_) {});
-    } else if (_musicStarted) {
+    } else if (_musicStarted && !_inBackground) {
       final player = _music;
       if (player == null) return;
       if (player.state == PlayerState.completed) {
@@ -214,6 +214,22 @@ class AudioService {
       }
     }
   }
+
+  bool _inBackground = false;
+
+  /// The app left the screen (home button, app switcher, screen off) or came
+  /// back: the music stops meanwhile and picks up where it was.
+  set inBackground(bool value) {
+    if (value == _inBackground) return;
+    _inBackground = value;
+    if (value) {
+      _music?.pause().catchError((_) {});
+    } else if (_musicOn) {
+      musicOn = true;
+    }
+  }
+
+  bool get inBackground => _inBackground;
 
   set musicVolume(double v) {
     _musicVolume = v;
@@ -261,7 +277,7 @@ class AudioService {
 
   Future<void> _playNext() async {
     final player = _music;
-    if (player == null) return;
+    if (player == null || _inBackground) return;
     try {
       final source = AssetSource(tracks[nextTrackIndex()]);
       if (_musicOn) {

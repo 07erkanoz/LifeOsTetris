@@ -323,11 +323,34 @@ class _Stat extends StatelessWidget {
   }
 }
 
+/// What the score card shows: the score, or the clock of a timed
+/// challenge, and two small stats below it.
+({String label, String? value, List<(String, String)> stats}) _hudFor(GameController c, AppStrings s) {
+  final g = c.game;
+  return switch (c.mode) {
+    GameMode.sprint => (
+      label: s.timeLabel,
+      value: s.clock(g.time),
+      stats: [(s.leftLabel, '${g.sprintLinesLeft}'), (s.levelLabel, '${g.level}')],
+    ),
+    GameMode.ultra => (
+      label: s.scoreLabel,
+      value: null,
+      stats: [(s.timeLabel, s.clock(g.ultraTimeLeft, tenths: false)), (s.linesLabel, '${g.lines}')],
+    ),
+    GameMode.dig => (label: s.timeLabel, value: s.clock(g.time), stats: [(s.leftLabel, '${g.garbageLeft}'), (s.linesLabel, '${g.lines}')]),
+    _ => (label: s.scoreLabel, value: null, stats: [(s.levelLabel, '${g.level}'), (s.linesLabel, '${g.lines}')]),
+  };
+}
+
 class _ScoreText extends StatelessWidget {
-  const _ScoreText({required this.c, required this.size});
+  const _ScoreText({required this.c, required this.size, this.text});
 
   final GameController c;
   final double size;
+
+  /// Shown instead of the score (a challenge clock).
+  final String? text;
 
   @override
   Widget build(BuildContext context) => Transform.scale(
@@ -337,7 +360,7 @@ class _ScoreText extends StatelessWidget {
       fit: BoxFit.scaleDown,
       alignment: Alignment.centerLeft,
       child: Text(
-        AppStrings.of(context).score(c.game.score),
+        text ?? AppStrings.of(context).score(c.game.score),
         style: TextStyle(
           fontSize: size,
           height: 1.05,
@@ -410,6 +433,7 @@ class _PhoneLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = c.settings;
     final s = AppStrings.of(context);
+    final hud = _hudFor(c, s);
     // One HUD row (no logo row): every pixel saved goes to the board.
     return Column(
       children: [
@@ -433,15 +457,15 @@ class _PhoneLayout extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        CardLabel(s.scoreLabel),
-                        _ScoreText(c: c, size: 24),
+                        CardLabel(hud.label),
+                        _ScoreText(c: c, size: 24, text: hud.value),
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Row(
                             children: [
-                              _Stat(s.levelLabel, '${c.game.level}'),
+                              _Stat(hud.stats[0].$1, hud.stats[0].$2),
                               const SizedBox(width: 12),
-                              _Stat(s.linesLabel, '${c.game.lines}'),
+                              _Stat(hud.stats[1].$1, hud.stats[1].$2),
                             ],
                           ),
                         ),
@@ -519,6 +543,7 @@ class _LandscapeLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final settings = c.settings;
     final s = AppStrings.of(context);
+    final hud = _hudFor(c, s);
     final p = GamePalette.of(context);
     final brightness = Theme.of(context).brightness;
     return LayoutBuilder(
@@ -555,15 +580,15 @@ class _LandscapeLayout extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            CardLabel(s.scoreLabel),
-                            _ScoreText(c: c, size: 21),
+                            CardLabel(hud.label),
+                            _ScoreText(c: c, size: 21, text: hud.value),
                             FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Row(
                                 children: [
-                                  _Stat(s.levelLabel, '${c.game.level}'),
+                                  _Stat(hud.stats[0].$1, hud.stats[0].$2),
                                   const SizedBox(width: 10),
-                                  _Stat(s.linesLabel, '${c.game.lines}'),
+                                  _Stat(hud.stats[1].$1, hud.stats[1].$2),
                                 ],
                               ),
                             ),
@@ -677,6 +702,7 @@ class _DesktopLayout extends StatelessWidget {
     final game = c.game;
     final settings = c.settings;
     final s = AppStrings.of(context);
+    final hud = _hudFor(c, s);
 
     TextStyle k() => TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: p.muted);
     Widget stat(String label, String value, {bool accent = false}) => Padding(
@@ -733,14 +759,20 @@ class _DesktopLayout extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        CardLabel(s.scoreLabel),
+                        CardLabel(hud.label),
                         const SizedBox(height: 4),
-                        _ScoreText(c: c, size: 38),
+                        _ScoreText(c: c, size: 38, text: hud.value),
                         const SizedBox(height: 8),
-                        stat(s.level, '${game.level}'),
-                        stat(s.lines, '${game.lines}'),
-                        stat(s.time, formatTime(c.playTime)),
-                        stat(s.best, s.score(settings.bestScore(c.mode)), accent: true),
+                        if (c.mode.isChallenge)
+                          for (final (label, value) in hud.stats) stat(label, value)
+                        else ...[stat(s.level, '${game.level}'), stat(s.lines, '${game.lines}'), stat(s.time, formatTime(c.playTime))],
+                        stat(
+                          s.best,
+                          c.mode.recordsTime
+                              ? (settings.bestTime(c.mode) == null ? '—' : s.clock(settings.bestTime(c.mode)!))
+                              : s.score(settings.bestScore(c.mode)),
+                          accent: true,
+                        ),
                         stat(s.mode, s.modeName(c.mode)),
                       ],
                     ),
@@ -1108,6 +1140,11 @@ class _StartOverlay extends StatelessWidget {
         ),
         const SizedBox(height: 16),
       ],
+      DailyPuzzleButton(
+        settings: c.settings,
+        onTap: () => BlocksScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics, daily: true),
+      ),
+      const SizedBox(height: 12),
       superButton,
       const SizedBox(height: 12),
       GradientButton(
@@ -1143,6 +1180,19 @@ class _StartOverlay extends StatelessWidget {
               onTap: () => c.start(GameMode.relaxed),
             ),
           ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      Center(child: CardLabel(s.challengesLabel)),
+      const SizedBox(height: 8),
+      Row(
+        children: [
+          for (final (i, mode) in const [GameMode.sprint, GameMode.ultra, GameMode.dig].indexed) ...[
+            if (i > 0) const SizedBox(width: 8),
+            Expanded(
+              child: _ChallengeTile(c: c, mode: mode),
+            ),
+          ],
         ],
       ),
     ];
@@ -1284,6 +1334,71 @@ class _ThemeSheet extends StatelessWidget {
   }
 }
 
+/// A small card for one challenge mode with its record.
+class _ChallengeTile extends StatelessWidget {
+  const _ChallengeTile({required this.c, required this.mode});
+
+  final GameController c;
+  final GameMode mode;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = GamePalette.of(context);
+    final s = AppStrings.of(context);
+    final best = mode.recordsTime
+        ? (c.settings.bestTime(mode) == null ? null : s.clock(c.settings.bestTime(mode)!))
+        : (c.settings.bestScore(mode) > 0 ? s.score(c.settings.bestScore(mode)) : null);
+    final (icon, tone) = switch (mode) {
+      GameMode.sprint => (Icons.speed_rounded, blockColors[PieceType.i]!),
+      GameMode.ultra => (Icons.timer_rounded, blockColors[PieceType.l]!),
+      _ => (Icons.layers_rounded, blockColors[PieceType.s]!),
+    };
+    return Tooltip(
+      message: switch (mode) {
+        GameMode.sprint => s.sprintSubtitle,
+        GameMode.ultra => s.ultraSubtitle,
+        _ => s.digSubtitle,
+      },
+      child: GestureDetector(
+        key: ValueKey('start-${mode.name}'),
+        onTap: () => c.start(mode),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(6, 10, 6, 9),
+          decoration: p.flat
+              ? flatCardDecoration(p, radius: 16, fill: p.keyFace, depth: 4)
+              : BoxDecoration(
+                  color: p.glass,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: p.glassBorder, width: 1.5),
+                ),
+          child: Column(
+            children: [
+              GameIcon(icon, size: 24, color: tone),
+              const SizedBox(height: 4),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  s.modeName(mode),
+                  maxLines: 1,
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: p.text),
+                ),
+              ),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  best ?? '—',
+                  maxLines: 1,
+                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: p.muted),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PauseOverlay extends StatelessWidget {
   const _PauseOverlay({super.key, required this.c});
 
@@ -1375,11 +1490,20 @@ class _GameOverOverlay extends StatelessWidget {
         ],
       ),
     );
+    // Timed challenges: the result is the clock (or "not finished").
+    final timed = c.mode.recordsTime;
+    final title = switch (c.mode) {
+      _ when !c.mode.isChallenge => s.gameOver,
+      GameMode.ultra => s.timeUp,
+      _ => game.won ? s.challengeDone : s.challengeFailed,
+    };
+    final bestTime = c.settings.bestTime(c.mode);
     return _OverlayShell(
       landscapeTail: 4,
       children: [
+        if (c.mode.isChallenge) ...[Center(child: CardLabel(s.modeName(c.mode).toUpperCase())), const SizedBox(height: 6)],
         Text(
-          s.gameOver,
+          title,
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: p.text),
         ),
@@ -1394,15 +1518,32 @@ class _GameOverOverlay extends StatelessWidget {
           ),
         const SizedBox(height: 6),
         Center(
-          child: GradientText(s.score(game.score), style: const TextStyle(fontSize: 46, fontWeight: FontWeight.w900)),
+          child: GradientText(
+            // A timed run that did not finish shows how far it got.
+            timed
+                ? (game.won
+                      ? s.clock(game.time)
+                      : c.mode == GameMode.dig
+                      ? '${GameMode.digRows - game.garbageLeft}/${GameMode.digRows}'
+                      : '${game.lines}/${GameMode.sprintLines}')
+                : s.score(game.score),
+            style: const TextStyle(fontSize: 46, fontWeight: FontWeight.w900),
+          ),
         ),
         const SizedBox(height: 14),
         Row(
-          children: [stat(s.levelLabel, '${game.level}'), stat(s.linesLabel, '${game.lines}'), stat(s.timeLabel, formatTime(c.playTime))],
+          children: switch (c.mode) {
+            GameMode.sprint => [stat(s.timeLabel, s.clock(game.time)), stat(s.scoreLabel, s.score(game.score))],
+            GameMode.dig => [stat(s.timeLabel, s.clock(game.time)), stat(s.linesLabel, '${game.lines}')],
+            GameMode.ultra => [stat(s.levelLabel, '${game.level}'), stat(s.linesLabel, '${game.lines}')],
+            _ => [stat(s.levelLabel, '${game.level}'), stat(s.linesLabel, '${game.lines}'), stat(s.timeLabel, formatTime(c.playTime))],
+          },
         ),
         const SizedBox(height: 10),
         Text(
-          '${s.bestPrefix}${s.score(c.settings.bestScore(c.mode))}',
+          timed
+              ? (bestTime == null ? '' : '${s.bestTimePrefix}${s.clock(bestTime)}')
+              : '${s.bestPrefix}${s.score(c.settings.bestScore(c.mode))}',
           textAlign: TextAlign.center,
           style: TextStyle(color: p.muted, fontWeight: FontWeight.w600),
         ),
