@@ -28,25 +28,41 @@ const _puzzleColors = [Color(0xFF14B8A6), Color(0xFF22C55E), Color(0xFFEAB308)];
 
 /// "Bulmaca Küpler": drag-and-drop block puzzle with 100 levels and an
 /// endless mode. Opened from the main menu as its own screen.
+///
+/// [BlocksEntry] picks where it opens.
+enum BlocksEntry {
+  /// The Bulmaca Küpler menu.
+  menu,
+
+  /// Today's daily puzzle.
+  daily,
+
+  /// The next unsolved level.
+  levels,
+
+  /// A new endless game.
+  endless,
+}
+
 class BlocksScreen extends StatefulWidget {
-  const BlocksScreen({super.key, required this.settings, required this.audio, this.haptics, this.daily = false});
+  const BlocksScreen({super.key, required this.settings, required this.audio, this.haptics, this.entry = BlocksEntry.menu});
 
   final Settings settings;
   final AudioService audio;
   final Haptics? haptics;
 
-  /// Opens straight into today's daily puzzle.
-  final bool daily;
+  /// Where the screen opens: its own menu, or straight into a game.
+  final BlocksEntry entry;
 
   static Future<void> open(
     BuildContext context, {
     required Settings settings,
     required AudioService audio,
     Haptics? haptics,
-    bool daily = false,
+    BlocksEntry entry = BlocksEntry.menu,
   }) => Navigator.of(context).push(
     PageRouteBuilder<void>(
-      pageBuilder: (_, _, _) => BlocksScreen(settings: settings, audio: audio, haptics: haptics, daily: daily),
+      pageBuilder: (_, _, _) => BlocksScreen(settings: settings, audio: audio, haptics: haptics, entry: entry),
       transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
     ),
   );
@@ -68,7 +84,17 @@ class _BlocksScreenState extends State<BlocksScreen> with SingleTickerProviderSt
     _ticker.start();
     // The square board works sideways too.
     OrientationLock.any();
-    if (widget.daily) c.startDaily();
+    switch (widget.entry) {
+      case BlocksEntry.menu:
+        break;
+      case BlocksEntry.daily:
+        c.startDaily();
+      case BlocksEntry.levels:
+        final next = widget.settings.unlockedBlockLevel;
+        next > BlockLevels.count ? c.openLevels() : c.startLevel(next);
+      case BlocksEntry.endless:
+        c.startEndless();
+    }
   }
 
   @override
@@ -1218,7 +1244,7 @@ class DailyPuzzleButton extends StatelessWidget {
       label: s.dailyTitle,
       subtitle: parts.join(' · '),
       icon: Icons.calendar_today_rounded,
-      colors: stars > 0 ? null : const [Color(0xFFFDE047), Color(0xFFF97316)],
+      colors: stars > 0 ? null : const [Color(0xFF14B8A6), Color(0xFF22C55E)],
       secondary: stars > 0,
       onTap: onTap,
     );

@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 
 import '../audio/audio_service.dart';
 import '../audio/haptics.dart';
+import '../core/blocks/level_generator.dart';
 import '../core/tetris_game.dart';
 import '../game/blocks/blocks_controller.dart';
 import '../game/game_controller.dart';
@@ -28,6 +29,8 @@ import 'board_view.dart';
 import 'power_bar.dart';
 import 'theme_picker.dart';
 import 'widgets.dart';
+
+part 'home_menu.dart';
 
 String formatTime(double seconds) {
   final s = seconds.floor();
@@ -1081,206 +1084,6 @@ class _OverlayShell extends StatelessWidget {
   }
 }
 
-class _StartOverlay extends StatelessWidget {
-  const _StartOverlay({super.key, required this.c});
-
-  final GameController c;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = GamePalette.of(context);
-    final s = AppStrings.of(context);
-    final touch = Theme.of(context).platform == TargetPlatform.android || Theme.of(context).platform == TargetPlatform.iOS;
-    final superButton = Stack(
-      clipBehavior: Clip.none,
-      children: [
-        SizedBox(
-          width: double.infinity,
-          child: GradientButton(
-            key: const ValueKey('start-super'),
-            label: s.superTitle,
-            subtitle: s.superSubtitle,
-            icon: Icons.auto_awesome_rounded,
-            colors: const [Color(0xFFA855F7), Color(0xFF6366F1), Color(0xFF38BDF8)],
-            onTap: () => c.start(GameMode.superMode),
-          ),
-        ),
-        Positioned(
-          top: -9,
-          right: 14,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-            decoration: p.flat
-                ? flatCardDecoration(p, radius: 12, fill: p.accent1, depth: 2)
-                : BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    gradient: const LinearGradient(colors: [Color(0xFFFDE047), Color(0xFFF97316)]),
-                    boxShadow: const [BoxShadow(color: Color(0x66F97316), blurRadius: 10)],
-                  ),
-            child: Text(
-              s.newBadge,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-                color: p.flat ? p.ink : const Color(0xFF3B1D00),
-                letterSpacing: 1,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-    final saved = c.savedSummary;
-    final modes = <Widget>[
-      if (saved != null) ...[
-        GradientButton(
-          key: const ValueKey('resume-game'),
-          label: s.resumeGame,
-          subtitle: s.resumeSummary(s.modeName(saved.mode), saved.score, saved.level),
-          icon: Icons.play_arrow_rounded,
-          onTap: c.resume,
-        ),
-        const SizedBox(height: 16),
-      ],
-      DailyPuzzleButton(
-        settings: c.settings,
-        onTap: () => BlocksScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics, daily: true),
-      ),
-      const SizedBox(height: 12),
-      superButton,
-      const SizedBox(height: 12),
-      GradientButton(
-        key: const ValueKey('start-puzzle'),
-        label: s.puzzleTitle,
-        subtitle: s.puzzleSubtitle,
-        icon: Icons.extension_rounded,
-        colors: const [Color(0xFF14B8A6), Color(0xFF22C55E), Color(0xFFEAB308)],
-        onTap: () => BlocksScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics),
-      ),
-      const SizedBox(height: 16),
-      Center(child: CardLabel(s.classicTitle.toUpperCase())),
-      const SizedBox(height: 8),
-      Row(
-        children: [
-          Expanded(
-            child: GradientButton(
-              key: const ValueKey('start-classic'),
-              label: s.normal,
-              subtitle: s.normalSubtitle,
-              icon: Icons.bolt_rounded,
-              secondary: true,
-              onTap: () => c.start(GameMode.classic),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: GradientButton(
-              label: s.relaxed,
-              subtitle: s.relaxedShort,
-              icon: Icons.spa_rounded,
-              secondary: true,
-              onTap: () => c.start(GameMode.relaxed),
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 16),
-      Center(child: CardLabel(s.challengesLabel)),
-      const SizedBox(height: 8),
-      Row(
-        children: [
-          for (final (i, mode) in const [GameMode.sprint, GameMode.ultra, GameMode.dig].indexed) ...[
-            if (i > 0) const SizedBox(width: 8),
-            Expanded(
-              child: _ChallengeTile(c: c, mode: mode),
-            ),
-          ],
-        ],
-      ),
-    ];
-    final best = c.settings.topScore > 0
-        ? Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const GameIcon(Icons.emoji_events_rounded, color: Color(0xFFFACC15), size: 20),
-              const SizedBox(width: 6),
-              Text(
-                s.bestPrefix,
-                style: TextStyle(color: p.muted, fontWeight: FontWeight.w600),
-              ),
-              GradientText(s.score(c.settings.topScore), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-            ],
-          )
-        : null;
-    final brand = <Widget>[
-      const Center(
-        child: FittedBox(fit: BoxFit.scaleDown, child: LogoTitle(fontSize: 32)),
-      ),
-      const SizedBox(height: 8),
-      Text(
-        s.tagline,
-        textAlign: TextAlign.center,
-        style: TextStyle(fontSize: 14, color: p.muted, fontWeight: FontWeight.w600),
-      ),
-      if (best != null) ...[const SizedBox(height: 14), best],
-    ];
-    final footer = <Widget>[
-      Text(
-        touch ? s.touchHint : s.keyboardHint,
-        textAlign: TextAlign.center,
-        style: TextStyle(fontSize: 12, color: p.label, fontWeight: FontWeight.w600, height: 1.5),
-      ),
-      const SizedBox(height: 14),
-      LanguageSegment(isTurkish: s.isTurkish, onChanged: (tr) => c.settings.language = tr ? AppLanguage.tr : AppLanguage.en),
-      const SizedBox(height: 4),
-      Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          TextButton.icon(
-            key: const ValueKey('open-themes'),
-            onPressed: () => _ThemeSheet.open(context, c.settings),
-            icon: GameIcon(Icons.palette_rounded, size: 16, color: p.muted),
-            label: Text(
-              s.themeLabel,
-              style: TextStyle(color: p.muted, fontSize: 13, fontWeight: FontWeight.w600),
-            ),
-          ),
-          const SizedBox(width: 8),
-          TextButton.icon(
-            onPressed: () => AboutPage.open(context, c.settings),
-            icon: GameIcon(Icons.info_outline_rounded, size: 16, color: p.muted),
-            label: Text(
-              s.about,
-              style: TextStyle(color: p.muted, fontSize: 13, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    ];
-    // Phones held sideways: brand and settings on the left, modes on the right.
-    if (_isShortLandscape(context)) {
-      return _OverlayShell(
-        maxWidth: 780,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [...brand, const SizedBox(height: 14), ...footer]),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: modes),
-              ),
-            ],
-          ),
-        ],
-      );
-    }
-    return _OverlayShell(children: [...brand, const SizedBox(height: 18), ...modes, const SizedBox(height: 18), ...footer]);
-  }
-}
-
 /// Theme cards and the light / dark switch in a small dialog, opened from
 /// the start menu.
 class _ThemeSheet extends StatelessWidget {
@@ -1329,71 +1132,6 @@ class _ThemeSheet extends StatelessWidget {
                 ],
               ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// A small card for one challenge mode with its record.
-class _ChallengeTile extends StatelessWidget {
-  const _ChallengeTile({required this.c, required this.mode});
-
-  final GameController c;
-  final GameMode mode;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = GamePalette.of(context);
-    final s = AppStrings.of(context);
-    final best = mode.recordsTime
-        ? (c.settings.bestTime(mode) == null ? null : s.clock(c.settings.bestTime(mode)!))
-        : (c.settings.bestScore(mode) > 0 ? s.score(c.settings.bestScore(mode)) : null);
-    final (icon, tone) = switch (mode) {
-      GameMode.sprint => (Icons.speed_rounded, blockColors[PieceType.i]!),
-      GameMode.ultra => (Icons.timer_rounded, blockColors[PieceType.l]!),
-      _ => (Icons.layers_rounded, blockColors[PieceType.s]!),
-    };
-    return Tooltip(
-      message: switch (mode) {
-        GameMode.sprint => s.sprintSubtitle,
-        GameMode.ultra => s.ultraSubtitle,
-        _ => s.digSubtitle,
-      },
-      child: GestureDetector(
-        key: ValueKey('start-${mode.name}'),
-        onTap: () => c.start(mode),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(6, 10, 6, 9),
-          decoration: p.flat
-              ? flatCardDecoration(p, radius: 16, fill: p.keyFace, depth: 4)
-              : BoxDecoration(
-                  color: p.glass,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: p.glassBorder, width: 1.5),
-                ),
-          child: Column(
-            children: [
-              GameIcon(icon, size: 24, color: tone),
-              const SizedBox(height: 4),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  s.modeName(mode),
-                  maxLines: 1,
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: p.text),
-                ),
-              ),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  best ?? '—',
-                  maxLines: 1,
-                  style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: p.muted),
-                ),
-              ),
-            ],
           ),
         ),
       ),

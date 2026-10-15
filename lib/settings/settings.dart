@@ -27,6 +27,7 @@ class Settings extends ChangeNotifier {
   double _vibrationStrength = 0.5;
   bool _highRefreshRate = _desktop;
   VisualTheme _visualTheme = VisualTheme.initial;
+  String? _lastPlay;
   String? _savedGame;
   String? _savedBlocks;
 
@@ -71,6 +72,7 @@ class Settings extends ChangeNotifier {
       s._vibrationStrength = prefs.getDouble('vibrationStrength') ?? 0.5;
       s._highRefreshRate = prefs.getBool('highRefreshRate') ?? _desktop;
       s._visualTheme = VisualTheme.parse(prefs.getString('visualTheme'));
+      s._lastPlay = prefs.getString('lastPlay');
       s._savedGame = prefs.getString('savedGame');
       s._savedBlocks = prefs.getString('savedBlocks');
       for (final m in GameMode.values) {
@@ -121,6 +123,10 @@ class Settings extends ChangeNotifier {
 
   /// The look of the game (blocks, cards, keys, icons and type).
   VisualTheme get visualTheme => _visualTheme;
+
+  /// Mode the big play button starts (a name from the home menu's list).
+  String? get lastPlay => _lastPlay;
+  set lastPlay(String? v) => _set(() => _lastPlay = v, () => v == null ? _prefs?.remove('lastPlay') : _prefs?.setString('lastPlay', v));
 
   /// Klasik / Süper Küpler game in progress (JSON), to continue later.
   String? get savedGame => _savedGame;

@@ -9,6 +9,7 @@ import '../theme/palette.dart';
 /// skin) and as 9×9 pixel art (pixel skin); the glass skin keeps Material
 /// icons.
 enum GameIconKind {
+  gear,
   calendar,
   palette,
   back,
@@ -53,6 +54,7 @@ enum GameIconKind {
 }
 
 final Map<IconData, GameIconKind> _byMaterial = {
+  Icons.settings_rounded: GameIconKind.gear,
   Icons.calendar_today_rounded: GameIconKind.calendar,
   Icons.palette_rounded: GameIconKind.palette,
   Icons.arrow_back_rounded: GameIconKind.back,
@@ -157,6 +159,7 @@ void paintPixelArt(Canvas canvas, double size, List<String> rows, Color color) {
 const _slash = ['#........', '.#.......', '..#......', '...#.....', '....#....', '.....#...', '......#..', '.......#.', '........#'];
 
 const Map<GameIconKind, List<String>> _pixelIcons = {
+  GameIconKind.gear: ['...#.#...', '.#######.', '.##...##.', '##.....##', '.#.....#.', '##.....##', '.##...##.', '.#######.', '...#.#...'],
   GameIconKind.calendar: [
     '.#.....#.',
     '#########',
@@ -426,6 +429,19 @@ void paintToyIcon(Canvas canvas, double size, GameIconKind kind, Color color) {
   }
 
   switch (kind) {
+    case GameIconKind.gear:
+      final teeth = Path();
+      for (var i = 0; i < 8; i++) {
+        final a = i * pi / 4;
+        final c = o(12 + cos(a) * 8.6, 12 + sin(a) * 8.6);
+        teeth.addRect(Rect.fromCenter(center: c, width: 4.2 * k, height: 4.2 * k));
+      }
+      final gear = Path.combine(
+        PathOperation.difference,
+        Path.combine(PathOperation.union, Path()..addOval(Rect.fromCircle(center: o(12, 12), radius: 7.6 * k)), teeth),
+        Path()..addOval(Rect.fromCircle(center: o(12, 12), radius: 3 * k)),
+      );
+      canvas.drawPath(gear, fill);
     case GameIconKind.calendar:
       canvas.drawRRect(rr(3, 4.5, 21, 21, 3), stroke..strokeWidth = 2.4 * k);
       canvas.drawRRect(rr(3, 4.5, 21, 9.5, 3), fill);
@@ -607,7 +623,8 @@ void paintToyIcon(Canvas canvas, double size, GameIconKind kind, Color color) {
         Path()..addOval(Rect.fromCircle(center: o(16.5, 16), radius: 3 * k)),
       );
       canvas.drawPath(board, fill);
-      final hole = Paint()..color = Color.lerp(color, Colors.black, 0.55)!;
+      // Paint wells: darker on a light icon, lighter on a dark one.
+      final hole = Paint()..color = Color.lerp(color, color.computeLuminance() > 0.4 ? Colors.black : Colors.white, 0.55)!;
       for (final (x, y) in [(8.0, 8.5), (12.5, 7.0), (16.8, 9.2), (7.0, 13.5)]) {
         canvas.drawCircle(o(x, y), 1.7 * k, hole);
       }

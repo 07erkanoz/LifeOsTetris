@@ -18,6 +18,21 @@ import 'package:lifeos_kupler/ui/widgets.dart';
 
 Settings settings(WidgetTester tester) => (tester.widget(find.byType(KuplerApp)) as KuplerApp).settings;
 
+/// Opens the modes page from the home screen and picks [name].
+Future<void> startMode(WidgetTester tester, String name) async {
+  await tester.tap(find.byKey(const ValueKey('change-mode')));
+  for (var i = 0; i < 10; i++) {
+    await tester.pump(const Duration(milliseconds: 40));
+  }
+  final card = find.byKey(ValueKey('mode-$name'));
+  await tester.ensureVisible(card);
+  await tester.pump(const Duration(milliseconds: 40));
+  await tester.tap(card);
+  for (var i = 0; i < 10; i++) {
+    await tester.pump(const Duration(milliseconds: 40));
+  }
+}
+
 void main() {
   Future<void> pumpApp(WidgetTester tester, Size size, {AppLanguage language = AppLanguage.tr}) async {
     tester.view.physicalSize = size;
@@ -30,13 +45,13 @@ void main() {
   for (final (name, size) in [('phone', const Size(390, 844)), ('desktop', const Size(1440, 900))]) {
     testWidgets('$name: start a game, play, pause and quit to menu', (tester) async {
       await pumpApp(tester, size);
-      expect(find.byKey(const ValueKey('start-classic')), findsOneWidget);
+      expect(find.byKey(const ValueKey('play')), findsOneWidget);
 
-      await tester.tap(find.byKey(const ValueKey('start-classic')));
+      await startMode(tester, 'normal');
       for (var i = 0; i < 30; i++) {
         await tester.pump(const Duration(milliseconds: 33));
       }
-      expect(find.byKey(const ValueKey('start-classic')), findsNothing);
+      expect(find.byKey(const ValueKey('play')), findsNothing);
       expect(tester.takeException(), isNull);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.space);
@@ -51,7 +66,7 @@ void main() {
 
       await tester.tap(find.text('Menü'));
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.byKey(const ValueKey('start-classic')), findsOneWidget);
+      expect(find.byKey(const ValueKey('play')), findsOneWidget);
     });
   }
 
@@ -73,7 +88,7 @@ void main() {
       await tester.tapAt(const Offset(5, 5));
       await tester.pump(const Duration(milliseconds: 300));
 
-      await tester.tap(find.byKey(const ValueKey('start-classic')));
+      await startMode(tester, 'normal');
       for (var i = 0; i < 20; i++) {
         await tester.pump(const Duration(milliseconds: 33));
       }
@@ -94,7 +109,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.byKey(const ValueKey('resume-game')), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey('start-classic')));
+    await startMode(tester, 'normal');
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 33));
     }
@@ -120,10 +135,8 @@ void main() {
 
   testWidgets('challenge modes start from the menu with their own HUD', (tester) async {
     await pumpApp(tester, const Size(390, 844));
-    expect(find.text('MEYDAN OKUMA'), findsOneWidget);
     for (final (mode, label) in [(GameMode.sprint, 'KALAN'), (GameMode.ultra, 'SÜRE'), (GameMode.dig, 'SATIR')]) {
-      await tester.ensureVisible(find.byKey(ValueKey('start-${mode.name}')));
-      await tester.tap(find.byKey(ValueKey('start-${mode.name}')));
+      await startMode(tester, mode.name);
       for (var i = 0; i < 10; i++) {
         await tester.pump(const Duration(milliseconds: 33));
       }
@@ -147,6 +160,39 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('the play button starts the last mode picked on the modes page', (tester) async {
+    await pumpApp(tester, const Size(390, 844));
+    expect(find.text('Süper Küpler'), findsOneWidget);
+    await startMode(tester, 'relaxed');
+    final c = (tester.state(find.byType(GameScreen)) as dynamic).controller as GameController;
+    expect(c.mode, GameMode.relaxed);
+    expect(settings(tester).lastPlay, 'relaxed');
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyP);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Menü'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Klasik Küpler · Rahat'), findsOneWidget);
+
+    // The modes page closes with its back button too.
+    await tester.tap(find.byKey(const ValueKey('change-mode')));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 40));
+    }
+    await tester.tap(find.byKey(const ValueKey('modes-back')));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 40));
+    }
+    expect(find.byKey(const ValueKey('play')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('play')));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 40));
+    }
+    expect(c.mode, GameMode.relaxed);
+    expect(find.byKey(const ValueKey('play')), findsNothing);
+  });
+
   testWidgets('about page shows the developer', (tester) async {
     await pumpApp(tester, const Size(390, 844));
     await tester.tap(find.text('Hakkında'));
@@ -163,7 +209,12 @@ void main() {
     expect(find.text('Super Blocks'), findsOneWidget);
     expect(find.text('About'), findsOneWidget);
 
+    // The language lives in the settings now.
+    await tester.tap(find.byKey(const ValueKey('open-settings')));
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('Türkçe'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tapAt(const Offset(5, 5));
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Süper Küpler'), findsOneWidget);
     expect(find.text('Hakkında'), findsOneWidget);
@@ -178,7 +229,7 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(KuplerApp(settings: settings, audio: AudioService(enabled: false)));
     await tester.pump(const Duration(milliseconds: 100));
-    await tester.tap(find.byKey(const ValueKey('start-classic')));
+    await startMode(tester, 'normal');
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 33));
     }
@@ -193,7 +244,7 @@ void main() {
 
   testWidgets('Süper Küpler shows the power bar and uses powers with number keys', (tester) async {
     await pumpApp(tester, const Size(390, 844));
-    await tester.tap(find.byKey(const ValueKey('start-super')));
+    await startMode(tester, 'superMode');
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 33));
     }
@@ -218,13 +269,16 @@ void main() {
     addTearDown(tester.view.reset);
     await tester.pumpWidget(KuplerApp(settings: settings, audio: AudioService(enabled: false)));
     await tester.pump(const Duration(milliseconds: 100));
-    await tester.tap(find.byKey(const ValueKey('start-puzzle')));
+    // The Levels card opens the next level; its menu is one step back.
+    await startMode(tester, 'blocksLevels');
+    final state = tester.state(find.byType(BlocksScreen)) as dynamic;
+    final c = state.c as BlocksController;
+    c.openMenu();
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 33));
     }
     expect(find.byKey(const ValueKey('blocks-continue')), findsOneWidget);
-    final state = tester.state(find.byType(BlocksScreen)) as dynamic;
-    return state.c as BlocksController;
+    return c;
   }
 
   testWidgets('Bulmaca Küpler: continue, solve level 1, earn stars, go on', (tester) async {

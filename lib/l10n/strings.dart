@@ -250,6 +250,27 @@ class AppStrings {
     return tenths ? '$base.${((s - s.floor()) * 10).floor()}' : base;
   }
 
+  // ------------------------------------------------------------ home and modes
+
+  String get play => _t('OYNA', 'PLAY');
+  String get changeMode => _t('Modu değiştir', 'Change mode');
+  String get modesTitle => _t('Modlar', 'Modes');
+  String get settingsTitle => _t('Ayarlar', 'Settings');
+  String get comingSoon => _t('YAKINDA', 'SOON');
+  String get superGroup => _t('SÜPER', 'SUPER');
+  String get puzzleGroup => _t('BULMACA', 'PUZZLE');
+  String get levelsCard => _t('Seviyeler', 'Levels');
+  String get levelsCardSubtitle => _t('100 seviye, ★ blokları topla', '100 levels, collect the ★ blocks');
+  String get endlessCardSubtitle => _t('Yer kaldıkça yerleştir', 'Place pieces while there is room');
+  String get adventureTitle => _t('Macera', 'Adventure');
+  String get adventureSubtitle => _t('Bölümleri bitir, resmi tamamla', 'Finish chapters, complete the picture');
+  String get bombTitle => _t('Bomba', 'Bombs');
+  String get bombSubtitle => _t('Patlamadan önce satırını temizle', 'Clear their rows before they blow');
+  String get targetTitle => _t('Hedef', 'Targets');
+  String get targetSubtitle => _t('Yıldızları topla, süre kazan', 'Collect stars to win time');
+  String get chaosTitle => _t('Kaos', 'Chaos');
+  String get chaosSubtitle => _t('Sürprizlerle dolu maraton', 'A marathon full of surprises');
+
   // ------------------------------------------------------------ daily puzzle
 
   String get dailyTitle => _t('Günlük Görev', 'Daily Puzzle');
