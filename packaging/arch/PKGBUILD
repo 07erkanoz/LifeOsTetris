@@ -5,12 +5,12 @@ pkgver=1.0.0
 pkgrel=1
 pkgdesc="LifeOS Küpler: bol efektli blok bulmaca oyunu"
 arch=('x86_64')
-url="https://github.com/07erkanoz/LifeOsTetris"
+url="https://lifeos.com.tr/kupler/"
 license=('LicenseRef-LifeOS-Kupler')
 depends=('gtk3' 'gstreamer' 'gst-plugins-base' 'gst-plugins-good')
 options=('!strip')
 # The test build is replaced on every release, so there is no fixed checksum.
-source=("LifeOS-Kupler-Linux-x64.tar.gz::https://github.com/07erkanoz/LifeOsTetris/releases/download/test-build/LifeOS-Kupler-Linux-x64.tar.gz")
+source=("LifeOS-Kupler-Linux-x64.tar.gz::https://lifeos.com.tr/kupler/indir/LifeOS-Kupler-Linux-x64.tar.gz")
 sha256sums=('SKIP')
 
 package() {

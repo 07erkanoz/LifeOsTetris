@@ -31,7 +31,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="preconnect" href="https://api.github.com">
 <link rel="stylesheet" href="kupler.css">
 
 <script type="application/ld+json">
@@ -206,8 +205,8 @@
         <article class="dl" data-platform="android">
           <h3>Android</h3>
           <p>Linki telefonda aç, APK'yı kur. “Bilinmeyen kaynaklar” izni istenebilir.</p>
-          <a class="btn btn-yellow" data-asset="LifeOS-Kupler-arm64.apk" href="https://github.com/07erkanoz/LifeOsTetris/releases/download/test-build/LifeOS-Kupler-arm64.apk">Modern telefonlar <small class="size"></small></a>
-          <a class="btn btn-ghost" data-asset="LifeOS-Kupler.apk" href="https://github.com/07erkanoz/LifeOsTetris/releases/download/test-build/LifeOS-Kupler.apk">Tüm telefonlar <small class="size"></small></a>
+          <a class="btn btn-yellow" data-asset="LifeOS-Kupler-arm64.apk" href="indir/LifeOS-Kupler-arm64.apk">Modern telefonlar <small class="size"></small></a>
+          <a class="btn btn-ghost" data-asset="LifeOS-Kupler.apk" href="indir/LifeOS-Kupler.apk">Tüm telefonlar <small class="size"></small></a>
         </article>
         <article class="dl" data-platform="ios">
           <h3>iPhone &amp; iPad</h3>
@@ -218,12 +217,12 @@
         <article class="dl" data-platform="windows">
           <h3>Windows</h3>
           <p>Zip'i bir klasöre çıkar, <code>lifeos_kupler.exe</code>'yi çalıştır. SmartScreen uyarırsa <i>Ek bilgi → Yine de çalıştır</i>.</p>
-          <a class="btn btn-yellow" data-asset="LifeOS-Kupler-Windows.zip" href="https://github.com/07erkanoz/LifeOsTetris/releases/download/test-build/LifeOS-Kupler-Windows.zip">Windows için indir <small class="size"></small></a>
+          <a class="btn btn-yellow" data-asset="LifeOS-Kupler-Windows.zip" href="indir/LifeOS-Kupler-Windows.zip">Windows için indir <small class="size"></small></a>
         </article>
         <article class="dl" data-platform="linux">
           <h3>Linux</h3>
-          <p>Arşivi aç, <code>lifeos_kupler</code>'ı çalıştır. Arch için <a href="https://github.com/07erkanoz/LifeOsTetris/tree/main/packaging/arch">PKGBUILD</a> hazır.</p>
-          <a class="btn btn-yellow" data-asset="LifeOS-Kupler-Linux-x64.tar.gz" href="https://github.com/07erkanoz/LifeOsTetris/releases/download/test-build/LifeOS-Kupler-Linux-x64.tar.gz">Linux x64 için indir <small class="size"></small></a>
+          <p>Arşivi aç, <code>lifeos_kupler</code>'ı çalıştır. Arch için <a href="arch/PKGBUILD">PKGBUILD</a> hazır.</p>
+          <a class="btn btn-yellow" data-asset="LifeOS-Kupler-Linux-x64.tar.gz" href="indir/LifeOS-Kupler-Linux-x64.tar.gz">Linux x64 için indir <small class="size"></small></a>
         </article>
       </div>
     </div>
@@ -250,9 +249,10 @@
 </footer>
 
 <script>
-// Download links come from the GitHub release: sizes and the date are
-// filled in live, and the main button offers the visitor's own platform.
-// Without JavaScript (or if GitHub is unreachable) the fixed links work.
+// Downloads are served from lifeos.com.tr (indir/, mirrored from each new
+// build). indir/latest.json gives the sizes and the date, and the main
+// button offers the visitor's own platform. Without JavaScript the fixed
+// links still work.
 (function () {
   var ua = navigator.userAgent;
   var iPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
@@ -271,13 +271,13 @@
     document.getElementById('primary-sub').textContent = 'Ücretsiz · başka platform için aşağı kaydır';
   }
 
-  fetch('https://api.github.com/repos/07erkanoz/LifeOsTetris/releases/tags/test-build')
+  fetch('indir/latest.json', {cache: 'no-cache'})
     .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
-    .then(function (release) {
+    .then(function (latest) {
       var newest = 0;
-      release.assets.forEach(function (a) {
+      latest.assets.forEach(function (a) {
         document.querySelectorAll('[data-asset="' + a.name + '"]').forEach(function (el) {
-          el.href = a.browser_download_url;
+          el.href = a.url;
           var size = el.querySelector('.size');
           if (size) size.textContent = Math.round(a.size / 1048576) + ' MB';
         });
