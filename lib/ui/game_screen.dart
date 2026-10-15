@@ -70,7 +70,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) controller.pauseIfRunning();
+    if (state != AppLifecycleState.resumed) {
+      controller.pauseIfRunning();
+      controller.saveProgress();
+    }
   }
 
   @override
@@ -1093,7 +1096,18 @@ class _StartOverlay extends StatelessWidget {
         ),
       ],
     );
+    final saved = c.savedSummary;
     final modes = <Widget>[
+      if (saved != null) ...[
+        GradientButton(
+          key: const ValueKey('resume-game'),
+          label: s.resumeGame,
+          subtitle: s.resumeSummary(s.modeName(saved.mode), saved.score, saved.level),
+          icon: Icons.play_arrow_rounded,
+          onTap: c.resume,
+        ),
+        const SizedBox(height: 16),
+      ],
       superButton,
       const SizedBox(height: 12),
       GradientButton(

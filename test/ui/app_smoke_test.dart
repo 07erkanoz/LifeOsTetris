@@ -83,6 +83,39 @@ void main() {
     }
   });
 
+  testWidgets('a game left for the menu continues from the menu, paused', (tester) async {
+    final settings = Settings.memory()..language = AppLanguage.tr;
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(KuplerApp(settings: settings, audio: AudioService(enabled: false)));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byKey(const ValueKey('resume-game')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('start-classic')));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 33));
+    }
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump(const Duration(milliseconds: 33));
+    final c = (tester.state(find.byType(GameScreen)) as dynamic).controller as GameController;
+    final score = c.game.score;
+    expect(score, greaterThan(0));
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyP);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Menü'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(settings.savedGame, isNotNull);
+    expect(find.byKey(const ValueKey('resume-game')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('resume-game')));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(c.game.score, score);
+    expect(c.game.paused, isTrue);
+    expect(find.text('Duraklatıldı'), findsOneWidget);
+  });
+
   testWidgets('about page shows the developer', (tester) async {
     await pumpApp(tester, const Size(390, 844));
     await tester.tap(find.text('Hakkında'));

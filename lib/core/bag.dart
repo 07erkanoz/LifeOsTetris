@@ -24,6 +24,14 @@ class PieceBag {
   /// power comes back next).
   void pushFront(PieceType type) => _queue.insert(0, type);
 
+  /// Pieces already drawn into the queue (for saving a game).
+  List<PieceType> get queued => List.unmodifiable(_queue);
+
+  /// Puts saved [pieces] back in front of the queue.
+  void restoreQueue(List<PieceType> pieces) => _queue
+    ..clear()
+    ..addAll(pieces);
+
   void _fill(int count) {
     while (_queue.length < count) {
       _queue.addAll(List.of(standardPieces)..shuffle(_random));

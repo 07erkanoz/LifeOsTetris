@@ -27,6 +27,8 @@ class Settings extends ChangeNotifier {
   double _vibrationStrength = 0.5;
   bool _highRefreshRate = _desktop;
   VisualTheme _visualTheme = VisualTheme.initial;
+  String? _savedGame;
+  String? _savedBlocks;
 
   /// Desktops draw at the monitor's rate by default; phones stay at 60 fps
   /// (cooler, longer battery) unless the player turns it on.
@@ -66,6 +68,8 @@ class Settings extends ChangeNotifier {
       s._vibrationStrength = prefs.getDouble('vibrationStrength') ?? 0.5;
       s._highRefreshRate = prefs.getBool('highRefreshRate') ?? _desktop;
       s._visualTheme = VisualTheme.parse(prefs.getString('visualTheme'));
+      s._savedGame = prefs.getString('savedGame');
+      s._savedBlocks = prefs.getString('savedBlocks');
       for (final m in GameMode.values) {
         s._best[m] = prefs.getInt('best_${m.name}') ?? 0;
       }
@@ -107,6 +111,30 @@ class Settings extends ChangeNotifier {
 
   /// The look of the game (blocks, cards, keys, icons and type).
   VisualTheme get visualTheme => _visualTheme;
+
+  /// Klasik / Süper Küpler game in progress (JSON), to continue later.
+  String? get savedGame => _savedGame;
+
+  /// Bulmaca Küpler game in progress (JSON), to continue later.
+  String? get savedBlocks => _savedBlocks;
+
+  /// Saving happens every few seconds: it writes quietly, without
+  /// rebuilding listeners, unless a save appears or disappears (the menus
+  /// show a continue button for it).
+  set savedGame(String? v) {
+    final changed = (v == null) != (_savedGame == null);
+    _savedGame = v;
+    v == null ? _prefs?.remove('savedGame') : _prefs?.setString('savedGame', v);
+    if (changed) notifyListeners();
+  }
+
+  set savedBlocks(String? v) {
+    final changed = (v == null) != (_savedBlocks == null);
+    _savedBlocks = v;
+    v == null ? _prefs?.remove('savedBlocks') : _prefs?.setString('savedBlocks', v);
+    if (changed) notifyListeners();
+  }
+
   double get buttonOpacity => _buttonOpacity;
 
   /// Desktop: borderless full screen (Windows), on by default.

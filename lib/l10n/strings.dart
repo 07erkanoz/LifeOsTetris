@@ -239,6 +239,13 @@ class AppStrings {
   String get endlessMode => _t('Sonsuz', 'Endless');
   String get endlessModeSubtitle => _t('Rekor için oyna', 'Play for a record');
   String continueLevel(int n) => _t('Devam et: Seviye $n', 'Continue: Level $n');
+  String get resumeGame => _t('Kaldığın yerden devam', 'Continue where you left off');
+  String resumeSummary(String mode, int score, int level) =>
+      _t('$mode · ${this.score(score)} puan · Seviye $level', '$mode · ${this.score(score)} points · Level $level');
+  String resumeBlocksLevel(int level, int movesLeft) =>
+      _t('Seviye $level · $movesLeft hamle kaldı', 'Level $level · $movesLeft moves left');
+  String resumeBlocksEndless(String endless, int score) =>
+      _t('$endless · ${this.score(score)} puan', '$endless · ${this.score(score)} points');
   String levelNumber(int n) => _t('Seviye $n', 'Level $n');
   String get gemsLeft => _t('KALAN ★', '★ LEFT');
   String get movesLeft => _t('HAMLE', 'MOVES');

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 import 'dart:ui';
 
@@ -71,6 +72,7 @@ class BlocksController extends ChangeNotifier {
   }
 
   void openMenu() {
+    saveProgress();
     view = BlocksView.menu;
     paused = false;
     cancelDrag();
@@ -111,7 +113,61 @@ class BlocksController extends ChangeNotifier {
   /// endless game.
   void restart() => isEndless ? startEndless() : startLevel(level!.number);
 
-  void _begin(void Function() start) {
+  // ------------------------------------------------------------ saving
+
+  /// Saves a game in progress so it can be continued later (also after the
+  /// app is closed). Bulmaca is turn based, so every placement saves.
+  void saveProgress() {
+    if (demo || view != BlocksView.playing || game.status != BlockStatus.playing) return;
+    settings.savedBlocks = jsonEncode({'game': game.toSave(), 'playTime': playTime});
+  }
+
+  String? _summaryOf;
+  ({int? level, int movesLeft, int score})? _summary;
+
+  /// Level (null for endless), moves left and score of the saved game.
+  ({int? level, int movesLeft, int score})? get savedSummary {
+    final raw = settings.savedBlocks;
+    if (raw == null) return null;
+    if (raw != _summaryOf) {
+      _summaryOf = raw;
+      try {
+        final g = (jsonDecode(raw) as Map)['game'] as Map;
+        final lv = g['level'] as Map?;
+        final moves = g['moves'] as int;
+        _summary = (
+          level: lv?['number'] as int?,
+          movesLeft: lv == null ? 0 : max(0, (lv['moveLimit'] as int) - moves),
+          score: g['score'] as int,
+        );
+      } catch (_) {
+        _summary = null;
+      }
+    }
+    return _summary;
+  }
+
+  /// Continues the saved game.
+  bool resume() {
+    final raw = settings.savedBlocks;
+    if (raw == null) return false;
+    final data = jsonDecode(raw);
+    _begin(() {
+      try {
+        game.restore(((data as Map)['game']! as Map).cast<String, Object?>());
+        playTime = (data['playTime'] as num?)?.toDouble() ?? 0;
+      } catch (e) {
+        debugPrint('Saved puzzle unreadable: $e');
+        settings.savedBlocks = null;
+        game.startEndless();
+      }
+      level = game.level;
+    }, keepSave: true);
+    return true;
+  }
+
+  void _begin(void Function() start, {bool keepSave = false}) {
+    if (!keepSave) settings.savedBlocks = null;
     view = BlocksView.playing;
     paused = false;
     newRecord = false;
@@ -209,6 +265,7 @@ class BlocksController extends ChangeNotifier {
           if (game.moves > 0) audio.play(Sfx.hold, volume: 0.5);
         case LevelWon(:final stars):
           _endAge = 0;
+          settings.savedBlocks = null;
           lastStars = stars;
           audio.play(Sfx.levelup);
           audio.duck = 0.5;
@@ -217,6 +274,7 @@ class BlocksController extends ChangeNotifier {
           settings.recordBlocksGame(endless: false, score: game.score, lines: game.lines, seconds: playTime);
         case BlocksGameOver():
           _endAge = 0;
+          settings.savedBlocks = null;
           audio.play(Sfx.gameover);
           audio.duck = 0.4;
           if (settings.vibration) haptics.heavy();
@@ -288,6 +346,7 @@ class BlocksController extends ChangeNotifier {
   bool place(int slot, int x, int y) {
     if (view != BlocksView.playing || paused || !game.place(slot, x, y)) return false;
     _process(game.drainEvents());
+    saveProgress();
     notifyListeners();
     return true;
   }

@@ -203,6 +203,77 @@ class TetrisGame {
     status = GameStatus.ready;
   }
 
+  /// Everything needed to continue a running game later, as JSON-ready
+  /// values. Timers restart from zero and the random sources are re-seeded,
+  /// so the pieces after the saved queue may differ.
+  Map<String, Object?> toSave() {
+    final a = _active;
+    return {
+      'v': 1,
+      'mode': mode.name,
+      'board': [
+        for (final row in _board) [for (final t in row) t?.name],
+      ],
+      'active': a == null ? null : [a.type.name, a.rotation.name, a.x, a.y],
+      'held': _held?.name,
+      'canHold': _canHold,
+      'score': score,
+      'lines': lines,
+      'level': level,
+      'combo': _combo,
+      'b2b': _backToBackActive,
+      'bag': [for (final t in _bag.queued) t.name],
+      'energy': _energy,
+      'powers': {for (final e in _powers.entries) e.key.name: e.value},
+      'powerQueue': [for (final p in _powerQueue) p.name],
+      'slowMotion': _slowMotion,
+      'clearing': status == GameStatus.clearing ? _clearingRows : null,
+    };
+  }
+
+  /// Continues a game saved with [toSave]. Throws on malformed data.
+  void restore(Map<String, Object?> save) {
+    PieceType piece(Object? name) => PieceType.values.byName(name! as String);
+    final mode = GameMode.values.byName(save['mode']! as String);
+    final rows = (save['board']! as List).cast<List>();
+    if (rows.length != height || rows.any((r) => r.length != width)) throw const FormatException('board size');
+    this.mode = mode;
+    _bag = PieceBag();
+    _powerRandom = Random();
+    _reset();
+    _board = [
+      for (final row in rows) [for (final c in row) c == null ? null : piece(c)],
+    ];
+    final active = save['active'] as List?;
+    if (active != null) {
+      _active = Piece(piece(active[0]), Rotation.values.byName(active[1] as String), active[2] as int, active[3] as int);
+    }
+    final held = save['held'];
+    _held = held == null ? null : piece(held);
+    _canHold = save['canHold'] as bool? ?? true;
+    score = save['score']! as int;
+    lines = save['lines']! as int;
+    level = save['level']! as int;
+    _combo = save['combo'] as int? ?? -1;
+    _backToBackActive = save['b2b'] as bool? ?? false;
+    _bag.restoreQueue([for (final t in (save['bag'] as List? ?? const [])) piece(t)]);
+    _energy = save['energy'] as int? ?? 0;
+    for (final e in (save['powers'] as Map? ?? const {}).entries) {
+      _powers[PowerType.values.byName(e.key as String)] = e.value as int;
+    }
+    _powerQueue.addAll([for (final p in (save['powerQueue'] as List? ?? const [])) PowerType.values.byName(p as String)]);
+    _slowMotion = (save['slowMotion'] as num? ?? 0).toDouble();
+    final clearing = save['clearing'] as List?;
+    if (clearing != null && clearing.isNotEmpty) {
+      _clearingRows = clearing.cast<int>();
+      _clearTimer = lineClearDelay;
+      status = GameStatus.clearing;
+    } else {
+      status = GameStatus.playing;
+      if (_active == null || !_fits(_active!)) _spawnNext();
+    }
+  }
+
   void togglePause() {
     if (status == GameStatus.playing || status == GameStatus.clearing) {
       paused = !paused;

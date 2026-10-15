@@ -64,7 +64,10 @@ class _BlocksScreenState extends State<BlocksScreen> with SingleTickerProviderSt
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) c.pauseIfRunning();
+    if (state != AppLifecycleState.resumed) {
+      c.pauseIfRunning();
+      c.saveProgress();
+    }
   }
 
   bool _phone = false;
@@ -351,6 +354,18 @@ class _Menu extends StatelessWidget {
           style: TextStyle(fontSize: 13, height: 1.45, color: p.muted, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 18),
+        if (c.savedSummary case final saved?) ...[
+          GradientButton(
+            key: const ValueKey('blocks-resume'),
+            label: s.resumeGame,
+            subtitle: saved.level == null
+                ? s.resumeBlocksEndless(s.endlessMode, saved.score)
+                : s.resumeBlocksLevel(saved.level!, saved.movesLeft),
+            icon: Icons.play_arrow_rounded,
+            onTap: c.resume,
+          ),
+          const SizedBox(height: 10),
+        ],
         GradientButton(
           key: const ValueKey('blocks-continue'),
           label: finished ? s.allLevelsDone : s.continueLevel(next),

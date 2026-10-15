@@ -152,6 +152,9 @@ class SequenceSource implements PieceSource {
   final RandomSource _fallback;
   int _next = 0;
 
+  /// How many listed pieces were dealt (for saving a level in progress).
+  int get dealt => _next;
+
   @override
   List<BlockShape> deal(BlockPuzzleGame game) => [
     for (var i = 0; i < 3; i++) _next < ids.length ? shapeById(ids[_next++]) : _fallback._pick(),
@@ -390,6 +393,73 @@ class BlockPuzzleGame {
         perfect: perfect,
       ),
     );
+  }
+
+  /// Everything needed to continue a game in progress later.
+  Map<String, Object?> toSave() {
+    final level = this.level;
+    final source = _source;
+    return {
+      'v': 1,
+      'board': [
+        for (final row in board) [for (final c in row) c == null ? '.' : (c.gem ? '*' : c.color.name.toUpperCase())].join(),
+      ],
+      'tray': [for (final s in tray) s?.id],
+      'score': score,
+      'moves': moves,
+      'lines': lines,
+      'gems': gemsCollected,
+      'streak': streak,
+      'sinceClear': _sinceClear,
+      if (level != null)
+        'level': {
+          'number': level.number,
+          'rows': level.rows,
+          'pieces': level.pieces,
+          'moveLimit': level.moveLimit,
+          'par': level.par,
+          'dealt': source is SequenceSource ? source.dealt : level.pieces.length,
+        },
+    };
+  }
+
+  /// Continues a game saved with [toSave]. Throws on malformed data.
+  void restore(Map<String, Object?> save) {
+    _reset();
+    final rows = (save['board']! as List).cast<String>();
+    if (rows.length != size || rows.any((r) => r.length != size)) throw const FormatException('board size');
+    for (var y = 0; y < size; y++) {
+      for (var x = 0; x < size; x++) {
+        board[y][x] = parseCell(rows[y][x]);
+      }
+    }
+    final trayIds = (save['tray']! as List).cast<String?>();
+    for (var i = 0; i < 3; i++) {
+      tray[i] = trayIds[i] == null ? null : shapeById(trayIds[i]!);
+    }
+    score = save['score']! as int;
+    moves = save['moves']! as int;
+    lines = save['lines'] as int? ?? 0;
+    gemsCollected = save['gems'] as int? ?? 0;
+    streak = save['streak'] as int? ?? 0;
+    _sinceClear = save['sinceClear'] as int? ?? 0;
+    final lv = save['level'] as Map?;
+    if (lv == null) {
+      level = null;
+      _source = RandomSource();
+    } else {
+      final restored = BlockLevel(
+        number: lv['number'] as int,
+        rows: (lv['rows'] as List).cast<String>(),
+        pieces: (lv['pieces'] as List).cast<String>(),
+        moveLimit: lv['moveLimit'] as int,
+        par: lv['par'] as int,
+      );
+      level = restored;
+      _source = SequenceSource(restored.pieces).._next = lv['dealt'] as int? ?? 0;
+    }
+    status = BlockStatus.playing;
+    if (tray.every((s) => s == null)) _refill();
   }
 
   /// Copies the state of [other] (not its piece source) for look-ahead.

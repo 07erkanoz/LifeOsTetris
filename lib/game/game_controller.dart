@@ -1,5 +1,8 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
-import 'package:flutter/painting.dart' show Offset;
+import 'package:flutter/painting.dart' show Axis, Offset;
 
 import '../audio/audio_service.dart';
 import '../audio/haptics.dart';
@@ -55,6 +58,10 @@ class GameController extends ChangeNotifier {
   /// Seconds of active play in the current game.
   double playTime = 0;
 
+  /// Play time at the last save; the game is saved every few seconds.
+  double _lastSave = 0;
+  static const double _saveEvery = 5;
+
   // Delayed auto shift for held left/right keys and buttons.
   static const double das = 0.16;
   static const double arr = 0.035;
@@ -92,6 +99,8 @@ class GameController extends ChangeNotifier {
     motivation.reset(bestScore: settings.bestScore(this.mode));
     newRecord = false;
     playTime = 0;
+    _lastSave = 0;
+    settings.savedGame = null;
     _leftHeld = _rightHeld = false;
     _shiftDir = 0;
     game.start(mode: this.mode);
@@ -136,7 +145,66 @@ class GameController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Saves a game in progress so it can be continued later (also after the
+  /// app is closed).
+  void saveProgress() {
+    if (_demo || _demoSuper) return;
+    if (game.status != GameStatus.playing && game.status != GameStatus.clearing) return;
+    settings.savedGame = jsonEncode({'game': game.toSave(), 'playTime': playTime});
+    _lastSave = playTime;
+  }
+
+  String? _summaryOf;
+  ({GameMode mode, int score, int level})? _summary;
+
+  /// Mode, score and level of the saved game, for the continue button.
+  ({GameMode mode, int score, int level})? get savedSummary {
+    final raw = settings.savedGame;
+    if (raw == null) return null;
+    if (raw != _summaryOf) {
+      _summaryOf = raw;
+      try {
+        final g = (jsonDecode(raw) as Map)['game'] as Map;
+        _summary = (mode: GameMode.values.byName(g['mode'] as String), score: g['score'] as int, level: g['level'] as int);
+      } catch (_) {
+        _summary = null;
+      }
+    }
+    return _summary;
+  }
+
+  /// Continues the saved game, paused so the player can get ready.
+  bool resume() {
+    final raw = settings.savedGame;
+    if (raw == null) return false;
+    try {
+      final data = jsonDecode(raw) as Map<String, Object?>;
+      game.restore((data['game']! as Map).cast<String, Object?>());
+      playTime = (data['playTime'] as num?)?.toDouble() ?? 0;
+    } catch (e) {
+      debugPrint('Saved game unreadable: $e');
+      settings.savedGame = null;
+      game.abandon();
+      notifyListeners();
+      return false;
+    }
+    mode = game.mode;
+    fx.reset();
+    motivation.reset(bestScore: settings.bestScore(mode));
+    newRecord = false;
+    _lastSave = playTime;
+    _leftHeld = _rightHeld = false;
+    _shiftDir = 0;
+    game.paused = true;
+    audio.startMusic();
+    audio.duck = 0.35;
+    _process(game.drainEvents());
+    notifyListeners();
+    return true;
+  }
+
   void toMenu() {
+    saveProgress();
     game.abandon();
     fx.reset();
     motivation.reset(bestScore: settings.bestScore(mode));
@@ -161,6 +229,7 @@ class GameController extends ChangeNotifier {
       playTime += dt;
       _updateAutoShift(dt);
       game.update(dt);
+      if (playTime - _lastSave >= _saveEvery) saveProgress();
     }
     _process(game.drainEvents());
     if (game.isRunning) motivation.update(dt, game);
@@ -228,6 +297,7 @@ class GameController extends ChangeNotifier {
       _sound(e);
       _haptic(e);
       if (e is GameOver) {
+        settings.savedGame = null;
         newRecord = settings.recordGame(mode: mode, score: game.score, lines: game.lines, seconds: playTime);
         audio.duck = 0.4;
       }
@@ -383,19 +453,48 @@ class GameController extends ChangeNotifier {
   void hold() => game.hold();
   void softDrop(bool on) => game.setSoftDrop(on);
 
-  // Touch gestures on the board.
+  // Touch gestures on the board. A drag commits to one axis once it has
+  // moved a little: a fast swipe down never nudges the piece sideways, and
+  // a sideways drag never starts a soft drop.
   double _dragX = 0, _dragY = 0;
+  double _totalX = 0, _totalY = 0;
+  Axis? _dragAxis;
   bool _dragMoved = false;
 
+  /// Movement (logical pixels) before a drag picks its axis.
+  static const double axisSlop = 12;
+
   void dragStart() {
-    _dragX = 0;
-    _dragY = 0;
+    _dragX = _dragY = _totalX = _totalY = 0;
+    _dragAxis = null;
     _dragMoved = false;
   }
 
   void dragUpdate(Offset delta, double cell) {
-    _dragX += delta.dx;
-    _dragY += delta.dy;
+    _totalX += delta.dx;
+    _totalY += delta.dy;
+    if (_dragAxis == null) {
+      if (max(_totalX.abs(), _totalY.abs()) < axisSlop) return;
+      _dragAxis = _totalY.abs() >= _totalX.abs() ? Axis.vertical : Axis.horizontal;
+      if (_dragAxis == Axis.horizontal) {
+        _dragX = _totalX;
+      } else {
+        _dragY = _totalY;
+      }
+    } else if (_dragAxis == Axis.horizontal) {
+      _dragX += delta.dx;
+    } else {
+      _dragY += delta.dy;
+    }
+    if (_dragAxis == Axis.vertical) {
+      if (_dragY > cell * 1.2) {
+        _dragMoved = true;
+        game.setSoftDrop(true);
+      } else if (_dragY < 0) {
+        game.setSoftDrop(false);
+      }
+      return;
+    }
     final step = cell * 0.85;
     while (_dragX.abs() >= step) {
       _dragMoved = true;
@@ -407,12 +506,6 @@ class GameController extends ChangeNotifier {
         _dragX += step;
       }
     }
-    if (_dragY > cell * 1.2) {
-      _dragMoved = true;
-      game.setSoftDrop(true);
-    } else if (_dragY < 0) {
-      game.setSoftDrop(false);
-    }
   }
 
   void dragEnd(Offset velocity) {
@@ -421,7 +514,7 @@ class GameController extends ChangeNotifier {
       game.hardDrop();
     } else if (velocity.dy < -900 && velocity.dy.abs() > velocity.dx.abs() * 1.5) {
       game.hold();
-    } else if (!_dragMoved && _dragX.abs() < 6 && _dragY.abs() < 6) {
+    } else if (!_dragMoved && _totalX.abs() < 6 && _totalY.abs() < 6) {
       game.rotateClockwise();
     }
   }
