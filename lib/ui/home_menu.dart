@@ -11,22 +11,22 @@ enum _PlayMode {
   relaxed(_ModeGroup.classic),
   blocksLevels(_ModeGroup.puzzle),
   blocksEndless(_ModeGroup.puzzle),
-  adventure(_ModeGroup.puzzle, soon: true),
+  adventure(_ModeGroup.puzzle, isNew: true),
+  bomb(_ModeGroup.puzzle, isNew: true),
   sprint(_ModeGroup.challenges),
   ultra(_ModeGroup.challenges),
   dig(_ModeGroup.challenges),
-  bomb(_ModeGroup.challenges, soon: true),
-  target(_ModeGroup.challenges, soon: true),
-  chaos(_ModeGroup.challenges, soon: true);
+  target(_ModeGroup.challenges, isNew: true),
+  chaos(_ModeGroup.challenges, isNew: true);
 
-  const _PlayMode(this.group, {this.soon = false});
+  const _PlayMode(this.group, {this.isNew = false});
 
   final _ModeGroup group;
 
-  /// Shown but not playable yet.
-  final bool soon;
+  /// Gets a "YENİ" badge on the modes page.
+  final bool isNew;
 
-  static _PlayMode fromName(String? name) => values.firstWhere((m) => m.name == name && !m.soon, orElse: () => _PlayMode.superMode);
+  static _PlayMode fromName(String? name) => values.firstWhere((m) => m.name == name, orElse: () => _PlayMode.superMode);
 
   /// The falling-block mode behind it, if any.
   GameMode? get gameMode => switch (this) {
@@ -36,6 +36,8 @@ enum _PlayMode {
     _PlayMode.sprint => GameMode.sprint,
     _PlayMode.ultra => GameMode.ultra,
     _PlayMode.dig => GameMode.dig,
+    _PlayMode.target => GameMode.target,
+    _PlayMode.chaos => GameMode.chaos,
     _ => null,
   };
 
@@ -97,11 +99,12 @@ enum _PlayMode {
         _PlayMode.superMode => PieceType.t,
         _PlayMode.normal => PieceType.j,
         _PlayMode.relaxed => PieceType.s,
-        _PlayMode.blocksLevels || _PlayMode.blocksEndless || _PlayMode.adventure => PieceType.i,
+        _PlayMode.blocksLevels || _PlayMode.blocksEndless => PieceType.i,
         _PlayMode.sprint => PieceType.i,
         _PlayMode.ultra => PieceType.l,
         _PlayMode.dig => PieceType.s,
         _PlayMode.bomb => PieceType.z,
+        _PlayMode.adventure => PieceType.l,
         _PlayMode.target => PieceType.o,
         _PlayMode.chaos => PieceType.t,
       }]!;
@@ -120,6 +123,8 @@ enum _PlayMode {
     return switch (this) {
       _PlayMode.blocksLevels => settings.totalBlockStars > 0 ? '★ ${settings.totalBlockStars}/${BlockLevels.count * 3}' : null,
       _PlayMode.blocksEndless => settings.blocksBest > 0 ? s.score(settings.blocksBest) : null,
+      _PlayMode.adventure => settings.adventureSolved > 0 ? '★ ${settings.totalAdventureStars}/${Adventure.count * 3}' : null,
+      _PlayMode.bomb => settings.bombBest > 0 ? s.score(settings.bombBest) : null,
       _ => null,
     };
   }
@@ -127,7 +132,6 @@ enum _PlayMode {
 
 /// Starts [mode] and remembers it for the play button.
 void _launch(BuildContext context, GameController c, _PlayMode mode) {
-  if (mode.soon) return;
   c.settings.lastPlay = mode.name;
   final game = mode.gameMode;
   if (game != null) {
@@ -139,7 +143,12 @@ void _launch(BuildContext context, GameController c, _PlayMode mode) {
     settings: c.settings,
     audio: c.audio,
     haptics: c.haptics,
-    entry: mode == _PlayMode.blocksEndless ? BlocksEntry.endless : BlocksEntry.levels,
+    entry: switch (mode) {
+      _PlayMode.blocksEndless => BlocksEntry.endless,
+      _PlayMode.adventure => BlocksEntry.adventure,
+      _PlayMode.bomb => BlocksEntry.bombs,
+      _ => BlocksEntry.levels,
+    },
   );
 }
 
@@ -525,14 +534,15 @@ class _ModeCard extends StatelessWidget {
         child: GameIcon(mode.icon, size: wide ? 28 : 22, color: badge),
       ),
     );
-    final soonChip = Container(
+    const newColor = Color(0xFFF43F5E);
+    final newChip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: p.flat
-          ? flatCardDecoration(p, radius: 10, fill: p.track, depth: 0)
-          : BoxDecoration(color: p.track, borderRadius: BorderRadius.circular(10)),
+          ? flatCardDecoration(p, radius: 10, fill: newColor, depth: 0)
+          : BoxDecoration(color: newColor, borderRadius: BorderRadius.circular(10)),
       child: Text(
-        s.comingSoon,
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.8, color: p.muted),
+        s.newBadge,
+        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.8, color: Colors.white),
       ),
     );
     final title = FittedBox(
@@ -585,7 +595,7 @@ class _ModeCard extends StatelessWidget {
                     children: [title, const SizedBox(height: 2), subtitle, const SizedBox(height: 4), recordRow],
                   ),
                 ),
-                if (mode.soon) soonChip,
+                if (mode.isNew) newChip,
               ],
             )
           : Column(
@@ -596,11 +606,11 @@ class _ModeCard extends StatelessWidget {
                   children: [
                     badgeBox,
                     const SizedBox(width: 6),
-                    if (mode.soon)
+                    if (mode.isNew)
                       Expanded(
                         child: Align(
                           alignment: Alignment.topRight,
-                          child: FittedBox(fit: BoxFit.scaleDown, child: soonChip),
+                          child: FittedBox(fit: BoxFit.scaleDown, child: newChip),
                         ),
                       ),
                   ],
@@ -615,13 +625,9 @@ class _ModeCard extends StatelessWidget {
             ),
     );
     return Semantics(
-      button: !mode.soon,
+      button: true,
       label: mode.title(s),
-      child: GestureDetector(
-        key: ValueKey('mode-${mode.name}'),
-        onTap: mode.soon ? null : () => Navigator.of(context).pop(mode),
-        child: Opacity(opacity: mode.soon ? 0.5 : 1, child: card),
-      ),
+      child: GestureDetector(key: ValueKey('mode-${mode.name}'), onTap: () => Navigator.of(context).pop(mode), child: card),
     );
   }
 }

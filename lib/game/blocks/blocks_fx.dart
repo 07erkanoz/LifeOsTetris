@@ -185,6 +185,10 @@ class BlocksFx implements BackdropFx {
         trayAge = 0;
       case LevelWon(:final stars, :final bonus):
         _won(stars, bonus);
+      case BombPlanted(:final cell):
+        _bombPlanted(cell);
+      case BombWentOff(:final cell):
+        _bombWentOff(cell);
       case BlocksGameOver():
         overAge = 0;
         pulseColor = const Color(0xFFEF4444);
@@ -269,6 +273,7 @@ class BlocksFx implements BackdropFx {
         ),
       );
       if (block.gem) _gemBurst(cell, burst);
+      if (block.isBomb) _defuseBurst(cell, burst);
     }
     for (final r in e.rows) {
       beams.add(LineBeam(r, column: false));
@@ -324,6 +329,85 @@ class BlocksFx implements BackdropFx {
       );
     }
     if (particlesEnabled) shockwaves.add(Shockwave(cell.x + 0.5, cell.y + 0.5, 1.6, const Color(0xFFFDE047), duration: 0.45, width: 0.2));
+  }
+
+  static const _fire = [Color(0xFFFDE047), Color(0xFFF97316), Color(0xFFEF4444), Color(0xFFFFFFFF)];
+
+  void _bombPlanted(Cell cell) {
+    if (particlesEnabled) {
+      shockwaves.add(Shockwave(cell.x + 0.5, cell.y + 0.5, 1.8, const Color(0xFFFB7185), duration: 0.45, width: 0.22));
+    }
+    for (var i = 0; i < 8; i++) {
+      final a = _r(0, pi * 2);
+      _add(
+        Particle(
+          kind: ParticleKind.spark,
+          x: cell.x + 0.5,
+          y: cell.y + 0.5,
+          vx: cos(a) * _r(2, 5),
+          vy: sin(a) * _r(2, 5),
+          maxLife: _r(0.3, 0.6),
+          size: _r(0.12, 0.22),
+          color: _fire[i % _fire.length],
+          drag: 2,
+        ),
+      );
+    }
+    _trauma = min(1, _trauma + 0.15);
+  }
+
+  /// A bomb cleared in time: a puff of smoke and sparks instead of a blast.
+  void _defuseBurst(Cell cell, double delay) {
+    for (var i = 0; i < 10; i++) {
+      final a = _r(-pi * 0.9, -pi * 0.1);
+      _add(
+        Particle(
+          kind: i.isEven ? ParticleKind.dot : ParticleKind.spark,
+          x: cell.x + 0.5,
+          y: cell.y + 0.5,
+          vx: cos(a) * _r(2, 6),
+          vy: sin(a) * _r(2, 6),
+          maxLife: _r(0.5, 0.9),
+          size: i.isEven ? _r(0.1, 0.18) : _r(0.15, 0.26),
+          color: i.isEven ? const Color(0xFFCBD5E1) : const Color(0xFFFDBA74),
+          drag: 1.5,
+          delay: delay,
+        ),
+      );
+    }
+  }
+
+  void _bombWentOff(Cell cell) {
+    final cx = cell.x + 0.5, cy = cell.y + 0.5;
+    if (particlesEnabled) {
+      shockwaves.add(Shockwave(cx, cy, 5, const Color(0xFFFDBA74), duration: 0.5, width: 0.4));
+      shockwaves.add(Shockwave(cx, cy, 9, const Color(0xFFF43F5E), duration: 0.8, width: 0.25));
+    }
+    for (var i = 0; i < 90; i++) {
+      final a = _r(0, pi * 2);
+      final speed = _r(2, 13);
+      _add(
+        Particle(
+          kind: i % 3 == 0 ? ParticleKind.spark : ParticleKind.dot,
+          x: cx,
+          y: cy,
+          vx: cos(a) * speed,
+          vy: sin(a) * speed - 2,
+          maxLife: _r(0.5, 1.2),
+          size: i % 3 == 0 ? _r(0.2, 0.42) : _r(0.08, 0.2),
+          color: _fire[i % _fire.length],
+          gravity: 4,
+          drag: 2.2,
+        ),
+      );
+    }
+    floaters.add(
+      Floater(_mid, (cy - 1.5).clamp(1.6, 6.4), [
+        FloaterLine(strings.bombWentOffTitle.toUpperCase(), 1.1, _hot, glow: const Color(0xFFEF4444)),
+      ], duration: 1.6),
+    );
+    boardFlash = 1;
+    _trauma = 1;
   }
 
   void _won(int stars, int bonus) {

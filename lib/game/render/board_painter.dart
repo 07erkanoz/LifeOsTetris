@@ -75,6 +75,7 @@ class BoardPainter extends CustomPainter {
     _paintGhost(canvas);
     _paintStack(canvas);
     _paintLockPulses(canvas);
+    _paintFog(canvas, well);
     _paintActive(canvas);
     canvas.restore();
 
@@ -82,6 +83,7 @@ class BoardPainter extends CustomPainter {
     _paintDrillBeams(canvas, well);
     _paintGhostLine(canvas, well);
     _paintSlowMotion(canvas, well);
+    _paintRush(canvas, well);
     _paintFlash(canvas, well);
     _paintShockwaves(canvas);
     _paintParticles(canvas);
@@ -443,6 +445,50 @@ class BoardPainter extends CustomPainter {
     canvas.drawRRect(
       RRect.fromRectAndRadius(bar, Radius.circular(c)),
       Paint()..shader = ui.Gradient.linear(bar.centerLeft, bar.centerRight, const [Color(0xFF7DD3FC), Color(0xFF3B82F6)]),
+    );
+  }
+
+  /// "Kaos" fog: the stack disappears behind drifting clouds; only the
+  /// falling piece stays in sight.
+  void _paintFog(Canvas canvas, Rect well) {
+    final left = game.fog;
+    if (left <= 0) return;
+    final c = geometry.cell;
+    final k = min(1.0, left) * min(1.0, (ChaosEvent.fogSeconds - left) * 2.5);
+    final fog = palette.isDark ? const Color(0xFF94A3B8) : const Color(0xFFE2E8F0);
+    final top = well.top + well.height * 0.22;
+    final rect = Rect.fromLTRB(well.left, top, well.right, well.bottom);
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = ui.Gradient.linear(rect.topCenter, Offset(rect.center.dx, top + well.height * 0.22), [
+          fog.withValues(alpha: 0),
+          fog.withValues(alpha: 0.97 * k),
+        ]),
+    );
+    final puff = Paint()..color = (palette.isDark ? const Color(0xFFCBD5E1) : Colors.white).withValues(alpha: 0.35 * k);
+    for (var i = 0; i < 9; i++) {
+      final x = (well.width * ((i * 0.37 + fx.time * 0.03 * (i.isEven ? 1 : -1)) % 1.0));
+      final y = top + well.height * (0.25 + 0.08 * i) + sin(fx.time * 0.8 + i) * c * 0.4;
+      canvas.drawCircle(Offset(x, y), c * (1.4 + 0.3 * (i % 3)), puff);
+    }
+  }
+
+  /// "Kaos" rush: a red tint and the time left as a bar.
+  void _paintRush(Canvas canvas, Rect well) {
+    final left = game.rush;
+    if (left <= 0) return;
+    final c = geometry.cell;
+    final k = min(1.0, left) * min(1.0, (ChaosEvent.rushSeconds - left) * 4 + 0.2);
+    final flicker = 0.8 + 0.2 * sin(fx.time * 12);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(well, Radius.circular(c * 0.45)),
+      Paint()..color = const Color(0xFFEF4444).withValues(alpha: 0.08 * k * flicker),
+    );
+    final bar = Rect.fromLTWH(well.left + c * 0.3, -c * 0.22, (well.width - c * 0.6) * (left / ChaosEvent.rushSeconds), c * 0.12);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(bar, Radius.circular(c)),
+      Paint()..shader = ui.Gradient.linear(bar.centerLeft, bar.centerRight, const [Color(0xFFFDE047), Color(0xFFEF4444)]),
     );
   }
 

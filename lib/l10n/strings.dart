@@ -224,6 +224,8 @@ class AppStrings {
     GameMode.sprint => sprintTitle,
     GameMode.ultra => ultraTitle,
     GameMode.dig => digTitle,
+    GameMode.target => targetTitle,
+    GameMode.chaos => chaosTitle,
   };
 
   // ------------------------------------------------------------ challenges
@@ -256,7 +258,6 @@ class AppStrings {
   String get changeMode => _t('Modu değiştir', 'Change mode');
   String get modesTitle => _t('Modlar', 'Modes');
   String get settingsTitle => _t('Ayarlar', 'Settings');
-  String get comingSoon => _t('YAKINDA', 'SOON');
   String get superGroup => _t('SÜPER', 'SUPER');
   String get puzzleGroup => _t('BULMACA', 'PUZZLE');
   String get levelsCard => _t('Seviyeler', 'Levels');
@@ -270,6 +271,67 @@ class AppStrings {
   String get targetSubtitle => _t('Yıldızları topla, süre kazan', 'Collect stars to win time');
   String get chaosTitle => _t('Kaos', 'Chaos');
   String get chaosSubtitle => _t('Sürprizlerle dolu maraton', 'A marathon full of surprises');
+
+  // ------------------------------------------------------------ pack 2
+
+  String get starsLabel => _t('YILDIZ', 'STARS');
+  String get surpriseLabel => _t('SÜRPRİZ', 'SURPRISE');
+  String plusSeconds(double s) => _t('+${s.round()} SN', '+${s.round()} SEC');
+  String chaosName(ChaosEvent e) => switch (e) {
+    ChaosEvent.rise => _t('YÜKSELİŞ!', 'RISING!'),
+    ChaosEvent.fog => _t('SİS!', 'FOG!'),
+    ChaosEvent.rush => _t('HIZ ÇILGINLIĞI!', 'RUSH!'),
+    ChaosEvent.quake => _t('DEPREM!', 'QUAKE!'),
+    ChaosEvent.gift => _t('HEDİYE BOMBA!', 'GIFT BOMB!'),
+  };
+  String chaosHint(ChaosEvent e) => switch (e) {
+    ChaosEvent.rise => _t('Alttan 2 gri satır geldi', '2 grey rows rose from below'),
+    ChaosEvent.fog => _t(
+      'Yığın ${ChaosEvent.fogSeconds.round()} saniye görünmez',
+      'The stack hides for ${ChaosEvent.fogSeconds.round()} s',
+    ),
+    ChaosEvent.rush => _t('${ChaosEvent.rushSeconds.round()} saniye 3 kat hız', 'Triple speed for ${ChaosEvent.rushSeconds.round()} s'),
+    ChaosEvent.quake => _t('Havadaki bloklar düştü', 'Floating blocks fell down'),
+    ChaosEvent.gift => _t('Sıradaki parça bomba', 'Your next piece is a bomb'),
+  };
+  String get targetHowTo => _t(
+    'Gri satırlardaki ★ blokları temizle: her ★ ${GameMode.targetBonus.round()} saniye kazandırır.',
+    'Clear the ★ blocks in the grey rows: each ★ adds ${GameMode.targetBonus.round()} seconds.',
+  );
+  String get bombsLabel => _t('BOMBA', 'BOMBS');
+  String get bombWentOffTitle => _t('Bomba patladı!', 'A bomb went off!');
+  String get bombHowTo => _t(
+    'Bombaların üstündeki sayı kalan hamledir. Sayı bitmeden satırını ya da sütununu patlat!',
+    'The number on a bomb is the moves left. Blast its row or column before it runs out!',
+  );
+  String get bombFailedHint => _t(
+    'Sayısı küçük bombaların satır ve sütunlarına öncelik ver.',
+    'Go for the rows and columns of bombs with the lowest numbers first.',
+  );
+  String defusedCount(int n) => _t('$n bomba söndürüldü', '$n bombs defused');
+  String adventureLevel(int chapter, int step) => _t('Bölüm $chapter · $step', 'Chapter $chapter · $step');
+  String pictureName(int chapter) => switch (chapter) {
+    1 => _t('Kalp', 'Heart'),
+    2 => _t('Mantar', 'Mushroom'),
+    3 => _t('Kedi', 'Cat'),
+    4 => _t('Ev', 'House'),
+    5 => _t('Ağaç', 'Tree'),
+    6 => _t('Balık', 'Fish'),
+    7 => _t('Roket', 'Rocket'),
+    8 => _t('Çiçek', 'Flower'),
+    9 => _t('Güneş', 'Sun'),
+    _ => _t('Taç', 'Crown'),
+  };
+  String get adventureHowTo => _t(
+    'Her bölüm 10 seviye. Çözdüğün her seviye resmin bir parçasını açar. 3. bölümden sonra bombalara dikkat!',
+    'Each chapter has 10 levels. Every level you solve uncovers a piece of the picture. Mind the bombs from chapter 3!',
+  );
+  String get pieceUncovered => _t('Resmin yeni parçası açıldı!', 'A new piece of the picture!');
+  String get pictureDone => _t('Resim tamamlandı!', 'Picture complete!');
+  String get chapterLocked => _t('Önceki bölümü bitir', 'Finish the previous chapter');
+  String playAdventure(int chapter, int step) => _t('Oyna: Bölüm $chapter · $step', 'Play: Chapter $chapter · $step');
+  String get adventureDone => _t('Tüm resimler tamam!', 'Every picture is complete!');
+  String get pictures => _t('Resimler', 'Pictures');
 
   // ------------------------------------------------------------ daily puzzle
 

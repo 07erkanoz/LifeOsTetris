@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import '../audio/audio_service.dart';
 import '../audio/haptics.dart';
+import '../core/blocks/adventure.dart';
 import '../core/blocks/block_puzzle.dart';
 import '../core/blocks/level_generator.dart';
 import '../core/tetromino.dart';
@@ -42,6 +43,12 @@ enum BlocksEntry {
 
   /// A new endless game.
   endless,
+
+  /// The chapters of "Macera".
+  adventure,
+
+  /// A new "Bomba" game.
+  bombs,
 }
 
 class BlocksScreen extends StatefulWidget {
@@ -94,6 +101,10 @@ class _BlocksScreenState extends State<BlocksScreen> with SingleTickerProviderSt
         next > BlockLevels.count ? c.openLevels() : c.startLevel(next);
       case BlocksEntry.endless:
         c.startEndless();
+      case BlocksEntry.adventure:
+        c.openAdventure();
+      case BlocksEntry.bombs:
+        c.startBombs();
     }
   }
 
@@ -128,7 +139,7 @@ class _BlocksScreenState extends State<BlocksScreen> with SingleTickerProviderSt
     switch (c.view) {
       case BlocksView.menu:
         Navigator.of(context).maybePop();
-      case BlocksView.levels:
+      case BlocksView.levels || BlocksView.adventure:
         c.openMenu();
       case BlocksView.playing:
         if (c.game.isOver) {
@@ -205,6 +216,7 @@ class _BlocksScreenState extends State<BlocksScreen> with SingleTickerProviderSt
                     child: switch (c.view) {
                       BlocksView.menu => _Menu(key: const ValueKey('menu'), c: c),
                       BlocksView.levels => _LevelSelect(key: const ValueKey('levels'), c: c),
+                      BlocksView.adventure => _AdventureSelect(key: const ValueKey('adventure'), c: c),
                       BlocksView.playing => _PlayView(key: const ValueKey('play'), c: c),
                     },
                   ),
@@ -397,8 +409,10 @@ class _Menu extends StatelessWidget {
             label: s.resumeGame,
             subtitle: saved.daily
                 ? s.resumeDaily(saved.movesLeft)
+                : saved.adventure
+                ? '${s.adventureTitle} · ${s.adventureLevel(Adventure.chapterOf(saved.level!), Adventure.stepOf(saved.level!) + 1)}'
                 : saved.level == null
-                ? s.resumeBlocksEndless(s.endlessMode, saved.score)
+                ? s.resumeBlocksEndless(saved.bombs ? s.bombTitle : s.endlessMode, saved.score)
                 : s.resumeBlocksLevel(saved.level!, saved.movesLeft),
             icon: Icons.play_arrow_rounded,
             onTap: c.resume,
@@ -435,6 +449,32 @@ class _Menu extends StatelessWidget {
                 icon: Icons.all_inclusive_rounded,
                 secondary: true,
                 onTap: c.startEndless,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: GradientButton(
+                key: const ValueKey('blocks-adventure'),
+                label: s.adventureTitle,
+                subtitle: '${s.pictures} ${settings.adventureSolved ~/ Adventure.perChapter}/${Adventure.chapters}',
+                icon: Icons.extension_rounded,
+                secondary: true,
+                onTap: c.openAdventure,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: GradientButton(
+                key: const ValueKey('blocks-bombs'),
+                label: s.bombTitle,
+                subtitle: settings.bombBest > 0 ? '${s.bestPrefix}${s.score(settings.bombBest)}' : s.endlessModeSubtitle,
+                icon: Icons.local_fire_department_rounded,
+                secondary: true,
+                onTap: c.startBombs,
               ),
             ),
           ],
@@ -691,7 +731,13 @@ class _TopBar extends StatelessWidget {
             child: FittedBox(
               fit: BoxFit.scaleDown,
               child: GradientText(
-                c.isDaily ? s.dailyTitle : (c.isEndless ? s.endlessMode : s.levelNumber(c.level!.number)),
+                c.isDaily
+                    ? s.dailyTitle
+                    : c.isAdventure
+                    ? s.adventureLevel(Adventure.chapterOf(c.level!.number), Adventure.stepOf(c.level!.number) + 1)
+                    : c.isBombs
+                    ? s.bombTitle
+                    : (c.isEndless ? s.endlessMode : s.levelNumber(c.level!.number)),
                 gradient: const LinearGradient(colors: _puzzleColors),
                 style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
               ),
@@ -774,7 +820,7 @@ class _Hud extends StatelessWidget {
     final values = level == null
         ? [
             _HudValue(label: s.scoreLabel, value: s.score(game.score), pulse: c.fx.scorePulse),
-            _HudValue(label: s.bestLabel, value: s.score(max(c.settings.blocksBest, game.score))),
+            _HudValue(label: s.bestLabel, value: s.score(max(c.isBombs ? c.settings.bombBest : c.settings.blocksBest, game.score))),
           ]
         : [
             _HudValue(label: s.gemsLeft, value: '${game.gemsLeft}', icon: Icons.star_rounded, pulse: c.fx.gemPulse),
@@ -916,7 +962,7 @@ class _WideLayout extends StatelessWidget {
                       _Hud(c: c, vertical: true),
                       const SizedBox(height: 16),
                       Text(
-                        c.isEndless ? s.blocksHowTo : s.blocksGoal,
+                        c.isBombs ? s.bombHowTo : (c.isEndless ? s.blocksHowTo : s.blocksGoal),
                         style: TextStyle(fontSize: 13, height: 1.45, color: p.muted, fontWeight: FontWeight.w600),
                       ),
                     ],
@@ -1104,8 +1150,8 @@ class _Pause extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: GradientButton(
-              label: c.isEndless ? s.menu : s.levelsMode,
-              icon: c.isEndless ? Icons.home_rounded : Icons.grid_view_rounded,
+              label: c.isEndless ? s.menu : (c.isAdventure ? s.adventureTitle : s.levelsMode),
+              icon: c.isEndless ? Icons.home_rounded : (c.isAdventure ? Icons.extension_rounded : Icons.grid_view_rounded),
               secondary: true,
               onTap: c.isEndless ? c.openMenu : c.openLevels,
             ),
@@ -1155,15 +1201,33 @@ class _LevelResult extends StatelessWidget {
     final level = c.level!;
     final won = game.status == BlockStatus.won;
     final daily = c.isDaily;
-    final last = daily || level.number >= BlockLevels.count;
+    final adventure = c.isAdventure;
+    final last = daily || level.number >= (adventure ? Adventure.count : BlockLevels.count);
+    final chapter = Adventure.chapterOf(level.number), step = Adventure.stepOf(level.number);
+    final tail = 2 + (won && !last ? 2 : 0) + (!daily && !adventure ? 2 : 0);
     return _Panel(
-      landscapeTail: won && !last ? 6 : 4,
+      landscapeTail: tail,
       scrim: true,
       children: [
-        Center(child: CardLabel((daily ? s.dailyTitle : s.levelNumber(level.number)).toUpperCase())),
+        Center(
+          child: CardLabel(
+            (daily
+                    ? s.dailyTitle
+                    : adventure
+                    ? s.adventureLevel(chapter, step + 1)
+                    : s.levelNumber(level.number))
+                .toUpperCase(),
+          ),
+        ),
         const SizedBox(height: 8),
         Text(
-          won ? s.levelCompleteTitle : (game.loss == BlockLoss.outOfMoves ? s.outOfMovesTitle : s.noRoomTitle),
+          won
+              ? s.levelCompleteTitle
+              : switch (game.loss) {
+                  BlockLoss.bomb => s.bombWentOffTitle,
+                  BlockLoss.outOfMoves => s.outOfMovesTitle,
+                  _ => s.noRoomTitle,
+                },
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: p.text),
         ),
@@ -1179,9 +1243,32 @@ class _LevelResult extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(color: p.muted, fontWeight: FontWeight.w700),
           ),
+          if (adventure) ...[
+            const SizedBox(height: 14),
+            Center(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 1400),
+                curve: const Interval(0.35, 1, curve: Curves.easeOut),
+                builder: (context, t, _) => AdventurePicture(
+                  chapter: chapter,
+                  solved: (n) => c.settings.adventureStars(n) > 0,
+                  cell: 13,
+                  highlight: Adventure.tileFor(chapter, step),
+                  highlightT: t,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              step == Adventure.perChapter - 1 ? '${s.pictureDone} ${s.pictureName(chapter)}' : s.pieceUncovered,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: p.text, fontWeight: FontWeight.w800),
+            ),
+          ],
         ] else
           Text(
-            s.levelFailedHint,
+            game.loss == BlockLoss.bomb ? s.bombFailedHint : s.levelFailedHint,
             textAlign: TextAlign.center,
             style: TextStyle(color: p.muted, fontWeight: FontWeight.w600, height: 1.4),
           ),
@@ -1212,16 +1299,339 @@ class _LevelResult extends StatelessWidget {
             Expanded(
               child: daily
                   ? GradientButton(label: s.menu, icon: Icons.home_rounded, secondary: true, onTap: c.openMenu)
+                  : adventure
+                  ? GradientButton(label: s.adventureTitle, icon: Icons.extension_rounded, secondary: true, onTap: c.openAdventure)
                   : GradientButton(label: s.newBoard, icon: Icons.casino_rounded, secondary: true, onTap: c.restart),
             ),
           ],
         ),
-        if (!daily) ...[
+        if (!daily && !adventure) ...[
           const SizedBox(height: 10),
           GradientButton(label: s.levelsMode, icon: Icons.grid_view_rounded, secondary: true, onTap: c.openLevels),
         ],
       ],
     );
+  }
+}
+
+// ---------------------------------------------------------------- macera
+
+/// A chapter's picture, drawn with the game's blocks. Tiles of levels not
+/// solved yet stay covered; [highlight] fades in a freshly uncovered tile.
+class AdventurePicture extends StatelessWidget {
+  const AdventurePicture({super.key, required this.chapter, required this.solved, required this.cell, this.highlight, this.highlightT = 1});
+
+  final int chapter;
+
+  /// Whether adventure level n has been solved.
+  final bool Function(int level) solved;
+  final double cell;
+  final int? highlight;
+  final double highlightT;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = GamePalette.of(context);
+    final first = Adventure.firstOf(chapter);
+    final open = {
+      for (var step = 0; step < Adventure.perChapter; step++)
+        if (solved(first + step)) Adventure.tileFor(chapter, step),
+    };
+    final side = cell * Adventure.pictureSize;
+    return SizedBox(
+      width: side,
+      height: side,
+      child: CustomPaint(
+        painter: _PicturePainter(
+          picture: Adventure.pictures[chapter - 1],
+          open: open,
+          highlight: highlight,
+          highlightT: highlightT,
+          sprites: BlockSprites.of(cell, MediaQuery.devicePixelRatioOf(context), p),
+          palette: p,
+        ),
+      ),
+    );
+  }
+}
+
+class _PicturePainter extends CustomPainter {
+  _PicturePainter({
+    required this.picture,
+    required this.open,
+    required this.highlight,
+    required this.highlightT,
+    required this.sprites,
+    required this.palette,
+  });
+
+  final List<String> picture;
+  final Set<int> open;
+  final int? highlight;
+  final double highlightT;
+  final BlockSprites sprites;
+  final GamePalette palette;
+
+  static const _types = {
+    'I': PieceType.i,
+    'O': PieceType.o,
+    'T': PieceType.t,
+    'S': PieceType.s,
+    'Z': PieceType.z,
+    'J': PieceType.j,
+    'L': PieceType.l,
+    'M': PieceType.mono,
+  };
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = sprites.cell;
+    final pixel = palette.skin == GameSkin.pixel;
+    final edge = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = palette.glassBorder;
+    for (var tile = 0; tile < Adventure.perChapter; tile++) {
+      final (tx, ty) = Adventure.tileOrigin(tile);
+      final rect = Rect.fromLTWH(tx * c, ty * c, 5 * c, 2 * c).deflate(c * 0.06);
+      final isOpen = open.contains(tile) || tile == highlight;
+      final t = tile == highlight ? highlightT : 1.0;
+      if (!isOpen || t < 1) {
+        final r = RRect.fromRectAndRadius(rect, Radius.circular(pixel ? 0 : c * 0.3));
+        final cover = isOpen ? 1 - t : 1.0;
+        canvas.drawRRect(r, Paint()..color = palette.track.withValues(alpha: palette.track.a * cover));
+        canvas.drawRRect(r, edge);
+      }
+      if (!isOpen) continue;
+      for (var y = ty; y < ty + 2; y++) {
+        for (var x = tx; x < tx + 5; x++) {
+          final type = _types[picture[y][x]];
+          if (type == null) continue;
+          sprites.draw(canvas, sprites.block(type), x * c, y * c, opacity: t, scale: 0.6 + 0.4 * t);
+        }
+      }
+      if (tile == highlight && t < 1) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(rect.inflate(c * 0.1), Radius.circular(c * 0.35)),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2
+            ..color = _gold.withValues(alpha: 1 - t),
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PicturePainter old) =>
+      old.highlightT != highlightT || old.open.length != open.length || old.sprites != sprites || old.picture != picture;
+}
+
+/// "Macera": chapters with their pictures and level buttons.
+class _AdventureSelect extends StatelessWidget {
+  const _AdventureSelect({super.key, required this.c});
+
+  final BlocksController c;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = GamePalette.of(context);
+    final s = AppStrings.of(context);
+    final settings = c.settings;
+    final next = settings.unlockedAdventure;
+    final wide = MediaQuery.sizeOf(context).width >= 760;
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: wide ? 820 : 480),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+              child: Row(
+                children: [
+                  GlassIconButton(
+                    key: const ValueKey('adventure-back'),
+                    icon: Icons.arrow_back_rounded,
+                    tooltip: s.back,
+                    onTap: c.openMenu,
+                    size: 38,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: GradientText(
+                        s.adventureTitle,
+                        gradient: const LinearGradient(colors: _puzzleColors),
+                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                  ),
+                  const GameIcon(Icons.star_rounded, color: _gold, size: 20),
+                  const SizedBox(width: 2),
+                  Text(
+                    '${settings.totalAdventureStars}/${Adventure.count * 3}',
+                    style: TextStyle(fontWeight: FontWeight.w800, color: p.text),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                children: [
+                  Text(
+                    s.adventureHowTo,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 13, height: 1.4, color: p.muted, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 12),
+                  if (next <= Adventure.count)
+                    GradientButton(
+                      key: const ValueKey('adventure-play'),
+                      label: s.playAdventure(Adventure.chapterOf(next), Adventure.stepOf(next) + 1),
+                      subtitle: s.pictureName(Adventure.chapterOf(next)),
+                      icon: Icons.play_arrow_rounded,
+                      colors: _puzzleColors,
+                      onTap: () => c.startAdventure(next),
+                    )
+                  else
+                    Center(
+                      child: GradientText(
+                        s.adventureDone,
+                        gradient: const LinearGradient(colors: [Color(0xFFFDE047), Color(0xFFF97316)]),
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                  const SizedBox(height: 6),
+                  for (var ch = 1; ch <= Adventure.chapters; ch++) ...[
+                    const SizedBox(height: 12),
+                    _ChapterCard(c: c, chapter: ch, next: next),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ChapterCard extends StatelessWidget {
+  const _ChapterCard({required this.c, required this.chapter, required this.next});
+
+  final BlocksController c;
+  final int chapter;
+
+  /// The first unsolved adventure level.
+  final int next;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = GamePalette.of(context);
+    final s = AppStrings.of(context);
+    final settings = c.settings;
+    final first = Adventure.firstOf(chapter);
+    final locked = first > next;
+    final solved = [for (var i = 0; i < Adventure.perChapter; i++) settings.adventureStars(first + i)];
+    final done = solved.where((v) => v > 0).length;
+    final card = GlassCard(
+      padding: const EdgeInsets.all(14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AdventurePicture(chapter: chapter, solved: (n) => settings.adventureStars(n) > 0, cell: 11),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CardLabel(s.chapter(chapter).toUpperCase()),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        locked ? '???' : s.pictureName(chapter),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 19, fontWeight: FontWeight.w900, color: p.text),
+                      ),
+                    ),
+                    if (locked)
+                      GameIcon(Icons.lock_rounded, size: 18, color: p.label)
+                    else
+                      Text(
+                        '$done/${Adventure.perChapter}',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: done == Adventure.perChapter ? _gold : p.muted),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 5,
+                  runSpacing: 5,
+                  children: [
+                    for (var i = 0; i < Adventure.perChapter; i++)
+                      _StepDot(
+                        key: ValueKey('adventure-${first + i}'),
+                        step: i + 1,
+                        stars: solved[i],
+                        current: first + i == next,
+                        locked: first + i > next,
+                        onTap: () => c.startAdventure(first + i),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (!locked) return card;
+    return Tooltip(
+      message: s.chapterLocked,
+      child: Opacity(opacity: 0.55, child: card),
+    );
+  }
+}
+
+/// One level of a chapter: its number, gold once solved.
+class _StepDot extends StatelessWidget {
+  const _StepDot({super.key, required this.step, required this.stars, required this.current, required this.locked, required this.onTap});
+
+  final int step;
+  final int stars;
+  final bool current;
+  final bool locked;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = GamePalette.of(context);
+    final fill = current ? flatTone(_puzzleColors, p) : (stars > 0 ? _gold : (locked ? p.track : p.glass));
+    final fg = current ? Colors.white : (stars > 0 ? p.ink : (locked ? p.label : p.text));
+    final dot = Container(
+      width: 30,
+      height: 30,
+      decoration: p.flat
+          ? flatCardDecoration(p, radius: p.skin == GameSkin.pixel ? 4 : 10, fill: fill, depth: locked ? 0 : 2)
+          : BoxDecoration(
+              color: fill,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: p.glassBorder),
+            ),
+      child: Center(
+        child: Text(
+          '$step',
+          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: fg),
+        ),
+      ),
+    );
+    if (locked) return dot;
+    return GestureDetector(onTap: onTap, child: dot);
   }
 }
 
@@ -1296,8 +1706,9 @@ class _EndlessOver extends StatelessWidget {
       landscapeTail: 4,
       scrim: true,
       children: [
+        if (c.isBombs) ...[Center(child: CardLabel(s.bombTitle.toUpperCase())), const SizedBox(height: 6)],
         Text(
-          s.noRoomTitle,
+          game.loss == BlockLoss.bomb ? s.bombWentOffTitle : s.noRoomTitle,
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: p.text),
         ),
@@ -1320,7 +1731,10 @@ class _EndlessOver extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          '${s.linesLabel} ${game.lines} · ${s.bestPrefix}${s.score(c.settings.blocksBest)}',
+          [
+            if (c.isBombs) s.defusedCount(game.bombsDefused) else '${s.linesLabel} ${game.lines}',
+            '${s.bestPrefix}${s.score(c.isBombs ? c.settings.bombBest : c.settings.blocksBest)}',
+          ].join(' · '),
           textAlign: TextAlign.center,
           style: TextStyle(color: p.muted, fontWeight: FontWeight.w700),
         ),
@@ -1330,7 +1744,7 @@ class _EndlessOver extends StatelessWidget {
           label: s.playAgain,
           icon: Icons.replay_rounded,
           colors: _puzzleColors,
-          onTap: c.startEndless,
+          onTap: c.restart,
         ),
         const SizedBox(height: 10),
         GradientButton(label: s.menu, icon: Icons.home_rounded, secondary: true, onTap: c.openMenu),

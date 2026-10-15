@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -46,7 +48,9 @@ class Settings extends ChangeNotifier {
   int _totalSeconds = 0;
   int? _lastTrack;
   int _blocksBest = 0;
+  int _bombBest = 0;
   final Map<int, int> _blockStars = {};
+  final Map<int, int> _adventureStars = {};
 
   static Future<Settings> load() async {
     SharedPreferences? prefs;
@@ -90,12 +94,9 @@ class Settings extends ChangeNotifier {
       if (legacy != null && legacy > s._best[GameMode.classic]!) s._best[GameMode.classic] = legacy;
       s._lastTrack = prefs.getInt('lastTrack');
       s._blocksBest = prefs.getInt('blocksBest') ?? 0;
-      for (final entry in (prefs.getString('blockStars') ?? '').split(',')) {
-        final parts = entry.split(':');
-        if (parts.length != 2) continue;
-        final level = int.tryParse(parts[0]), stars = int.tryParse(parts[1]);
-        if (level != null && stars != null) s._blockStars[level] = stars;
-      }
+      s._bombBest = prefs.getInt('bombBest') ?? 0;
+      _readStars(prefs.getString('blockStars'), s._blockStars);
+      _readStars(prefs.getString('adventureStars'), s._adventureStars);
       s._gamesPlayed = prefs.getInt('gamesPlayed') ?? 0;
       s._totalLines = prefs.getInt('totalLines') ?? 0;
       s._totalSeconds = prefs.getInt('totalSeconds') ?? 0;
@@ -103,6 +104,18 @@ class Settings extends ChangeNotifier {
     applyVisualTheme(s._visualTheme);
     return s;
   }
+
+  /// Parses "level:stars,level:stars" into [into].
+  static void _readStars(String? raw, Map<int, int> into) {
+    for (final entry in (raw ?? '').split(',')) {
+      final parts = entry.split(':');
+      if (parts.length != 2) continue;
+      final level = int.tryParse(parts[0]), stars = int.tryParse(parts[1]);
+      if (level != null && stars != null) into[level] = stars;
+    }
+  }
+
+  static String _writeStars(Map<int, int> stars) => stars.entries.map((e) => '${e.key}:${e.value}').join(',');
 
   /// In-memory settings, used by tests.
   factory Settings.memory() {
@@ -226,25 +239,43 @@ class Settings extends ChangeNotifier {
   /// Saves a completed level, keeping the best star count.
   void recordBlockLevel(int level, int stars) {
     if (stars <= blockStars(level)) return;
-    _set(
-      () => _blockStars[level] = stars,
-      () => _prefs?.setString('blockStars', _blockStars.entries.map((e) => '${e.key}:${e.value}').join(',')),
-    );
+    _set(() => _blockStars[level] = stars, () => _prefs?.setString('blockStars', _writeStars(_blockStars)));
   }
 
+  // ------------------------------------------------------------ macera
+
+  /// Stars earned on adventure level [level] (0 = not solved yet).
+  int adventureStars(int level) => _adventureStars[level] ?? 0;
+
+  int get totalAdventureStars => _adventureStars.values.fold(0, (a, b) => a + b);
+
+  /// Adventure levels solved so far.
+  int get adventureSolved => _adventureStars.length;
+
+  /// Highest playable adventure level: one past the highest solved.
+  int get unlockedAdventure => _adventureStars.keys.fold(0, (a, b) => a > b ? a : b) + 1;
+
+  void recordAdventure(int level, int stars) {
+    if (stars <= adventureStars(level)) return;
+    _set(() => _adventureStars[level] = stars, () => _prefs?.setString('adventureStars', _writeStars(_adventureStars)));
+  }
+
+  /// Best score of "Bomba".
+  int get bombBest => _bombBest;
+
   /// Records a finished Bulmaca Küpler game for the lifetime stats. Returns
-  /// true when an endless [score] is a new best.
-  bool recordBlocksGame({required bool endless, required int score, required int lines, required double seconds}) {
-    final record = endless && score > _blocksBest;
+  /// true when an endless or [bombs] [score] is a new best.
+  bool recordBlocksGame({required bool endless, bool bombs = false, required int score, required int lines, required double seconds}) {
+    final record = bombs ? score > _bombBest : endless && score > _blocksBest;
     _set(
       () {
-        if (record) _blocksBest = score;
+        if (record) bombs ? _bombBest = score : _blocksBest = score;
         _gamesPlayed++;
         _totalLines += lines;
         _totalSeconds += seconds.round();
       },
       () {
-        if (record) _prefs?.setInt('blocksBest', score);
+        if (record) _prefs?.setInt(bombs ? 'bombBest' : 'blocksBest', score);
         _prefs?.setInt('gamesPlayed', _gamesPlayed);
         _prefs?.setInt('totalLines', _totalLines);
         _prefs?.setInt('totalSeconds', _totalSeconds);
@@ -254,7 +285,7 @@ class Settings extends ChangeNotifier {
   }
 
   /// Highest score across all modes.
-  int get topScore => _best.values.fold(_blocksBest, (a, b) => a > b ? a : b);
+  int get topScore => _best.values.fold(max(_blocksBest, _bombBest), (a, b) => a > b ? a : b);
 
   set themeMode(ThemeMode v) => _set(() => _themeMode = v, () => _prefs?.setInt('themeMode', v.index));
   set language(AppLanguage v) => _set(() => _language = v, () => _prefs?.setInt('language', v.index));

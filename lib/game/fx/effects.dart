@@ -418,7 +418,7 @@ class EffectsEngine implements BackdropFx {
         pulse = 1;
         floaters.add(
           Floater(5, 8, [
-            FloaterLine(game.mode == GameMode.ultra ? strings.timeUp : strings.challengeDone, 1.4, const [
+            FloaterLine(game.mode == GameMode.ultra || game.mode == GameMode.target ? strings.timeUp : strings.challengeDone, 1.4, const [
               Color(0xFFFFFFFF),
               Color(0xFFFDE047),
               Color(0xFFF59E0B),
@@ -480,8 +480,16 @@ class EffectsEngine implements BackdropFx {
         _drill(column, removed, points);
       case GravityApplied(:final moves):
         _gravity(moves);
-      case SlowMotionStarted() || SlowMotionEnded() || GhostLineStarted():
+      case SlowMotionStarted() || SlowMotionEnded() || GhostLineStarted() || ChaosEnded():
         break;
+      case StarsCollected(:final cells, :final seconds):
+        _starsCollected(cells, seconds);
+      case GarbageRaised():
+        addTrauma(0.25);
+        pulseColor = const Color(0xFF94A3B8);
+        pulse = max(pulse, 0.4);
+      case ChaosStarted(:final type):
+        _chaos(type);
       case GhostLineFilled(:final row, :final cells):
         lockPulses.add(LockPulse(cells));
         for (final c in cells) {
@@ -504,6 +512,63 @@ class EffectsEngine implements BackdropFx {
         }
         addTrauma(0.2);
     }
+  }
+
+  void _starsCollected(List<Cell> cells, double seconds) {
+    final h = TetrisGame.hiddenRows;
+    for (final c in cells) {
+      for (var i = 0; i < 14; i++) {
+        final a = _r(0, pi * 2);
+        final speed = _r(2, 8);
+        _add(
+          Particle(
+            kind: i.isEven ? ParticleKind.spark : ParticleKind.dot,
+            x: c.x + 0.5,
+            y: c.y - h + 0.5,
+            vx: cos(a) * speed,
+            vy: sin(a) * speed - 2,
+            maxLife: _r(0.5, 1.0),
+            size: i.isEven ? _r(0.18, 0.34) : _r(0.06, 0.12),
+            color: i % 3 == 0 ? const Color(0xFFFFFFFF) : const Color(0xFFFBBF24),
+            drag: 2.2,
+          ),
+        );
+      }
+      shockwaves.add(Shockwave(c.x + 0.5, c.y - h + 0.5, 3, const Color(0xFFFDE047), duration: 0.5, width: 0.3));
+    }
+    final first = cells.first;
+    floaters.add(
+      Floater(5, (first.y - h - 2.5).clamp(3, 15).toDouble(), [
+        FloaterLine(strings.plusSeconds(seconds), 1.1, _gold, glow: const Color(0xFFF59E0B)),
+      ], duration: 1.3),
+    );
+    pulseColor = const Color(0xFFFBBF24);
+    pulse = max(pulse, 0.8);
+    scorePulse = 1;
+  }
+
+  /// Colours of each "Kaos" surprise.
+  static const Map<ChaosEvent, List<Color>> chaosColors = {
+    ChaosEvent.rise: [Color(0xFFE2E8F0), Color(0xFF94A3B8)],
+    ChaosEvent.fog: [Color(0xFFF1F5F9), Color(0xFF7DD3FC)],
+    ChaosEvent.rush: [Color(0xFFFDE047), Color(0xFFEF4444)],
+    ChaosEvent.quake: [Color(0xFFFDBA74), Color(0xFFB45309)],
+    ChaosEvent.gift: [Color(0xFFFDA4AF), Color(0xFFF43F5E)],
+  };
+
+  void _chaos(ChaosEvent type) {
+    final colors = chaosColors[type]!;
+    floaters.add(
+      Floater(5, 6.5, [
+        FloaterLine(strings.chaosName(type), 1.15, [const Color(0xFFFFFFFF), ...colors], glow: colors.last),
+        FloaterLine(strings.chaosHint(type), 0.45, const [Color(0xFFF8FAFC), Color(0xFFCBD5E1)]),
+      ], duration: 1.8),
+    );
+    pulseColor = colors.last;
+    pulse = max(pulse, 0.7);
+    boardFlash = max(boardFlash, 0.3);
+    addTrauma(type == ChaosEvent.quake ? 0.8 : 0.35);
+    _powerSparks(colors);
   }
 
   void _powerSparks(List<Color> colors) {

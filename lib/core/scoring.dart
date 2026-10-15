@@ -21,17 +21,32 @@ enum GameMode {
   ultra,
 
   /// "Kazı": dig through [digRows] rows of garbage as fast as possible.
-  dig;
+  dig,
+
+  /// "Hedef": ★ blocks sit in grey rows at the bottom. Every ★ cleared adds
+  /// [targetBonus] seconds to a clock that starts at [targetSeconds].
+  target,
+
+  /// "Kaos": a marathon where a surprise ([ChaosEvent]) strikes every
+  /// [chaosEvery] seconds.
+  chaos;
 
   static const int sprintLines = 40;
   static const double ultraSeconds = 180;
   static const int digRows = 10;
+  static const double targetSeconds = 60;
+  static const double targetBonus = 5;
+
+  /// ★ blocks kept on the board in "Hedef".
+  static const int targetStars = 3;
+  static const int targetRows = 5;
+  static const double chaosEvery = 20;
 
   bool get hasPowers => this == GameMode.superMode;
   bool get speedsUp => this != GameMode.relaxed;
 
   /// Short goal-driven runs, listed apart from the endless modes.
-  bool get isChallenge => this == GameMode.sprint || this == GameMode.ultra || this == GameMode.dig;
+  bool get isChallenge => this == GameMode.sprint || this == GameMode.ultra || this == GameMode.dig || this == GameMode.target;
 
   /// The record is the fastest finish (lower is better), not the score.
   bool get recordsTime => this == GameMode.sprint || this == GameMode.dig;

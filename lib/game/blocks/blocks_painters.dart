@@ -66,6 +66,7 @@ class BlocksBoardPainter extends CustomPainter {
     _paintPulse(canvas, grid);
     _paintCells(canvas);
     _paintPreview(canvas, grid);
+    _paintFuses(canvas);
     _paintPlacePulses(canvas);
     _paintVanishing(canvas);
     _paintBeams(canvas, grid);
@@ -229,6 +230,52 @@ class BlocksBoardPainter extends CustomPainter {
         if (phase > 0.6) sprites.draw(canvas, sprites.white, x * c, y * c, opacity: (phase - 0.6) * 0.5 * shine);
       }
     }
+  }
+
+  /// The number of moves left on every bomb; the last ones pulse red.
+  void _paintFuses(Canvas canvas) {
+    final c = geometry.cell;
+    for (final (cell, fuse) in game.bombCells) {
+      final center = Offset((cell.x + 0.48) * c, (cell.y + 0.58) * c);
+      if (fuse <= 3) {
+        final pulse = 0.5 + 0.5 * sin(fx.time * (fuse == 1 ? 14 : 9));
+        canvas.drawCircle(
+          center,
+          c * (0.42 + 0.06 * pulse),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = max(1.5, c * 0.07)
+            ..color = const Color(0xFFF43F5E).withValues(alpha: 0.5 + 0.5 * pulse),
+        );
+      }
+      final text = fuseText(fuse, c);
+      text.paint(canvas, center - Offset(text.width / 2, text.height / 2));
+    }
+  }
+
+  static final Map<(int, double, String), TextPainter> _fuseTexts = {};
+
+  /// Laid-out fuse number, cached per value and cell size.
+  static TextPainter fuseText(int fuse, double c) {
+    final key = (fuse, c, fontFamily);
+    final hit = _fuseTexts[key];
+    if (hit != null) return hit;
+    if (_fuseTexts.length > 40) _fuseTexts.clear();
+    final size = c * (activeSkin == GameSkin.pixel ? 0.62 : 0.46);
+    return _fuseTexts[key] = TextPainter(
+      text: TextSpan(
+        text: '$fuse',
+        style: TextStyle(
+          fontFamily: fontFamily,
+          fontSize: size,
+          height: 1,
+          fontWeight: FontWeight.w900,
+          color: fuse <= 3 ? const Color(0xFFFFE4E6) : Colors.white,
+          shadows: [Shadow(color: Colors.black.withValues(alpha: 0.8), blurRadius: c * 0.06, offset: Offset(0, c * 0.03))],
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
   }
 
   void _paintPreview(Canvas canvas, Rect grid) {

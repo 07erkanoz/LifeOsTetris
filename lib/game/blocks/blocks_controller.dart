@@ -6,13 +6,14 @@ import 'package:flutter/foundation.dart';
 
 import '../../audio/audio_service.dart';
 import '../../audio/haptics.dart';
+import '../../core/blocks/adventure.dart';
 import '../../core/blocks/block_puzzle.dart';
 import '../../core/blocks/level_generator.dart';
 import '../../l10n/strings.dart';
 import '../../settings/settings.dart';
 import 'blocks_fx.dart';
 
-enum BlocksView { menu, levels, playing }
+enum BlocksView { menu, levels, adventure, playing }
 
 /// Glue for "Bulmaca Küpler": game, drag and drop, effects, audio, haptics
 /// and saved progress.
@@ -40,6 +41,12 @@ class BlocksController extends ChangeNotifier {
   /// Day of the daily puzzle being played (null for levels and endless).
   DateTime? dailyDay;
   bool get isDaily => dailyDay != null;
+
+  /// A "Macera" level is being played ([level] holds its number).
+  bool isAdventure = false;
+
+  /// "Bomba" (endless with bombs).
+  bool get isBombs => game.bombs;
 
   /// Today's date; tests may move it.
   DateTime Function() today = DateTime.now;
@@ -72,8 +79,19 @@ class BlocksController extends ChangeNotifier {
   // ------------------------------------------------------------ navigation
 
   void openLevels() {
+    if (isAdventure) return openAdventure();
     view = BlocksView.levels;
     paused = false;
+    audio.play(Sfx.click);
+    notifyListeners();
+  }
+
+  /// The chapters and pictures of "Macera".
+  void openAdventure() {
+    view = BlocksView.adventure;
+    paused = false;
+    cancelDrag();
+    fx.reset();
     audio.play(Sfx.click);
     notifyListeners();
   }
@@ -90,6 +108,7 @@ class BlocksController extends ChangeNotifier {
 
   void startEndless() {
     dailyDay = null;
+    isAdventure = false;
     level = null;
     _begin(() {
       game.startEndless();
@@ -100,9 +119,27 @@ class BlocksController extends ChangeNotifier {
     });
   }
 
+  /// "Bomba": endless with bombs to defuse.
+  void startBombs() {
+    dailyDay = null;
+    isAdventure = false;
+    level = null;
+    _begin(game.startBombs);
+  }
+
+  /// Plays "Macera" level [number] (always the same board).
+  void startAdventure(int number) {
+    dailyDay = null;
+    isAdventure = true;
+    final next = Adventure.level(number);
+    level = next;
+    _begin(() => game.startLevel(next));
+  }
+
   /// Plays level [number] on a freshly generated board.
   void startLevel(int number) {
     dailyDay = null;
+    isAdventure = false;
     final n = number.clamp(1, BlockLevels.count);
     final next = BlockLevels.generate(n);
     level = next;
@@ -116,11 +153,18 @@ class BlocksController extends ChangeNotifier {
     _begin(() => game.startLevel(current));
   }
 
-  void nextLevel() => startLevel(min((level?.number ?? 0) + 1, BlockLevels.count));
+  void nextLevel() => isAdventure
+      ? startAdventure(min((level?.number ?? 0) + 1, Adventure.count))
+      : startLevel(min((level?.number ?? 0) + 1, BlockLevels.count));
 
-  /// Replays the current mode: same level number on a new board, or a new
-  /// endless game.
-  void restart() => isDaily ? startDaily() : (isEndless ? startEndless() : startLevel(level!.number));
+  /// Replays the current mode: same level number on a new board (the same
+  /// board for daily and adventure), or a new endless game.
+  void restart() {
+    if (isDaily) return startDaily();
+    if (isAdventure) return retryLevel();
+    if (isBombs) return startBombs();
+    isEndless ? startEndless() : startLevel(level!.number);
+  }
 
   /// Today's daily puzzle: the same board and pieces for every player,
   /// built from the date. It gets harder through the week.
@@ -129,6 +173,7 @@ class BlocksController extends ChangeNotifier {
     final day = DateTime(now.year, now.month, now.day);
     final next = dailyLevel(day);
     level = next;
+    isAdventure = false;
     _begin(() {
       dailyDay = day;
       game.startLevel(next, random: Random(dailySeed(day)));
@@ -151,14 +196,15 @@ class BlocksController extends ChangeNotifier {
       'game': game.toSave(),
       'playTime': playTime,
       if (dailyDay != null) 'daily': dailyDay!.toIso8601String(),
+      if (isAdventure) 'adventure': true,
     });
   }
 
   String? _summaryOf;
-  ({int? level, int movesLeft, int score, bool daily})? _summary;
+  ({int? level, int movesLeft, int score, bool daily, bool adventure, bool bombs})? _summary;
 
   /// Level (null for endless), moves left and score of the saved game.
-  ({int? level, int movesLeft, int score, bool daily})? get savedSummary {
+  ({int? level, int movesLeft, int score, bool daily, bool adventure, bool bombs})? get savedSummary {
     final raw = settings.savedBlocks;
     if (raw == null) return null;
     if (raw != _summaryOf) {
@@ -173,6 +219,8 @@ class BlocksController extends ChangeNotifier {
           movesLeft: lv == null ? 0 : max(0, (lv['moveLimit'] as int) - moves),
           score: g['score'] as int,
           daily: data['daily'] != null,
+          adventure: data['adventure'] == true,
+          bombs: g['bombs'] == true,
         );
       } catch (_) {
         _summary = null;
@@ -196,7 +244,8 @@ class BlocksController extends ChangeNotifier {
         game.startEndless();
       }
       level = game.level;
-      final daily = (data as Map)['daily'] as String?;
+      isAdventure = (data as Map)['adventure'] == true && level != null;
+      final daily = data['daily'] as String?;
       dailyDay = daily == null ? null : DateTime.tryParse(daily);
     }, keepSave: true);
     return true;
@@ -272,6 +321,7 @@ class BlocksController extends ChangeNotifier {
       game.moves,
       game.gemsLeft,
       game.status,
+      game.shortestFuse,
       showResult,
       Object.hashAll(game.tray),
       dragSlot,
@@ -299,6 +349,11 @@ class BlocksController extends ChangeNotifier {
           if (settings.vibration) lines >= 3 || perfect ? haptics.celebrate() : haptics.medium();
         case TrayRefilled():
           if (game.moves > 0) audio.play(Sfx.hold, volume: 0.5);
+        case BombPlanted():
+          audio.play(Sfx.poweruse, volume: 0.7);
+          if (settings.vibration) haptics.light();
+        case BombWentOff():
+          audio.play(Sfx.bomb);
         case LevelWon(:final stars):
           _endAge = 0;
           settings.savedBlocks = null;
@@ -306,7 +361,13 @@ class BlocksController extends ChangeNotifier {
           audio.play(Sfx.levelup);
           audio.duck = 0.5;
           if (settings.vibration) haptics.celebrate();
-          isDaily ? settings.recordDaily(dailyDay!, stars) : settings.recordBlockLevel(level!.number, stars);
+          if (isDaily) {
+            settings.recordDaily(dailyDay!, stars);
+          } else if (isAdventure) {
+            settings.recordAdventure(level!.number, stars);
+          } else {
+            settings.recordBlockLevel(level!.number, stars);
+          }
           settings.recordBlocksGame(endless: false, score: game.score, lines: game.lines, seconds: playTime);
         case BlocksGameOver():
           _endAge = 0;
@@ -314,7 +375,13 @@ class BlocksController extends ChangeNotifier {
           audio.play(Sfx.gameover);
           audio.duck = 0.4;
           if (settings.vibration) haptics.heavy();
-          newRecord = settings.recordBlocksGame(endless: isEndless, score: game.score, lines: game.lines, seconds: playTime);
+          newRecord = settings.recordBlocksGame(
+            endless: isEndless,
+            bombs: isBombs,
+            score: game.score,
+            lines: game.lines,
+            seconds: playTime,
+          );
       }
     }
   }

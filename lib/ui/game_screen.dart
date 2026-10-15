@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 
 import '../audio/audio_service.dart';
 import '../audio/haptics.dart';
+import '../core/blocks/adventure.dart';
 import '../core/blocks/level_generator.dart';
 import '../core/tetris_game.dart';
 import '../game/blocks/blocks_controller.dart';
@@ -342,6 +343,12 @@ class _Stat extends StatelessWidget {
       stats: [(s.timeLabel, s.clock(g.ultraTimeLeft, tenths: false)), (s.linesLabel, '${g.lines}')],
     ),
     GameMode.dig => (label: s.timeLabel, value: s.clock(g.time), stats: [(s.leftLabel, '${g.garbageLeft}'), (s.linesLabel, '${g.lines}')]),
+    GameMode.target => (
+      label: s.scoreLabel,
+      value: null,
+      stats: [(s.timeLabel, s.clock(g.targetTimeLeft, tenths: false)), (s.starsLabel, '${g.stars}')],
+    ),
+    GameMode.chaos => (label: s.scoreLabel, value: null, stats: [(s.levelLabel, '${g.level}'), (s.surpriseLabel, '${g.chaosIn.ceil()}')]),
     _ => (label: s.scoreLabel, value: null, stats: [(s.levelLabel, '${g.level}'), (s.linesLabel, '${g.lines}')]),
   };
 }
@@ -766,7 +773,7 @@ class _DesktopLayout extends StatelessWidget {
                         const SizedBox(height: 4),
                         _ScoreText(c: c, size: 38, text: hud.value),
                         const SizedBox(height: 8),
-                        if (c.mode.isChallenge)
+                        if (c.mode.isChallenge || c.mode == GameMode.chaos)
                           for (final (label, value) in hud.stats) stat(label, value)
                         else ...[stat(s.level, '${game.level}'), stat(s.lines, '${game.lines}'), stat(s.time, formatTime(c.playTime))],
                         stat(
@@ -1234,7 +1241,7 @@ class _GameOverOverlay extends StatelessWidget {
     final timed = c.mode.recordsTime;
     final title = switch (c.mode) {
       _ when !c.mode.isChallenge => s.gameOver,
-      GameMode.ultra => s.timeUp,
+      GameMode.ultra || GameMode.target => s.timeUp,
       _ => game.won ? s.challengeDone : s.challengeFailed,
     };
     final bestTime = c.settings.bestTime(c.mode);
@@ -1276,6 +1283,7 @@ class _GameOverOverlay extends StatelessWidget {
             GameMode.sprint => [stat(s.timeLabel, s.clock(game.time)), stat(s.scoreLabel, s.score(game.score))],
             GameMode.dig => [stat(s.timeLabel, s.clock(game.time)), stat(s.linesLabel, '${game.lines}')],
             GameMode.ultra => [stat(s.levelLabel, '${game.level}'), stat(s.linesLabel, '${game.lines}')],
+            GameMode.target => [stat(s.starsLabel, '${game.stars}'), stat(s.linesLabel, '${game.lines}')],
             _ => [stat(s.levelLabel, '${game.level}'), stat(s.linesLabel, '${game.lines}'), stat(s.timeLabel, formatTime(c.playTime))],
           },
         ),

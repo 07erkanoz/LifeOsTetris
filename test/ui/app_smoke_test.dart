@@ -135,7 +135,13 @@ void main() {
 
   testWidgets('challenge modes start from the menu with their own HUD', (tester) async {
     await pumpApp(tester, const Size(390, 844));
-    for (final (mode, label) in [(GameMode.sprint, 'KALAN'), (GameMode.ultra, 'SÜRE'), (GameMode.dig, 'SATIR')]) {
+    for (final (mode, label) in [
+      (GameMode.sprint, 'KALAN'),
+      (GameMode.ultra, 'SÜRE'),
+      (GameMode.dig, 'SATIR'),
+      (GameMode.target, 'YILDIZ'),
+      (GameMode.chaos, 'SÜRPRİZ'),
+    ]) {
       await startMode(tester, mode.name);
       for (var i = 0; i < 10; i++) {
         await tester.pump(const Duration(milliseconds: 33));
@@ -308,6 +314,68 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('blocks-next')));
     await tester.pump(const Duration(milliseconds: 300));
     expect(c.level!.number, 2);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Macera: chapters page, solve the first level, uncover a piece', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final settings = Settings.memory()..language = AppLanguage.tr;
+    await tester.pumpWidget(KuplerApp(settings: settings, audio: AudioService(enabled: false)));
+    await tester.pump(const Duration(milliseconds: 100));
+    await startMode(tester, 'adventure');
+    final c = (tester.state(find.byType(BlocksScreen)) as dynamic).c as BlocksController;
+    expect(c.view, BlocksView.adventure);
+    expect(find.text('Kalp'), findsWidgets);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const ValueKey('adventure-play')));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 33));
+    }
+    expect(c.isAdventure, isTrue);
+    expect(find.text('Bölüm 1 · 1'), findsOneWidget);
+    for (final (slot, x, y) in BlockSolver.solve(c.level!)!) {
+      expect(c.place(slot, x, y), isTrue);
+      await tester.pump(const Duration(milliseconds: 33));
+    }
+    for (var i = 0; i < 90; i++) {
+      await tester.pump(const Duration(milliseconds: 33));
+    }
+    expect(find.text('Resmin yeni parçası açıldı!'), findsOneWidget);
+    expect(find.byType(AdventurePicture), findsOneWidget);
+    expect(settings.adventureStars(1), greaterThan(0));
+    expect(settings.unlockedAdventure, 2);
+
+    await tester.tap(find.text('Macera'));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 33));
+    }
+    expect(c.view, BlocksView.adventure);
+    expect(find.text('Oyna: Bölüm 1 · 2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Bomba: bombs appear, count down and can end the game', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final settings = Settings.memory()..language = AppLanguage.tr;
+    await tester.pumpWidget(KuplerApp(settings: settings, audio: AudioService(enabled: false)));
+    await tester.pump(const Duration(milliseconds: 100));
+    await startMode(tester, 'bomb');
+    final c = (tester.state(find.byType(BlocksScreen)) as dynamic).c as BlocksController;
+    expect(c.isBombs, isTrue);
+    expect(find.text('Bomba'), findsWidgets);
+
+    c.game.debugSetBoard(['1.......', '........', '........', '........', '........', '........', '........', '........']);
+    c.game.debugSetTray(['dot', 'dot', 'dot']);
+    expect(c.place(0, 7, 7), isTrue);
+    for (var i = 0; i < 70; i++) {
+      await tester.pump(const Duration(milliseconds: 33));
+    }
+    expect(find.text('Bomba patladı!'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 

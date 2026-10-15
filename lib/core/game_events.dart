@@ -104,6 +104,55 @@ class GameOver extends GameEvent {
   final bool won;
 }
 
+// ------------------------------------------------------------ challenges
+
+/// "Hedef": ★ blocks were cleared and bought more time.
+class StarsCollected extends GameEvent {
+  const StarsCollected(this.cells, this.seconds);
+  final List<Cell> cells;
+  final double seconds;
+}
+
+/// Grey rows pushed the stack up from below.
+class GarbageRaised extends GameEvent {
+  const GarbageRaised(this.rows);
+  final int rows;
+}
+
+/// The surprises of "Kaos".
+enum ChaosEvent {
+  /// Two grey rows rise from below.
+  rise,
+
+  /// Fog hides the stack for [fogSeconds].
+  fog,
+
+  /// Pieces fall three times as fast for [rushSeconds].
+  rush,
+
+  /// The board shakes: floating blocks drop into the holes below them.
+  quake,
+
+  /// A bomb piece arrives as a gift.
+  gift;
+
+  static const double fogSeconds = 12;
+  static const double rushSeconds = 10;
+
+  /// Lasts a while (fog, rush) instead of happening at once.
+  bool get lasting => this == ChaosEvent.fog || this == ChaosEvent.rush;
+}
+
+class ChaosStarted extends GameEvent {
+  const ChaosStarted(this.type);
+  final ChaosEvent type;
+}
+
+class ChaosEnded extends GameEvent {
+  const ChaosEnded(this.type);
+  final ChaosEvent type;
+}
+
 // ------------------------------------------------------------ powers
 
 class EnergyGained extends GameEvent {

@@ -16,7 +16,10 @@ enum GameStatus { ready, playing, clearing, over }
 /// The board has [hiddenRows] buffer rows above the [visibleHeight] rows the
 /// player sees; row 0 is the top of the buffer.
 class TetrisGame {
-  TetrisGame({int? seed, this.startLevel = 1, this.mode = GameMode.classic}) : _bag = PieceBag(seed), _powerRandom = Random(seed) {
+  TetrisGame({int? seed, this.startLevel = 1, this.mode = GameMode.classic})
+    : _bag = PieceBag(seed),
+      _powerRandom = Random(seed),
+      _chaosRandom = Random(seed) {
     _reset();
   }
 
@@ -85,7 +88,16 @@ class TetrisGame {
   double _slowMotion = 0;
   double? _ghostLine;
 
-  // Bulmaca Küpler state.
+  // "Hedef" state: seconds won by clearing ★ blocks, and ★ collected.
+  double _bonusTime = 0;
+  int stars = 0;
+
+  // "Kaos" state.
+  Random _chaosRandom;
+  double _chaosTimer = GameMode.chaosEvery;
+  ChaosEvent? _lastChaos;
+  double _fog = 0;
+  double _rush = 0;
 
   // ---------------------------------------------------------------- queries
 
@@ -135,6 +147,14 @@ class TetrisGame {
 
   /// Seconds of slow motion left.
   double get slowMotion => _slowMotion;
+
+  /// "Kaos": seconds until the next surprise, and what came last.
+  double get chaosIn => _chaosTimer;
+  ChaosEvent? get lastChaos => _lastChaos;
+
+  /// "Kaos": seconds of fog / rush left.
+  double get fog => _fog;
+  double get rush => _rush;
 
   /// Position of the ghost line in visible rows (0 = top), or null.
   double? get ghostLine => _ghostLine;
@@ -189,6 +209,12 @@ class TetrisGame {
     _powerQueue.clear();
     _slowMotion = 0;
     _ghostLine = null;
+    _bonusTime = 0;
+    stars = 0;
+    _chaosTimer = GameMode.chaosEvery;
+    _lastChaos = null;
+    _fog = 0;
+    _rush = 0;
   }
 
   /// Starts a new game. Pass [seed] to make the piece sequence reproducible.
@@ -197,8 +223,10 @@ class TetrisGame {
     final s = seed ?? Random().nextInt(1 << 31);
     _bag = PieceBag(s);
     _powerRandom = Random(s);
+    _chaosRandom = Random(s + 1);
     _reset();
     if (this.mode == GameMode.dig) _fillGarbage(Random(s));
+    if (this.mode == GameMode.target) _fillTargets();
     status = GameStatus.playing;
     _spawn(_bag.next());
   }
@@ -212,6 +240,55 @@ class TetrisGame {
       _board[height - 1 - i] = [for (var x = 0; x < width; x++) x == hole ? null : PieceType.mono];
     }
   }
+
+  /// "Hedef": grey rows with one hole each, and a ★ in some of them.
+  void _fillTargets() {
+    for (var i = 0; i < GameMode.targetRows; i++) {
+      _board[height - 1 - i] = _garbageRow(star: i.isOdd || i == 0);
+    }
+  }
+
+  /// A grey row with one hole, optionally with a ★ block in it.
+  List<PieceType?> _garbageRow({bool star = false}) {
+    final hole = _chaosRandom.nextInt(width);
+    final row = [for (var x = 0; x < width; x++) x == hole ? null : PieceType.mono];
+    if (star) {
+      var at = _chaosRandom.nextInt(width - 1);
+      if (at >= hole) at++;
+      row[at] = PieceType.gem;
+    }
+    return row;
+  }
+
+  /// Pushes [count] grey rows in from below. Blocks pushed past the top end
+  /// the game.
+  void _raiseGarbage(int count, {bool star = false}) {
+    var toppedOut = false;
+    for (var i = 0; i < count; i++) {
+      if (_board.first.any((c) => c != null)) toppedOut = true;
+      _board.removeAt(0);
+      _board.add(_garbageRow(star: star));
+    }
+    _events.add(GarbageRaised(count));
+    var piece = _active;
+    if (piece != null) {
+      while (!_fits(piece!) && piece.y > 0) {
+        piece = piece.moved(0, -1);
+      }
+      if (!_fits(piece)) toppedOut = true;
+      _active = piece;
+    }
+    if (toppedOut) {
+      _active = null;
+      _gameOver();
+    }
+  }
+
+  /// ★ blocks on the board ("Hedef").
+  int get starsOnBoard => _board.fold(0, (n, row) => n + row.where((c) => c == PieceType.gem).length);
+
+  /// Seconds left in "Hedef".
+  double get targetTimeLeft => max(0, GameMode.targetSeconds + _bonusTime - time);
 
   /// Garbage rows still on the board ("Kazı").
   int get garbageLeft => _board.where((row) => row.contains(PieceType.mono)).length;
@@ -256,6 +333,12 @@ class TetrisGame {
       'powerQueue': [for (final p in _powerQueue) p.name],
       'slowMotion': _slowMotion,
       'time': time,
+      'bonus': _bonusTime,
+      'stars': stars,
+      'chaosTimer': _chaosTimer,
+      'lastChaos': _lastChaos?.name,
+      'fog': _fog,
+      'rush': _rush,
       'clearing': status == GameStatus.clearing ? _clearingRows : null,
     };
   }
@@ -269,6 +352,7 @@ class TetrisGame {
     this.mode = mode;
     _bag = PieceBag();
     _powerRandom = Random();
+    _chaosRandom = Random();
     _reset();
     _board = [
       for (final row in rows) [for (final c in row) c == null ? null : piece(c)],
@@ -293,6 +377,13 @@ class TetrisGame {
     _powerQueue.addAll([for (final p in (save['powerQueue'] as List? ?? const [])) PowerType.values.byName(p as String)]);
     _slowMotion = (save['slowMotion'] as num? ?? 0).toDouble();
     time = (save['time'] as num? ?? 0).toDouble();
+    _bonusTime = (save['bonus'] as num? ?? 0).toDouble();
+    stars = save['stars'] as int? ?? 0;
+    _chaosTimer = (save['chaosTimer'] as num? ?? GameMode.chaosEvery).toDouble();
+    final lastChaos = save['lastChaos'] as String?;
+    _lastChaos = lastChaos == null ? null : ChaosEvent.values.byName(lastChaos);
+    _fog = (save['fog'] as num? ?? 0).toDouble();
+    _rush = (save['rush'] as num? ?? 0).toDouble();
     final clearing = save['clearing'] as List?;
     if (clearing != null && clearing.isNotEmpty) {
       _clearingRows = clearing.cast<int>();
@@ -320,6 +411,11 @@ class TetrisGame {
       _finish();
       return;
     }
+    if (mode == GameMode.target && targetTimeLeft <= 0) {
+      time = GameMode.targetSeconds + _bonusTime;
+      _finish();
+      return;
+    }
 
     if (status == GameStatus.clearing) {
       _clearTimer -= dt;
@@ -339,10 +435,15 @@ class TetrisGame {
       if (_slowMotion == 0) _events.add(const SlowMotionEnded());
     }
 
+    if (mode == GameMode.chaos) {
+      _updateChaos(dt);
+      if (status != GameStatus.playing) return;
+    }
+
     final piece = _active;
     if (piece == null) return;
 
-    final base = gravityInterval(level, mode) * (_slowMotion > 0 ? slowMotionFactor : 1);
+    final base = gravityInterval(level, mode) * (_slowMotion > 0 ? slowMotionFactor : 1) / (_rush > 0 ? 3 : 1);
     final interval = _softDrop ? min(base / 20, 0.05) : base;
     _gravityTimer += dt;
     while (_gravityTimer >= interval) {
@@ -362,6 +463,54 @@ class TetrisGame {
       if (_lockTimer >= lockDelay || _lockResets >= maxLockResets) _lock();
     } else {
       _lockTimer = 0;
+    }
+  }
+
+  // ---------------------------------------------------------------- chaos
+
+  void _updateChaos(double dt) {
+    if (_fog > 0) {
+      _fog = max(0, _fog - dt);
+      if (_fog == 0) _events.add(const ChaosEnded(ChaosEvent.fog));
+    }
+    if (_rush > 0) {
+      _rush = max(0, _rush - dt);
+      if (_rush == 0) _events.add(const ChaosEnded(ChaosEvent.rush));
+    }
+    if (_active == null) return;
+    _chaosTimer -= dt;
+    if (_chaosTimer <= 0) {
+      _chaosTimer = GameMode.chaosEvery;
+      triggerChaos(_pickChaos());
+    }
+  }
+
+  /// A different surprise than last time, and one that does something now.
+  ChaosEvent _pickChaos() {
+    final options = [
+      for (final e in ChaosEvent.values)
+        if (e != _lastChaos && (e != ChaosEvent.quake || hasFloatingBlocks)) e,
+    ];
+    return options[_chaosRandom.nextInt(options.length)];
+  }
+
+  /// Sets off a "Kaos" surprise.
+  void triggerChaos(ChaosEvent type) {
+    _lastChaos = type;
+    _events.add(ChaosStarted(type));
+    switch (type) {
+      case ChaosEvent.rise:
+        _raiseGarbage(2);
+      case ChaosEvent.fog:
+        _fog = ChaosEvent.fogSeconds;
+      case ChaosEvent.rush:
+        _rush = ChaosEvent.rushSeconds;
+      case ChaosEvent.quake:
+        _applyGravity();
+      case ChaosEvent.gift:
+        final piece = _active;
+        if (piece != null && !piece.type.isSpecial) _bag.pushFront(piece.type);
+        _spawn(PieceType.bomb);
     }
   }
 
@@ -734,6 +883,18 @@ class TetrisGame {
   }
 
   void _beginClear(List<int> fullRows, TSpin tSpin, {required bool backToBack, required bool perfectClear, required int points}) {
+    final starCells = [
+      for (final y in fullRows)
+        for (var x = 0; x < width; x++)
+          if (_board[y][x] == PieceType.gem) Cell(x, y),
+    ];
+    if (starCells.isNotEmpty) {
+      stars += starCells.length;
+      final seconds = starCells.length * GameMode.targetBonus;
+      _bonusTime += seconds;
+      score += starCells.length * 250 * level;
+      _events.add(StarsCollected(starCells, seconds));
+    }
     _events.add(
       LinesCleared(rows: fullRows, tSpin: tSpin, combo: _combo, backToBack: backToBack, perfectClear: perfectClear, points: points),
     );
@@ -803,6 +964,10 @@ class TetrisGame {
       _finish();
       return;
     }
+    if (mode == GameMode.target && starsOnBoard < GameMode.targetStars) {
+      _raiseGarbage(GameMode.targetStars - starsOnBoard, star: true);
+      if (status == GameStatus.over) return;
+    }
     _spawnNext();
   }
 
@@ -836,6 +1001,7 @@ class TetrisGame {
   static PieceType? _parseCell(String ch) => switch (ch) {
     '.' => null,
     'M' => PieceType.mono,
+    '*' => PieceType.gem,
     _ => PieceType.values.byName(ch.toLowerCase()),
   };
 

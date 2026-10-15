@@ -276,6 +276,10 @@ class GameController extends ChangeNotifier {
       Object.hashAll(PowerType.values.map(game.canUsePower)),
       game.ghostLine != null,
       game.slowMotion > 0,
+      game.stars,
+      game.chaosIn.ceil(),
+      game.fog > 0,
+      game.rush > 0,
       (fx.energyPulse * 4).round(),
       (fx.powerPulse * 4).round(),
       // Challenge clocks show tenths of a second.
@@ -359,7 +363,20 @@ class GameController extends ChangeNotifier {
         audio.play(Sfx.drill);
       case GhostLineFilled():
         audio.play(Sfx.clear2, volume: 0.8);
+      case StarsCollected():
+        audio.play(Sfx.power);
+      case GarbageRaised():
+        audio.play(Sfx.hard, volume: 0.7);
+      case ChaosStarted(:final type):
+        audio.play(switch (type) {
+          ChaosEvent.quake => Sfx.gravity,
+          ChaosEvent.fog => Sfx.ghost,
+          ChaosEvent.rush => Sfx.slowmo,
+          ChaosEvent.rise => Sfx.hard,
+          ChaosEvent.gift => Sfx.power,
+        });
       case PieceSpawned() ||
+          ChaosEnded() ||
           RowsCollapsed() ||
           EnergyGained() ||
           GravityApplied() ||
@@ -383,8 +400,10 @@ class GameController extends ChangeNotifier {
         haptics.celebrate();
       case GameOver() || BombExploded():
         haptics.heavy();
-      case ColumnDrilled() || GravityApplied() || GhostLineFilled():
+      case ColumnDrilled() || GravityApplied() || GhostLineFilled() || GarbageRaised() || StarsCollected():
         haptics.medium();
+      case ChaosStarted():
+        haptics.heavy();
       case PowerEarned() || PowerActivated():
         haptics.light();
       default:

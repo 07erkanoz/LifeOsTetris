@@ -7,12 +7,24 @@ export 'shapes.dart';
 
 /// One filled square of the board.
 class BlockCell {
-  const BlockCell(this.color, {this.gem = false});
+  const BlockCell(this.color, {this.gem = false, this.fuse});
+
+  /// A bomb that goes off after [fuse] more placements unless its row or
+  /// column is cleared first.
+  const BlockCell.bomb(int this.fuse) : color = PieceType.bomb, gem = false;
 
   final PieceType color;
 
   /// A golden ★ block: the target of a level.
   final bool gem;
+
+  /// Placements left before this bomb goes off; null for normal blocks.
+  final int? fuse;
+
+  bool get isBomb => fuse != null;
+
+  /// One character of a board string (see [BlockLevel.rows]).
+  String get code => isBomb ? '$fuse' : (gem ? '*' : color.name.toUpperCase());
 }
 
 /// A level of "Bulmaca Küpler": a starting board with ★ blocks to collect,
@@ -23,7 +35,8 @@ class BlockLevel {
   final int number;
 
   /// [BlockPuzzleGame.size] strings, top row first: '.' empty, '*' a ★ block,
-  /// a tetromino letter (I O T S Z J L) a coloured block.
+  /// a digit a bomb with that many placements left, a tetromino letter
+  /// (I O T S Z J L) a coloured block.
   final List<String> rows;
 
   /// Shape ids in the order they are dealt, three at a time.
@@ -53,7 +66,7 @@ class BlockLevel {
 enum BlockStatus { ready, playing, won, lost }
 
 /// Why a game or level ended without success.
-enum BlockLoss { noRoom, outOfMoves }
+enum BlockLoss { noRoom, outOfMoves, bomb }
 
 sealed class BlockEvent {
   const BlockEvent();
@@ -91,6 +104,20 @@ class LinesBlasted extends BlockEvent {
 
   int get lines => rows.length + columns.length;
   Iterable<Cell> get gems => cells.where((c) => c.$2.gem).map((c) => c.$1);
+  Iterable<Cell> get bombs => cells.where((c) => c.$2.isBomb).map((c) => c.$1);
+}
+
+/// "Bomba": a new bomb appeared on the board.
+class BombPlanted extends BlockEvent {
+  const BombPlanted(this.cell, this.fuse);
+  final Cell cell;
+  final int fuse;
+}
+
+/// A bomb's fuse ran out: the game is lost.
+class BombWentOff extends BlockEvent {
+  const BombWentOff(this.cell);
+  final Cell cell;
 }
 
 class TrayRefilled extends BlockEvent {
@@ -163,7 +190,8 @@ class SequenceSource implements PieceSource {
 
 /// "Bulmaca Küpler": drag pieces onto an 8×8 board; full rows and columns
 /// blast away. Endless mode is about score, levels about collecting ★ blocks
-/// within a move limit.
+/// within a move limit. "Bomba" is endless with bombs that must be cleared
+/// before their fuses run out; levels may start with bombs too.
 class BlockPuzzleGame {
   BlockPuzzleGame();
 
@@ -179,6 +207,15 @@ class BlockPuzzleGame {
   int moves = 0;
   int lines = 0;
   int gemsCollected = 0;
+
+  /// "Bomba" mode: new bombs keep appearing.
+  bool bombs = false;
+  int bombsDefused = 0;
+  int _sinceBomb = 0;
+  Random _bombRandom = Random();
+
+  /// Most bombs on the board at once in "Bomba".
+  static const int maxBombs = 3;
 
   /// Consecutive placements that cleared something (kept alive while the
   /// player clears at least once every [streakWindow] placements).
@@ -204,6 +241,16 @@ class BlockPuzzleGame {
 
   int get movesLeft => level == null ? 0 : max(0, level!.moveLimit - moves);
 
+  /// Bombs on the board with their fuses.
+  List<(Cell, int)> get bombCells => [
+    for (var y = 0; y < size; y++)
+      for (var x = 0; x < size; x++)
+        if (board[y][x]?.fuse case final fuse?) (Cell(x, y), fuse),
+  ];
+
+  /// Shortest fuse on the board, if any bomb is there.
+  int? get shortestFuse => bombCells.fold<int?>(null, (m, b) => m == null || b.$2 < m ? b.$2 : m);
+
   List<BlockEvent> drainEvents() {
     final out = List<BlockEvent>.of(_events);
     _events.clear();
@@ -213,7 +260,19 @@ class BlockPuzzleGame {
   void startEndless({Random? random}) {
     _reset();
     level = null;
+    bombs = false;
     _source = RandomSource(random);
+    status = BlockStatus.playing;
+    _refill();
+  }
+
+  /// "Bomba": endless play with bombs.
+  void startBombs({Random? random}) {
+    _reset();
+    level = null;
+    bombs = true;
+    _bombRandom = random ?? Random();
+    _source = RandomSource(_bombRandom);
     status = BlockStatus.playing;
     _refill();
   }
@@ -221,6 +280,7 @@ class BlockPuzzleGame {
   void startLevel(BlockLevel level, {Random? random}) {
     _reset();
     this.level = level;
+    bombs = false;
     for (var y = 0; y < size; y++) {
       for (var x = 0; x < size; x++) {
         board[y][x] = parseCell(level.rows[y][x]);
@@ -236,7 +296,7 @@ class BlockPuzzleGame {
       row.fillRange(0, size, null);
     }
     tray.fillRange(0, 3, null);
-    score = moves = lines = gemsCollected = streak = _sinceClear = 0;
+    score = moves = lines = gemsCollected = streak = _sinceClear = bombsDefused = _sinceBomb = 0;
     loss = null;
     _events.clear();
   }
@@ -251,6 +311,7 @@ class BlockPuzzleGame {
     'Z' => const BlockCell(PieceType.z),
     'J' => const BlockCell(PieceType.j),
     'L' => const BlockCell(PieceType.l),
+    _ when c.length == 1 && '123456789'.contains(c) => BlockCell.bomb(int.parse(c)),
     _ => throw ArgumentError('Unknown cell "$c"'),
   };
 
@@ -324,10 +385,50 @@ class BlockPuzzleGame {
       _events.add(LevelWon(stars: level!.starsFor(moves), movesLeft: left, bonus: bonus));
       return true;
     }
+    if (_tickBombs()) return true;
     if (level != null && movesLeft == 0) return _lose(BlockLoss.outOfMoves);
+    if (bombs) _maybePlantBomb();
     if (tray.every((s) => s == null)) _refill();
     if (!tray.any((s) => s != null && fitsAnywhere(s))) return _lose(BlockLoss.noRoom);
     return true;
+  }
+
+  /// Every bomb left on the board burns one step. Returns true when one went
+  /// off (the game is lost).
+  bool _tickBombs() {
+    Cell? blew;
+    for (final (cell, fuse) in bombCells) {
+      board[cell.y][cell.x] = BlockCell.bomb(fuse - 1);
+      if (fuse - 1 <= 0) blew ??= cell;
+    }
+    if (blew == null) return false;
+    _events.add(BombWentOff(blew));
+    _lose(BlockLoss.bomb);
+    return true;
+  }
+
+  /// "Bomba": a new bomb every few placements, faster and with shorter fuses
+  /// as the game goes on.
+  void _maybePlantBomb() {
+    _sinceBomb++;
+    final every = moves < 40 ? 5 : (moves < 100 ? 4 : 3);
+    if (moves != 2 && _sinceBomb < every) return;
+    if (bombCells.length >= maxBombs) return;
+    final fuse = moves < 40 ? 9 : (moves < 100 ? 8 : 7);
+    // Never on a cell that would finish a line by itself.
+    final spots = [
+      for (var y = 0; y < size; y++)
+        for (var x = 0; x < size; x++)
+          if (board[y][x] == null &&
+              board[y].where((c) => c != null).length < size - 1 &&
+              board.where((row) => row[x] != null).length < size - 1)
+            Cell(x, y),
+    ];
+    if (spots.isEmpty) return;
+    final spot = spots[_bombRandom.nextInt(spots.length)];
+    board[spot.y][spot.x] = BlockCell.bomb(fuse);
+    _sinceBomb = 0;
+    _events.add(BombPlanted(spot, fuse));
   }
 
   bool _lose(BlockLoss reason) {
@@ -379,8 +480,10 @@ class BlockPuzzleGame {
     lines += n;
     final gems = removed.values.where((c) => c.gem).length;
     gemsCollected += gems;
+    final defused = removed.values.where((c) => c.isBomb).length;
+    bombsDefused += defused;
     final perfect = board.every((row) => row.every((c) => c == null));
-    var points = 10 * n * (n + 1) ~/ 2 * streak + gems * 20;
+    var points = 10 * n * (n + 1) ~/ 2 * streak + gems * 20 + defused * 40;
     if (perfect) points += 300;
     score += points;
     _events.add(
@@ -402,8 +505,11 @@ class BlockPuzzleGame {
     return {
       'v': 1,
       'board': [
-        for (final row in board) [for (final c in row) c == null ? '.' : (c.gem ? '*' : c.color.name.toUpperCase())].join(),
+        for (final row in board) [for (final c in row) c?.code ?? '.'].join(),
       ],
+      if (bombs) 'bombs': true,
+      'defused': bombsDefused,
+      'sinceBomb': _sinceBomb,
       'tray': [for (final s in tray) s?.id],
       'score': score,
       'moves': moves,
@@ -443,6 +549,10 @@ class BlockPuzzleGame {
     gemsCollected = save['gems'] as int? ?? 0;
     streak = save['streak'] as int? ?? 0;
     _sinceClear = save['sinceClear'] as int? ?? 0;
+    bombs = save['bombs'] as bool? ?? false;
+    bombsDefused = save['defused'] as int? ?? 0;
+    _sinceBomb = save['sinceBomb'] as int? ?? 0;
+    _bombRandom = Random();
     final lv = save['level'] as Map?;
     if (lv == null) {
       level = null;
@@ -474,6 +584,7 @@ class BlockPuzzleGame {
     }
     status = other.status;
     level = other.level;
+    bombs = other.bombs;
     score = other.score;
     moves = other.moves;
     lines = other.lines;

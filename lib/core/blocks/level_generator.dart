@@ -5,6 +5,11 @@ import 'block_puzzle.dart';
 /// One placement: tray slot and top-left board position.
 typedef BlockMove = (int slot, int x, int y);
 
+/// How hard a generated level is: ★ count, how full the board starts, how
+/// many spare moves the limit allows over the reference solution, how often
+/// awkward pieces are dealt (0..1), and bombs with their fuse.
+typedef LevelSpec = ({int gems, double fill, int slack, double awkward, int bombs, int fuse});
+
 /// Builds the 100 levels of "Bulmaca Küpler" on the fly, so a level is a
 /// fresh board every time while its difficulty stays the same.
 ///
@@ -17,12 +22,17 @@ class BlockLevels {
   static const int perChapter = 10;
   static const int _n = BlockPuzzleGame.size;
 
-  /// Difficulty of level [n]: ★ count, how full the board starts, how many
-  /// spare moves the limit allows over the reference solution, and how often
-  /// awkward pieces are dealt (0..1).
-  static ({int gems, double fill, int slack, double awkward}) specFor(int n) {
+  /// Difficulty of level [n].
+  static LevelSpec specFor(int n) {
     final k = (n.clamp(1, count) - 1) / (count - 1);
-    return (gems: 2 + (k * 10).round(), fill: 0.24 + 0.24 * k, slack: max(2, (8 - k * 6).round()), awkward: 0.05 + 0.6 * k);
+    return (
+      gems: 2 + (k * 10).round(),
+      fill: 0.24 + 0.24 * k,
+      slack: max(2, (8 - k * 6).round()),
+      awkward: 0.05 + 0.6 * k,
+      bombs: 0,
+      fuse: 0,
+    );
   }
 
   /// Rough number of moves the reference solution should need.
@@ -31,9 +41,9 @@ class BlockLevels {
     return (lo, lo + 6 + n ~/ 12);
   }
 
-  static BlockLevel generate(int number, {Random? random}) {
+  static BlockLevel generate(int number, {Random? random, LevelSpec? spec}) {
     final rng = random ?? Random();
-    final spec = specFor(number);
+    spec ??= specFor(number);
     final (lo, hi) = _targetMoves(number);
     BlockLevel? best;
     var bestMiss = 1 << 30;
@@ -57,8 +67,8 @@ class BlockLevels {
     throw StateError('Could not build level $number');
   }
 
-  static BlockLevel? _candidate(int number, ({int gems, double fill, int slack, double awkward}) spec, Random rng) {
-    final rows = _board(spec.fill, spec.gems, rng);
+  static BlockLevel? _candidate(int number, LevelSpec spec, Random rng) {
+    final rows = _board(spec.fill, spec.gems, rng, bombs: spec.bombs, fuse: spec.fuse);
     if (rows == null) return null;
     final pieces = [for (var i = 0; i < 90; i++) _pickShape(spec.awkward, rng).id];
     final draft = BlockLevel(number: number, rows: rows, pieces: pieces, moveLimit: 80, par: 80);
@@ -83,8 +93,8 @@ class BlockLevels {
   }
 
   /// A board that looks played: random pieces dropped in, never completing
-  /// a line, then ★ blocks on some of the filled cells.
-  static List<String>? _board(double fill, int gems, Random rng) {
+  /// a line, then ★ blocks and bombs on some of the filled cells.
+  static List<String>? _board(double fill, int gems, Random rng, {int bombs = 0, int fuse = 9}) {
     final grid = List.generate(_n, (_) => List<String>.filled(_n, '.'));
     final target = (fill * _n * _n).round();
     var filled = 0;
@@ -112,9 +122,12 @@ class BlockLevels {
         for (var x = 0; x < _n; x++)
           if (grid[y][x] != '.') (x, y),
     ]..shuffle(rng);
-    if (solid.length < gems) return null;
+    if (solid.length < gems + bombs) return null;
     for (final (x, y) in solid.take(gems)) {
       grid[y][x] = '*';
+    }
+    for (final (x, y) in solid.skip(gems).take(bombs)) {
+      grid[y][x] = '$fuse';
     }
     return [for (final r in grid) r.join()];
   }
@@ -167,9 +180,10 @@ class BlockSolver {
       for (var r = 0; r < _n; r++)
         for (var c = 0; c < _n; c++) game.board[r][c] != null,
     ];
+    // Bombs are worth clearing as much as ★ blocks.
     final gem = [
       for (var r = 0; r < _n; r++)
-        for (var c = 0; c < _n; c++) game.board[r][c]?.gem ?? false,
+        for (var c = 0; c < _n; c++) (game.board[r][c]?.gem ?? false) || (game.board[r][c]?.isBomb ?? false),
     ];
     var contact = 0;
     for (final c in shape.cells) {
