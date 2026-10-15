@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifeos_kupler/audio/audio_service.dart';
 import 'package:lifeos_kupler/core/scoring.dart';
+import 'package:lifeos_kupler/core/tetromino.dart';
 import 'package:lifeos_kupler/game/game_controller.dart';
 import 'package:lifeos_kupler/settings/settings.dart';
 
@@ -40,6 +41,8 @@ void main() {
 
   test('a tap still rotates', () {
     final c = _game();
+    // A fixed T piece: a random first piece may be the O, which never turns.
+    c.game.debugSetActive(const Piece(PieceType.t, Rotation.spawn, 3, 4));
     final rotation = c.game.active!.rotation;
     c.dragStart();
     c.dragUpdate(const Offset(2, 1), cell);
