@@ -548,16 +548,7 @@ class _KeycapPainter extends CustomPainter {
 /// On-screen control drawn as a jelly keycap that sinks when pressed.
 /// Supports press-and-hold through [onDown]/[onUp].
 class ControlButton extends StatefulWidget {
-  const ControlButton({
-    super.key,
-    required this.glyph,
-    this.onDown,
-    this.onUp,
-    this.size = 58,
-    this.primary = false,
-    this.tooltip,
-    this.label,
-  });
+  const ControlButton({super.key, required this.glyph, this.onDown, this.onUp, this.size = 58, this.primary = false, this.tooltip});
 
   final ControlGlyph glyph;
   final VoidCallback? onDown;
@@ -565,9 +556,6 @@ class ControlButton extends StatefulWidget {
   final double size;
   final bool primary;
   final String? tooltip;
-
-  /// Optional text next to the glyph: makes a wide pill-shaped key.
-  final String? label;
 
   @override
   State<ControlButton> createState() => _ControlButtonState();
@@ -598,45 +586,18 @@ class _ControlButtonState extends State<ControlButton> {
     final primary = widget.primary;
     final color = primary ? p.keyPrimary : p.keyFace;
     final glyphColor = primary ? p.keyPrimaryGlyph : p.keyGlyph;
-    final label = widget.label;
-
-    Widget body;
-    if (label == null) {
-      body = CustomPaint(
-        size: Size.square(s),
-        painter: _KeycapPainter(
-          color: color,
-          pressed: _pressed,
-          dark: p.isDark,
-          glyph: widget.glyph,
-          glyphColor: glyphColor,
-          glyphScale: primary ? 0.46 : 0.42,
-          alpha: p.flat ? 1 : (primary ? max(0.85, keycapGlass) : keycapGlass),
-        ),
-      );
-    } else {
-      final face = keycapFace(Rect.fromLTWH(0, 0, 1, s), pressed: _pressed);
-      body = SizedBox(
-        height: s,
-        child: CustomPaint(
-          painter: _KeycapPainter(color: color, pressed: _pressed, dark: p.isDark, alpha: p.flat ? 1 : keycapGlass),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(s * 0.32, face.top, s * 0.4, s - face.bottom),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CustomPaint(size: Size.square(s * 0.4), painter: _GlyphPainter(widget.glyph, glyphColor)),
-                SizedBox(width: s * 0.18),
-                Text(
-                  label,
-                  style: TextStyle(fontSize: s * 0.3, fontWeight: FontWeight.w900, letterSpacing: 1, color: glyphColor),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
+    final body = CustomPaint(
+      size: Size.square(s),
+      painter: _KeycapPainter(
+        color: color,
+        pressed: _pressed,
+        dark: p.isDark,
+        glyph: widget.glyph,
+        glyphColor: glyphColor,
+        glyphScale: primary ? 0.46 : 0.42,
+        alpha: p.flat ? 1 : (primary ? max(0.85, keycapGlass) : keycapGlass),
+      ),
+    );
 
     final button = Listener(
       behavior: HitTestBehavior.opaque,

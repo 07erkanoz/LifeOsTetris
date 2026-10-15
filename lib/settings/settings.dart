@@ -22,7 +22,6 @@ class Settings extends ChangeNotifier {
   bool _shake = true;
   bool _vibration = true;
   bool _showButtons = true;
-  bool _quickButtons = true;
   double _buttonOpacity = 0.9;
   bool _fullScreen = true;
   double _vibrationStrength = 0.5;
@@ -62,7 +61,6 @@ class Settings extends ChangeNotifier {
       s._shake = prefs.getBool('shake') ?? true;
       s._vibration = prefs.getBool('vibration') ?? true;
       s._showButtons = prefs.getBool('showButtons') ?? true;
-      s._quickButtons = prefs.getBool('quickButtons') ?? true;
       s._buttonOpacity = prefs.getDouble('buttonOpacity') ?? 0.9;
       s._fullScreen = prefs.getBool('fullScreen') ?? true;
       s._vibrationStrength = prefs.getDouble('vibrationStrength') ?? 0.5;
@@ -106,10 +104,6 @@ class Settings extends ChangeNotifier {
   bool get shake => _shake;
   bool get vibration => _vibration;
   bool get showButtons => _showButtons;
-
-  /// With the on-screen buttons off, still show hold and hard drop (hard to
-  /// do reliably with gestures).
-  bool get quickButtons => _quickButtons;
 
   /// The look of the game (blocks, cards, keys, icons and type).
   VisualTheme get visualTheme => _visualTheme;
@@ -191,7 +185,6 @@ class Settings extends ChangeNotifier {
   set effects(bool v) => _set(() => _effects = v, () => _prefs?.setBool('effects', v));
   set shake(bool v) => _set(() => _shake = v, () => _prefs?.setBool('shake', v));
   set vibration(bool v) => _set(() => _vibration = v, () => _prefs?.setBool('vibration', v));
-  set quickButtons(bool v) => _set(() => _quickButtons = v, () => _prefs?.setBool('quickButtons', v));
   set showButtons(bool v) => _set(() => _showButtons = v, () => _prefs?.setBool('showButtons', v));
   set buttonOpacity(double v) => _set(() => _buttonOpacity = v, () => _prefs?.setDouble('buttonOpacity', v));
   set highRefreshRate(bool v) => _set(() => _highRefreshRate = v, () => _prefs?.setBool('highRefreshRate', v));

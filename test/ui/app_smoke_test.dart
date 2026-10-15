@@ -118,18 +118,13 @@ void main() {
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 33));
     }
-    // Only the hold and drop keys stay.
-    expect(find.byType(ControlButton), findsNWidgets(2));
+    expect(find.byType(ControlButton), findsNothing);
 
     // The hold card itself holds too.
     await tester.tap(find.text('TUT').first);
     await tester.pump(const Duration(milliseconds: 33));
     final state = tester.state(find.byType(GameScreen)) as dynamic;
     expect((state.controller as GameController).game.held, isNotNull);
-
-    settings.quickButtons = false;
-    await tester.pump(const Duration(milliseconds: 33));
-    expect(find.byType(ControlButton), findsNothing);
   });
 
   testWidgets('Süper Küpler shows the power bar and uses powers with number keys', (tester) async {

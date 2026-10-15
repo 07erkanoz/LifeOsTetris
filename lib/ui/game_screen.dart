@@ -497,20 +497,6 @@ class _PhoneLayout extends StatelessWidget {
               ),
             ),
           )
-        else if (settings.quickButtons)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 2, 16, 10),
-            child: Opacity(
-              opacity: settings.buttonOpacity,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  ControlButton(glyph: ControlGlyph.hold, label: s.hold, size: 48, onDown: c.hold),
-                  ControlButton(glyph: ControlGlyph.drop, label: s.dropShort, size: 48, onDown: c.hardDrop),
-                ],
-              ),
-            ),
-          )
         else
           const SizedBox(height: 8),
       ],
@@ -957,12 +943,7 @@ class SettingsPanel extends StatelessWidget {
             value: settings.showButtons,
             onChanged: (v) => settings.showButtons = v,
           ),
-          if (!settings.showButtons)
-            Padding(
-              padding: const EdgeInsets.only(left: 28),
-              child: ToggleRow(label: s.quickButtons, value: settings.quickButtons, onChanged: (v) => settings.quickButtons = v),
-            ),
-          if (settings.showButtons || settings.quickButtons) ...[
+          if (settings.showButtons) ...[
             Padding(
               padding: const EdgeInsets.only(left: 28, top: 2),
               child: Text(
