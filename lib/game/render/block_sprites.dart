@@ -64,9 +64,116 @@ void paintBlock(Canvas canvas, Offset origin, double s, Color color, {required C
 /// A block in the style of [palette]'s skin.
 void paintSkinBlock(Canvas canvas, Offset origin, double s, Color color, GamePalette palette) => switch (palette.skin) {
   GameSkin.glass => paintBlock(canvas, origin, s, color, shadeTarget: palette.shadeTarget, emissive: palette.isDark),
-  GameSkin.toy => paintToyBlock(canvas, origin, s, color, palette.ink),
+  GameSkin.toy => hdBlocks ? paintToyBlockHd(canvas, origin, s, color, palette.ink) : paintToyBlock(canvas, origin, s, color, palette.ink),
   GameSkin.pixel => paintPixelBlock(canvas, origin, s, color, palette.ink),
 };
+
+const String _blockStyle = String.fromEnvironment('KUPLER_BLOCKS');
+
+/// Detailed ("HD") blocks: shaded faces, rim light and gloss on the toy
+/// brick shape instead of flat fills.
+bool hdBlocks = _blockStyle == 'hd';
+
+/// HD toy brick: the same outlined shape as [paintToyBlock], with a lit face
+/// gradient, bevelled rim, curved gloss, a shaded lip and soft side shading.
+void paintToyBlockHd(Canvas canvas, Offset origin, double s, Color color, Color ink) {
+  final g = s * 0.03, w = s - 2 * g;
+  final outline = max(1.2, s * 0.06);
+  final x = origin.dx + g, y = origin.dy + g;
+  final r = Radius.circular(s * 0.22);
+  final body = RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, w), r);
+  final lip = s * 0.16;
+  final faceRect = Rect.fromLTWH(x, y, w, w - lip);
+  final face = RRect.fromRectAndRadius(faceRect, r);
+
+  // Lip: darker, shaded towards the bottom edge.
+  canvas.drawRRect(
+    body,
+    Paint()
+      ..shader = ui.Gradient.linear(Offset(0, y + w - lip * 1.6), Offset(0, y + w), [
+        Color.lerp(color, ink, 0.22)!,
+        Color.lerp(color, ink, 0.5)!,
+      ]),
+  );
+  // Face: lit from the top left.
+  canvas.drawRRect(
+    face,
+    Paint()
+      ..shader = ui.Gradient.linear(
+        faceRect.topLeft,
+        faceRect.bottomRight,
+        [lighten(color, 0.28), color, Color.lerp(color, ink, 0.1)!],
+        const [0, 0.5, 1],
+      ),
+  );
+  // Side shading: a touch of light on the left, shade on the right.
+  canvas.drawRRect(
+    face,
+    Paint()
+      ..shader = ui.Gradient.linear(
+        faceRect.centerLeft,
+        faceRect.centerRight,
+        [
+          Colors.white.withValues(alpha: 0.12),
+          Colors.white.withValues(alpha: 0),
+          Colors.black.withValues(alpha: 0),
+          Colors.black.withValues(alpha: 0.1),
+        ],
+        const [0, 0.25, 0.75, 1],
+      ),
+  );
+  // Bevel: a bright rim along the top of the face, fading downwards.
+  canvas.drawRRect(
+    face.deflate(s * 0.07),
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = max(0.8, s * 0.035)
+      ..shader = ui.Gradient.linear(faceRect.topCenter, faceRect.bottomCenter, [
+        Colors.white.withValues(alpha: 0.6),
+        Colors.white.withValues(alpha: 0.08),
+      ]),
+  );
+  // Crease where the face meets the lip.
+  canvas.drawLine(
+    Offset(x + s * 0.12, y + w - lip),
+    Offset(x + w - s * 0.12, y + w - lip),
+    Paint()
+      ..color = Color.lerp(color, ink, 0.55)!.withValues(alpha: 0.6)
+      ..strokeWidth = max(0.6, s * 0.025),
+  );
+  // Curved gloss and a specular point.
+  final gloss = Path()
+    ..moveTo(x + s * 0.17, y + s * 0.34)
+    ..quadraticBezierTo(x + s * 0.17, y + s * 0.13, x + s * 0.4, y + s * 0.13)
+    ..lineTo(x + s * 0.62, y + s * 0.13)
+    ..quadraticBezierTo(x + s * 0.4, y + s * 0.18, x + s * 0.27, y + s * 0.36)
+    ..close();
+  canvas.drawPath(
+    gloss,
+    Paint()
+      ..shader = ui.Gradient.linear(Offset(x, y + s * 0.12), Offset(x + s * 0.5, y + s * 0.36), [
+        Colors.white.withValues(alpha: 0.85),
+        Colors.white.withValues(alpha: 0.15),
+      ]),
+  );
+  canvas.drawCircle(Offset(x + w - s * 0.2, y + s * 0.2), s * 0.04, Paint()..color = Colors.white.withValues(alpha: 0.9));
+  canvas.drawCircle(
+    Offset(x + w - s * 0.2, y + s * 0.2),
+    s * 0.09,
+    Paint()
+      ..shader = ui.Gradient.radial(Offset(x + w - s * 0.2, y + s * 0.2), s * 0.09, [
+        Colors.white.withValues(alpha: 0.35),
+        Colors.white.withValues(alpha: 0),
+      ]),
+  );
+  canvas.drawRRect(
+    body.deflate(outline / 2),
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = outline
+      ..color = ink,
+  );
+}
 
 /// Flat toy brick: ink outline, a darker lip at the bottom and one short
 /// shine stroke. No gradients or glow.
@@ -301,7 +408,7 @@ class BlockSprites {
   /// Shared sprites for a cell size; a handful of sizes are kept alive.
   static BlockSprites of(double cell, double dpr, GamePalette palette) {
     final rounded = (cell * 2).roundToDouble() / 2;
-    final key = '$rounded@$dpr/${palette.skin.name}/${palette.isDark}';
+    final key = '$rounded@$dpr/${palette.skin.name}/$hdBlocks/${palette.isDark}';
     final hit = _cache.remove(key);
     if (hit != null) return _cache[key] = hit;
     if (_cache.length >= 16) {
