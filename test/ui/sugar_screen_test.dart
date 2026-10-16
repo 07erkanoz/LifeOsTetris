@@ -194,7 +194,10 @@ void main() {
     expect(find.text('Kırmak istediğin şekere dokun'), findsWidgets);
     final box = tester.getRect(find.byKey(const ValueKey('sugar-board')));
     await tester.tapAt(box.center);
-    await pumpFor(tester, 40);
+    // Wait for the hammer and whatever falls after it.
+    for (var i = 0; i < 1500 && !c.canPlay; i++) {
+      await tester.pump(const Duration(milliseconds: 33));
+    }
     expect(settings.sugarBoosters(SugarBooster.hammer), hammers - 1);
     expect(c.hammerArmed, isFalse);
     expect(c.game.moves, SugarBooster.extraMoves, reason: 'the hammer costs no move');
