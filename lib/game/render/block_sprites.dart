@@ -61,9 +61,112 @@ void paintBlock(Canvas canvas, Offset origin, double s, Color color, {required C
   canvas.drawCircle(Offset(x + w * 0.8, y + s * 0.2), s * 0.045, Paint()..color = Colors.white.withValues(alpha: 0.9));
 }
 
-/// A block in the style of [palette]'s skin.
-void paintSkinBlock(Canvas canvas, Offset origin, double s, Color color, GamePalette palette, {bool? hd}) => switch (palette.skin) {
-  GameSkin.glass => paintBlock(canvas, origin, s, color, shadeTarget: palette.shadeTarget, emissive: palette.isDark),
+/// Jelly HD (the neon skin): the glass jelly made calmer and finer. Light
+/// enters from the top and glows out of the bottom, a soft wide gloss and
+/// one small reflection replace the hard white bar and dot, a faint ground
+/// shadow replaces most of the coloured halo, and the edges are crisp. With
+/// [bubbles] (a seed) a few faint air bubbles float inside, placed by it.
+void paintJellyHd(Canvas canvas, Offset origin, double s, Color color, {required Color shadeTarget, int? bubbles}) {
+  final b = Rect.fromLTWH(origin.dx, origin.dy, s, s).deflate(s * 0.055);
+  final rr = RRect.fromRectAndRadius(b, Radius.circular(s * 0.24));
+  final deep = Color.lerp(color, shadeTarget, 0.55)!;
+  canvas.drawRRect(
+    rr.shift(Offset(0, s * 0.07)),
+    Paint()
+      ..color = Colors.black.withValues(alpha: 0.45)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, s * 0.09),
+  );
+  canvas.drawRRect(
+    rr,
+    Paint()
+      ..color = color.withValues(alpha: 0.14)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, s * 0.18),
+  );
+  canvas.drawRRect(
+    rr,
+    Paint()
+      ..shader = ui.Gradient.linear(
+        b.topCenter,
+        b.bottomCenter,
+        [Color.lerp(color, Colors.white, 0.16)!, color, Color.lerp(color, shadeTarget, 0.24)!],
+        const [0, 0.45, 1],
+      ),
+  );
+  canvas.save();
+  canvas.clipRRect(rr);
+  final lip = Rect.fromLTWH(b.left, b.bottom - s * 0.22, b.width, s * 0.22);
+  canvas.drawRect(
+    lip,
+    Paint()..shader = ui.Gradient.linear(lip.topCenter, lip.bottomCenter, [deep.withValues(alpha: 0), deep.withValues(alpha: 0.45)]),
+  );
+  final glowAt = b.bottomCenter - Offset(0, s * 0.24);
+  final inner = Color.lerp(color, Colors.white, 0.4)!;
+  canvas.drawCircle(
+    glowAt,
+    s * 0.42,
+    Paint()..shader = ui.Gradient.radial(glowAt, s * 0.42, [inner.withValues(alpha: 0.42), inner.withValues(alpha: 0)]),
+  );
+  if (bubbles != null) {
+    final rnd = Random(bubbles * 7919 + color.toARGB32());
+    for (var i = 0; i < 2 + rnd.nextInt(2); i++) {
+      final c = Offset(b.left + b.width * (0.22 + rnd.nextDouble() * 0.56), b.top + b.height * (0.45 + rnd.nextDouble() * 0.38));
+      final rad = s * (0.03 + rnd.nextDouble() * 0.035);
+      canvas.drawCircle(c, rad, Paint()..color = Colors.white.withValues(alpha: 0.1));
+      canvas.drawCircle(
+        c,
+        rad,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.28)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = s * 0.012,
+      );
+      canvas.drawCircle(c - Offset(rad * 0.35, rad * 0.35), rad * 0.3, Paint()..color = Colors.white.withValues(alpha: 0.55));
+    }
+  }
+  final gloss = RRect.fromRectAndRadius(Rect.fromLTWH(b.left + s * 0.1, b.top + s * 0.06, b.width - s * 0.2, s * 0.34), Radius.circular(s * 0.17));
+  canvas.drawRRect(
+    gloss,
+    Paint()
+      ..shader = ui.Gradient.linear(
+        gloss.outerRect.topCenter,
+        gloss.outerRect.bottomCenter,
+        [Colors.white.withValues(alpha: 0.3), Colors.white.withValues(alpha: 0)],
+      ),
+  );
+  canvas.drawRRect(
+    RRect.fromRectAndRadius(Rect.fromLTWH(b.left + s * 0.17, b.top + s * 0.11, s * 0.24, s * 0.065), Radius.circular(s * 0.04)),
+    Paint()
+      ..color = Colors.white.withValues(alpha: 0.6)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, s * 0.008),
+  );
+  canvas.restore();
+  canvas.drawRRect(
+    rr.deflate(s * 0.02),
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = s * 0.025
+      ..shader = ui.Gradient.linear(
+        b.topCenter,
+        b.topCenter + Offset(0, s * 0.35),
+        [Colors.white.withValues(alpha: 0.38), Colors.white.withValues(alpha: 0)],
+      ),
+  );
+  canvas.drawRRect(
+    rr,
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = max(1, s * 0.022)
+      ..color = deep.withValues(alpha: 0.9),
+  );
+}
+
+/// A block in the style of [palette]'s skin. [variant] picks the bubbles of
+/// the neon Jelly HD block.
+void paintSkinBlock(Canvas canvas, Offset origin, double s, Color color, GamePalette palette, {bool? hd, int variant = 0}) => switch (palette.skin) {
+  GameSkin.glass =>
+    isNeon(palette)
+        ? paintJellyHd(canvas, origin, s, color, shadeTarget: palette.shadeTarget, bubbles: variant)
+        : paintBlock(canvas, origin, s, color, shadeTarget: palette.shadeTarget, emissive: palette.isDark),
   GameSkin.toy =>
     (hd ?? hdBlocks) ? paintToyBlockHd(canvas, origin, s, color, palette.ink) : paintToyBlock(canvas, origin, s, color, palette.ink),
   GameSkin.pixel => paintPixelBlock(canvas, origin, s, color, palette.ink),
@@ -352,7 +455,7 @@ void paintDrill(Canvas canvas, Offset origin, double s) {
 /// Pre-rendered block images for one cell size. Drawing cached images is far
 /// cheaper than re-running gradients and blurs for every cell every frame.
 class BlockSprites {
-  BlockSprites._(this.cell, this.dpr, this.palette) : pad = cell * 0.45 {
+  BlockSprites._(this.cell, this.dpr, this.palette) : pad = cell * 0.45, variants = isNeon(palette) ? 3 : 1 {
     for (final type in PieceType.values) {
       _normal[type] = _render(
         (c, o) => switch (type) {
@@ -362,6 +465,28 @@ class BlockSprites {
           _ => paintSkinBlock(c, o, cell, blockColors[type]!, palette),
         },
       );
+      if (type != PieceType.bomb && type != PieceType.drill) {
+        _shaded[type] = _render((c, o) {
+          if (type == PieceType.gem) {
+            paintGem(c, o, cell, shadeTarget: palette.shadeTarget, palette: palette);
+          } else {
+            paintSkinBlock(c, o, cell, blockColors[type]!, palette);
+          }
+          _paintContactShadow(c, o);
+        });
+      }
+      // Neon jelly cubes come in a few bubble patterns, picked per cell.
+      if (variants > 1 && type != PieceType.bomb && type != PieceType.drill && type != PieceType.gem) {
+        for (var v = 1; v < variants; v++) {
+          _normalVariants.putIfAbsent(type, () => []).add(_render((c, o) => paintSkinBlock(c, o, cell, blockColors[type]!, palette, variant: v)));
+          _shadedVariants.putIfAbsent(type, () => []).add(
+            _render((c, o) {
+              paintSkinBlock(c, o, cell, blockColors[type]!, palette, variant: v);
+              _paintContactShadow(c, o);
+            }),
+          );
+        }
+      }
       _ghost[type] = _render((c, o) => _paintGhost(c, o, blockColors[type]!));
       _aura[type] = _render((c, o) => _paintAura(c, o, blockColors[type]!));
     }
@@ -386,13 +511,28 @@ class BlockSprites {
   final double pad;
 
   final Map<PieceType, ui.Image> _normal = {};
+  final Map<PieceType, ui.Image> _shaded = {};
+  final Map<PieceType, List<ui.Image>> _normalVariants = {};
+  final Map<PieceType, List<ui.Image>> _shadedVariants = {};
+
+  /// Looks per block type (neon: bubble patterns); 1 for the other skins.
+  final int variants;
+
+  /// A stable look for the cell at ([x], [y]).
+  static int variantAt(int x, int y) => (x * 7 + y * 13) % 3;
   final Map<PieceType, ui.Image> _ghost = {};
   final Map<PieceType, ui.Image> _aura = {};
   late final ui.Image gray;
   late final ui.Image white;
 
-  ui.Image block(PieceType type) => _normal[type]!;
+  ui.Image block(PieceType type, [int variant = 0]) =>
+      variant % variants == 0 ? _normal[type]! : (_normalVariants[type]?[variant % variants - 1] ?? _normal[type]!);
   ui.Image ghost(PieceType type) => _ghost[type]!;
+
+  /// The block with the shadow of one resting on it (falls back to the
+  /// plain block for bombs and drills).
+  ui.Image shaded(PieceType type, [int variant = 0]) =>
+      (variant % variants == 0 ? null : _shadedVariants[type]?[variant % variants - 1]) ?? _shaded[type] ?? _normal[type]!;
 
   /// Soft coloured glow behind the active piece (pre-blurred, so drawing it
   /// costs no per-frame blur).
@@ -403,7 +543,7 @@ class BlockSprites {
   /// Shared sprites for a cell size; a handful of sizes are kept alive.
   static BlockSprites of(double cell, double dpr, GamePalette palette) {
     final rounded = (cell * 2).roundToDouble() / 2;
-    final key = '$rounded@$dpr/${palette.skin.name}/$hdBlocks/${palette.isDark}';
+    final key = '$rounded@$dpr/${palette.skin.name}/$hdBlocks/${palette.isDark}/$neonStyle';
     final hit = _cache.remove(key);
     if (hit != null) return _cache[key] = hit;
     if (_cache.length >= 16) {
@@ -422,6 +562,29 @@ class BlockSprites {
     final image = picture.toImageSync(px, px);
     picture.dispose();
     return image;
+  }
+
+  /// Darkens the top of a block just drawn (only where it is opaque).
+  void _paintContactShadow(Canvas canvas, Offset o) {
+    final shade = palette.shadeTarget;
+    switch (palette.skin) {
+      case GameSkin.pixel:
+        canvas.drawRect(
+          Rect.fromLTWH(o.dx, o.dy, cell, cell * 0.125),
+          Paint()
+            ..color = shade.withValues(alpha: 0.24)
+            ..blendMode = BlendMode.srcATop,
+        );
+      case GameSkin.toy || GameSkin.glass:
+        final strength = palette.skin == GameSkin.glass ? 0.16 : 0.24;
+        final band = Rect.fromLTWH(o.dx, o.dy, cell, cell * 0.24);
+        canvas.drawRect(
+          band,
+          Paint()
+            ..blendMode = BlendMode.srcATop
+            ..shader = ui.Gradient.linear(band.topCenter, band.bottomCenter, [shade.withValues(alpha: strength), shade.withValues(alpha: 0)]),
+        );
+    }
   }
 
   void _paintGhost(Canvas canvas, Offset o, Color color) {

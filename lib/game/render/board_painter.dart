@@ -48,6 +48,11 @@ class BoardPainter extends CustomPainter {
 
   static const int _h = TetrisGame.hiddenRows;
 
+  /// Depth: the well's wall shadow, a light from the top left, contact
+  /// shadows under stacked blocks and dark holes. Off only for before/after
+  /// comparisons (tool/depth_compare_test.dart).
+  static bool depth = true;
+
   @override
   void paint(Canvas canvas, Size size) {
     final c = geometry.cell;
@@ -77,6 +82,7 @@ class BoardPainter extends CustomPainter {
     _paintLockPulses(canvas);
     _paintFog(canvas, well);
     _paintActive(canvas);
+    if (depth) _paintLight(canvas, well);
     canvas.restore();
 
     _paintClearBeams(canvas, well);
@@ -95,7 +101,7 @@ class BoardPainter extends CustomPainter {
 
   ui.Image _chrome(Rect well) {
     final dpr = min(sprites.dpr, 2.0);
-    final key = '${geometry.cell}/${palette.skin.name}/${palette.isDark}/$dpr';
+    final key = '${geometry.cell}/${palette.skin.name}/${palette.isDark}/$dpr/$depth';
     final hit = _chromeCache[key];
     if (hit != null) return hit;
     if (_chromeCache.length >= 4) _chromeCache.remove(_chromeCache.keys.first)?.dispose();
@@ -104,10 +110,76 @@ class BoardPainter extends CustomPainter {
       ..scale(dpr)
       ..translate(geometry.wellOrigin.dx, geometry.wellOrigin.dy);
     _paintFrame(canvas, well);
+    if (depth) _paintWallShadow(canvas, well);
     final picture = recorder.endRecording();
     final image = picture.toImageSync((geometry.size.width * dpr).ceil(), (geometry.size.height * dpr).ceil());
     picture.dispose();
     return _chromeCache[key] = image;
+  }
+
+  /// The well's walls cast a shadow onto its floor: deepest under the top
+  /// edge, lighter along the sides. Baked into the chrome image.
+  void _paintWallShadow(Canvas canvas, Rect well) {
+    final c = geometry.cell;
+    final shade = palette.shadeTarget;
+    final strength = palette.isDark ? 1.0 : 0.6;
+    canvas.save();
+    if (palette.skin == GameSkin.pixel) {
+      // Hard steps instead of a soft fade, like the rest of the pixel skin.
+      canvas.clipRect(well);
+      final u = c / 8;
+      for (final (i, a) in [(0, 0.34), (1, 0.22), (2, 0.12)]) {
+        final band = Paint()..color = shade.withValues(alpha: a * strength);
+        canvas.drawRect(Rect.fromLTWH(well.left, well.top + i * u, well.width, u), band);
+        canvas.drawRect(Rect.fromLTWH(well.left + i * u, well.top, u, well.height), band);
+        canvas.drawRect(Rect.fromLTWH(well.right - (i + 1) * u, well.top, u, well.height), band);
+      }
+      canvas.restore();
+      return;
+    }
+    canvas.clipRRect(RRect.fromRectAndRadius(well, Radius.circular(c * 0.4)));
+    final top = Rect.fromLTWH(well.left, well.top, well.width, c * 1.1);
+    canvas.drawRect(
+      top,
+      Paint()..shader = ui.Gradient.linear(top.topCenter, top.bottomCenter, [shade.withValues(alpha: 0.42 * strength), shade.withValues(alpha: 0)]),
+    );
+    final side = c * 0.5;
+    final left = Rect.fromLTWH(well.left, well.top, side, well.height);
+    canvas.drawRect(
+      left,
+      Paint()..shader = ui.Gradient.linear(left.centerLeft, left.centerRight, [shade.withValues(alpha: 0.26 * strength), shade.withValues(alpha: 0)]),
+    );
+    final right = Rect.fromLTWH(well.right - side, well.top, side, well.height);
+    canvas.drawRect(
+      right,
+      Paint()..shader = ui.Gradient.linear(right.centerRight, right.centerLeft, [shade.withValues(alpha: 0.26 * strength), shade.withValues(alpha: 0)]),
+    );
+    canvas.restore();
+  }
+
+  /// One light from the top left over the whole well, and the far corner a
+  /// little darker. Two plain (source-over) fills: no blend mode that would
+  /// need a copy of the screen on some Android GPUs.
+  void _paintLight(Canvas canvas, Rect well) {
+    final glow = palette.isDark ? 0.11 : 0.14;
+    canvas.drawRect(
+      well,
+      Paint()
+        ..shader = ui.Gradient.radial(
+          well.topLeft + Offset(well.width * 0.12, -well.height * 0.04),
+          well.height * 0.8,
+          [Colors.white.withValues(alpha: glow), Colors.white.withValues(alpha: 0)],
+        ),
+    );
+    canvas.drawRect(
+      well,
+      Paint()
+        ..shader = ui.Gradient.linear(
+          well.center,
+          well.bottomRight,
+          [Colors.black.withValues(alpha: 0), Colors.black.withValues(alpha: palette.isDark ? 0.08 : 0.04)],
+        ),
+    );
   }
 
   void _paintFrame(Canvas canvas, Rect well) {
@@ -301,6 +373,9 @@ class BoardPainter extends CustomPainter {
     final clearing = game.status == GameStatus.clearing ? game.clearingRows : const <int>[];
     final p = game.clearProgress;
     final grayT = fx.gameOverAge < 0 || fx.finishedWon ? -1.0 : fx.gameOverAge / EffectsEngine.gameOverGrayDuration;
+    // Holes stay put only while nothing moves.
+    final settled = depth && !collapsing && clearing.isEmpty && fx.fallAge >= EffectsEngine.fallDuration;
+    if (settled) _paintHoles(canvas);
 
     for (var y = _h; y < TetrisGame.height; y++) {
       final yv = y - _h;
@@ -317,11 +392,38 @@ class BoardPainter extends CustomPainter {
           final vanish = EffectsEngine.cellVanishTime(x);
           if (p >= vanish) continue;
           final k = p / vanish;
-          sprites.draw(canvas, sprites.block(type), px, py, scale: 1 + 0.14 * k);
+          sprites.draw(canvas, sprites.block(type, BlockSprites.variantAt(x, y)), px, py, scale: 1 + 0.14 * k);
           sprites.draw(canvas, sprites.white, px, py, scale: 1 + 0.14 * k, opacity: min(1, p / 0.12) * 0.85);
           continue;
         }
-        sprites.draw(canvas, gray ? sprites.gray : sprites.block(type), px, py);
+        // A block under another sits in its shadow.
+        final covered = depth && game.cellAt(x, y - 1) != null;
+        final look = BlockSprites.variantAt(x, y);
+        sprites.draw(canvas, gray ? sprites.gray : (covered ? sprites.shaded(type, look) : sprites.block(type, look)), px, py);
+      }
+    }
+  }
+
+  /// Empty cells with a block somewhere above them: closed-off holes, drawn
+  /// darker so the stack reads as solid.
+  void _paintHoles(Canvas canvas) {
+    final c = geometry.cell;
+    final pixel = palette.skin == GameSkin.pixel;
+    final fill = Paint()..color = palette.shadeTarget.withValues(alpha: palette.isDark ? 0.3 : 0.16);
+    for (var x = 0; x < TetrisGame.width; x++) {
+      var roof = false;
+      for (var y = 0; y < TetrisGame.height; y++) {
+        if (game.cellAt(x, y) != null) {
+          roof = true;
+          continue;
+        }
+        if (!roof || y < _h) continue;
+        final r = Rect.fromLTWH(x * c, (y - _h) * c, c, c).deflate(c * 0.04);
+        if (pixel) {
+          canvas.drawRect(r, fill);
+        } else {
+          canvas.drawRRect(RRect.fromRectAndRadius(r, Radius.circular(c * 0.18)), fill);
+        }
       }
     }
   }

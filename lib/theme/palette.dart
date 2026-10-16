@@ -53,6 +53,13 @@ void applyVisualTheme(VisualTheme theme) {
 double get skinTextScale => activeSkin == GameSkin.pixel ? 1.15 : 1;
 
 /// Block colours of the active skin, shared by both themes.
+/// Neon look of the dark glass skin: outlined, glowing controls and panels
+/// (lib/ui/widgets.dart) and Jelly HD blocks (block_sprites.dart). Off only
+/// for before/after comparisons (tool/neon_compare_test.dart).
+bool neonStyle = true;
+
+bool isNeon(GamePalette p) => neonStyle && p.skin == GameSkin.glass && p.isDark;
+
 Map<PieceType, Color> get blockColors => blockColorsOf(activeSkin);
 
 Map<PieceType, Color> blockColorsOf(GameSkin skin) => switch (skin) {

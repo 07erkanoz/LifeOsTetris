@@ -8,6 +8,7 @@ import 'audio/haptics.dart';
 import 'l10n/strings.dart';
 import 'settings/settings.dart';
 import 'theme/palette.dart';
+import 'ui/fps_overlay.dart';
 import 'ui/game_screen.dart';
 
 class KuplerApp extends StatelessWidget {
@@ -19,7 +20,7 @@ class KuplerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
+    final app = ListenableBuilder(
       listenable: settings,
       builder: (context, _) => MaterialApp(
         title: 'LifeOS Küpler',
@@ -67,6 +68,8 @@ class KuplerApp extends StatelessWidget {
         home: GameScreen(settings: settings, audio: audio, haptics: haptics),
       ),
     );
+    // Frame times in a corner, only in builds made for measuring.
+    return FpsOverlay.enabled ? FpsOverlay(child: app) : app;
   }
 }
 

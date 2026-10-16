@@ -154,6 +154,9 @@ flutter build apk --release  # Android
 | `--dart-define=KUPLER_DEMO=true` | Oyunu neredeyse dolu tahtayla başlatır (efekt demosu) |
 | `--dart-define=KUPLER_DEMO_SUPER=true` | Süper Küpler'i birkaç güçle başlatır |
 | `--dart-define=KUPLER_DEMO_BLOCKS=true` | Doğrudan Bulmaca Küpler'i açar; Sonsuz mod hazır bir tahtayla başlar |
+| `--dart-define=KUPLER_FPS=true` | Köşede kare hızı ile kare başına UI ve GPU süresini gösterir (telefonda ölçmek için) |
+| `flutter test tool/depth_compare_test.dart` | Tahtanın derinlik efektlerini önce/sonra çeker (`build/depth/`) |
+| `flutter test tool/neon_compare_test.dart` | Neon görünümünü (düğmeler, kartlar, Jöle HD) önce/sonra çeker (`build/neon/`) |
 | `powershell -ExecutionPolicy Bypass -File tool\make_android_keystore.ps1` | Android yükleme anahtarını (upload keystore) oluşturur ve GitHub secret'larına yükler (bir kez çalıştırılır) |
 
 **Android imzalama:** Sürüm derlemeleri `android/key.properties` dosyasındaki anahtarla

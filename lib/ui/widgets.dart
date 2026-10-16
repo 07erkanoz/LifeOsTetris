@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,29 @@ export 'game_icons.dart' show GameIcon;
 
 /// Phones and tablets: vibration and on-screen buttons only make sense there.
 bool get isMobilePlatform => !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+
+const neonCyan = Color(0xFF3DF5FF);
+const neonBlue = Color(0xFF3D7BFF);
+const neonPink = Color(0xFFFF4FD8);
+const neonViolet = Color(0xFF8C5BFF);
+const _neonPanelTop = Color(0xCC131B36);
+const _neonPanelBottom = Color(0xB30A0F22);
+
+/// A neon panel: dark glass, a thin outline in [tone] and a soft halo that
+/// grows with [glow].
+Decoration neonCardDecoration({double radius = 20, double glow = 0, Color tone = neonCyan}) => BoxDecoration(
+  gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [_neonPanelTop, _neonPanelBottom]),
+  borderRadius: BorderRadius.circular(radius),
+  border: Border.all(color: Color.lerp(tone.withValues(alpha: 0.3), tone, glow)!, width: 1.3),
+  boxShadow: [
+    BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6)),
+    BoxShadow(color: tone.withValues(alpha: 0.1 + 0.4 * glow), blurRadius: 18 + 12 * glow),
+  ],
+);
+
+/// Icon colour and glow on neon panels.
+const neonGlyph = Color(0xFFD4FBFF);
+List<Shadow> neonGlyphGlow([Color tone = neonCyan]) => [Shadow(color: tone.withValues(alpha: 0.85), blurRadius: 10)];
 
 class GlassCard extends StatelessWidget {
   const GlassCard({super.key, required this.child, this.padding = const EdgeInsets.all(12), this.radius = 20, this.glow = 0});
@@ -33,6 +57,9 @@ class GlassCard extends StatelessWidget {
         decoration: flatCardDecoration(p, radius: radius, glow: glow),
         child: child,
       );
+    }
+    if (isNeon(p)) {
+      return Container(padding: padding, decoration: neonCardDecoration(radius: radius, glow: glow), child: child);
     }
     return Container(
       padding: padding,
@@ -247,6 +274,7 @@ class GlassIconButton extends StatelessWidget {
       );
       return tooltip == null ? button : Tooltip(message: tooltip!, child: button);
     }
+    final neon = isNeon(p);
     final button = GestureDetector(
       onTap: onTap,
       child: GlassCard(
@@ -254,7 +282,7 @@ class GlassIconButton extends StatelessWidget {
         radius: size * 0.35,
         child: SizedBox.square(
           dimension: size,
-          child: Icon(icon, size: size * 0.45, color: p.icon),
+          child: Icon(icon, size: size * 0.45, color: neon ? neonGlyph : p.icon, shadows: neon ? neonGlyphGlow() : null),
         ),
       ),
     );
@@ -351,7 +379,16 @@ class _GlyphPainter extends CustomPainter {
 /// Paints a 2.5D "jelly keycap" in [rect]: a darker base for depth, a
 /// glossy top face, a soft rim and highlight, matching the game's blocks.
 /// When [pressed] the top face sinks onto its base.
-void paintKeycap(Canvas canvas, Rect rect, Color color, {required bool pressed, required bool dark, double glow = 0, double alpha = 1}) {
+void paintKeycap(
+  Canvas canvas,
+  Rect rect,
+  Color color, {
+  required bool pressed,
+  required bool dark,
+  double glow = 0,
+  double alpha = 1,
+  bool primary = false,
+}) {
   switch (activeSkin) {
     case GameSkin.toy:
       _paintToyKey(canvas, rect, color, pressed: pressed, glow: glow);
@@ -360,7 +397,10 @@ void paintKeycap(Canvas canvas, Rect rect, Color color, {required bool pressed, 
       _paintPixelKey(canvas, rect, color, pressed: pressed, glow: glow);
       return;
     case GameSkin.glass:
-      break;
+      if (neonStyle && dark) {
+        _paintNeonKey(canvas, rect, pressed: pressed, primary: primary);
+        return;
+      }
   }
   final depth = rect.height * 0.09;
   final radius = Radius.circular(min(rect.width, rect.height) * 0.32);
@@ -417,6 +457,57 @@ void paintKeycap(Canvas canvas, Rect rect, Color color, {required bool pressed, 
           Colors.white.withValues(alpha: 0),
         ],
       ).createShader(gloss),
+  );
+}
+
+/// Neon key: dark glass with a glowing outline (cyan, or pink to violet for
+/// the primary key); pressing brightens the glow and the face.
+void _paintNeonKey(Canvas canvas, Rect rect, {required bool pressed, required bool primary}) {
+  final h = rect.height;
+  final face = RRect.fromRectAndRadius(rect.deflate(h * (pressed ? 0.06 : 0.035)), Radius.circular(min(rect.width, h) * 0.3));
+  final tones = primary ? const [neonPink, neonViolet] : const [neonCyan, neonBlue];
+  final outline = LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: tones).createShader(face.outerRect);
+  canvas.drawRRect(
+    face,
+    Paint()
+      ..shader = outline
+      ..color = Color.fromRGBO(0, 0, 0, pressed ? 0.95 : 0.6)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = h * 0.08
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, h * (pressed ? 0.17 : 0.11)),
+  );
+  final tint = primary ? 0.3 : 0.1;
+  canvas.drawRRect(
+    face,
+    Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color.lerp(const Color(0xFF131B36), tones.first, tint + (pressed ? 0.15 : 0))!.withValues(alpha: 0.88),
+          Color.lerp(const Color(0xFF0A0F22), tones.last, tint * 0.6 + (pressed ? 0.1 : 0))!.withValues(alpha: 0.8),
+        ],
+      ).createShader(face.outerRect),
+  );
+  canvas.save();
+  canvas.clipRRect(face);
+  final top = Rect.fromLTWH(face.left, face.top, face.width, face.height * 0.45);
+  canvas.drawRect(
+    top,
+    Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Colors.white.withValues(alpha: 0.09), Colors.white.withValues(alpha: 0)],
+      ).createShader(top),
+  );
+  canvas.restore();
+  canvas.drawRRect(
+    face,
+    Paint()
+      ..shader = outline
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = max(1.4, h * 0.028),
   );
 }
 
@@ -499,7 +590,11 @@ class _KeycapPainter extends CustomPainter {
     this.glyphScale = 0.42,
     this.alpha = 1,
     this.palette,
+    this.primary = false,
   });
+
+  /// The main key (rotate): neon draws it pink to violet.
+  final bool primary;
 
   /// Only used to pick ink for the flat skins.
   final GamePalette? palette;
@@ -517,13 +612,24 @@ class _KeycapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    paintKeycap(canvas, rect, color, pressed: pressed, dark: dark, glow: pressed ? 1 : 0, alpha: alpha);
+    paintKeycap(canvas, rect, color, pressed: pressed, dark: dark, glow: pressed ? 1 : 0, alpha: alpha, primary: primary);
     final glyph = this.glyph;
     if (glyph == null) return;
-    final face = keycapFace(rect, pressed: pressed);
+    final neon = neonStyle && activeSkin == GameSkin.glass && dark;
+    final face = neon ? rect : keycapFace(rect, pressed: pressed);
     final g = min(face.width, face.height) * glyphScale;
     canvas.save();
     canvas.translate(face.center.dx - g / 2, face.center.dy - g / 2);
+    if (neon) {
+      // The glyph glows in its key's colour, like a lit tube.
+      final glowBounds = Rect.fromLTWH(-g * 0.3, -g * 0.3, g * 1.6, g * 1.6);
+      canvas.saveLayer(glowBounds, Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: g * 0.09, sigmaY: g * 0.09));
+      _GlyphPainter(glyph, primary ? neonPink : neonCyan).paint(canvas, Size.square(g));
+      canvas.restore();
+      _GlyphPainter(glyph, primary ? Colors.white : neonGlyph).paint(canvas, Size.square(g));
+      canvas.restore();
+      return;
+    }
     // A soft drop shadow lifts the glyph off the face.
     if (activeSkin == GameSkin.glass) {
       canvas.save();
@@ -542,7 +648,8 @@ class _KeycapPainter extends CustomPainter {
       old.dark != dark ||
       old.glyph != glyph ||
       old.glyphColor != glyphColor ||
-      old.alpha != alpha;
+      old.alpha != alpha ||
+      old.primary != primary;
 }
 
 /// On-screen control drawn as a jelly keycap that sinks when pressed.
@@ -596,6 +703,7 @@ class _ControlButtonState extends State<ControlButton> {
         glyphColor: glyphColor,
         glyphScale: primary ? 0.46 : 0.42,
         alpha: p.flat ? 1 : (primary ? max(0.85, keycapGlass) : keycapGlass),
+        primary: primary,
       ),
     );
 
@@ -639,12 +747,17 @@ class GradientButton extends StatelessWidget {
     if (p.flat) return _flat(context, p);
     final fg = secondary ? p.text : Colors.white;
     final gradient = colors ?? [p.accent1, p.accent2];
+    final neon = isNeon(p);
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: width,
         padding: EdgeInsets.symmetric(horizontal: subtitle == null ? 14 : 20, vertical: 14),
-        decoration: BoxDecoration(
+        // Coloured buttons stay bright (like the play button); secondary
+        // ones become neon panels.
+        decoration: neon && secondary
+            ? neonCardDecoration(radius: 18)
+            : BoxDecoration(
           borderRadius: BorderRadius.circular(18),
           gradient: secondary ? null : LinearGradient(colors: gradient),
           color: secondary ? p.glass : null,

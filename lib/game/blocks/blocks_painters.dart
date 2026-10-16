@@ -31,7 +31,7 @@ class BlocksGeometry {
   static double fit(double side) => side / (_n + 0.6);
 }
 
-BlockSprite _sprite(BlockSprites sprites, BlockCell cell) => sprites.block(cell.gem ? PieceType.gem : cell.color);
+BlockSprite _sprite(BlockSprites sprites, BlockCell cell, [int variant = 0]) => sprites.block(cell.gem ? PieceType.gem : cell.color, variant);
 
 typedef BlockSprite = ui.Image;
 
@@ -217,7 +217,7 @@ class BlocksBoardPainter extends CustomPainter {
       for (var x = 0; x < _n; x++) {
         final cell = game.board[y][x];
         if (cell == null) continue;
-        sprites.draw(canvas, gray && !cell.gem ? sprites.gray : _sprite(sprites, cell), x * c, y * c);
+        sprites.draw(canvas, gray && !cell.gem ? sprites.gray : _sprite(sprites, cell, BlockSprites.variantAt(x, y)), x * c, y * c);
       }
     }
     // Gems twinkle so they read as the goal.
