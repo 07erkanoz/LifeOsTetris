@@ -923,9 +923,9 @@ class EffectsEngine implements BackdropFx {
       shockwaves.add(Shockwave(5, midY, 4 + n * 1.5, const Color(0xFFFFFFFF), duration: 0.5, width: 0.22));
     }
 
-    final big = n == 4 || e.tSpin != TSpin.none || e.perfectClear;
-    if (big) _confetti(midY, n == 4 || e.perfectClear ? 140 : 70);
-    if (n == 4 || e.perfectClear) {
+    final big = n >= 4 || e.tSpin != TSpin.none || e.perfectClear;
+    if (big) _confetti(midY, n >= 4 || e.perfectClear ? 140 : 70);
+    if (n >= 4 || e.perfectClear) {
       boardFlash = 0.85;
       if (particlesEnabled) shockwaves.add(Shockwave(5, midY, 12, const Color(0xFF7DD3FC), duration: 0.8, width: 0.35));
     }
@@ -939,7 +939,7 @@ class EffectsEngine implements BackdropFx {
           } +
           (e.tSpin != TSpin.none ? 0.15 : 0),
     );
-    pulseColor = n == 4
+    pulseColor = n >= 4
         ? const Color(0xFF22D3EE)
         : e.tSpin != TSpin.none
         ? const Color(0xFFA855F7)
@@ -952,7 +952,7 @@ class EffectsEngine implements BackdropFx {
     final label = strings.clearLabel(n, e.tSpin);
     final (size, colors, glow) = switch ((n, e.tSpin)) {
       (_, TSpin.full || TSpin.mini) => (1.45, _violet, const Color(0xFFA855F7)),
-      (4, _) => (2.0, _rainbow, const Color(0xFF22D3EE)),
+      (>= 4, _) => (2.0, _rainbow, const Color(0xFF22D3EE)),
       (3, _) => (1.6, _cool, const Color(0xFF38BDF8)),
       (2, _) => (1.45, _cool, const Color(0xFF38BDF8)),
       _ => (1.1, _cool, const Color(0xFF38BDF8)),

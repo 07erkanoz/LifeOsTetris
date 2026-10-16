@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lifeos_kupler/app.dart';
 import 'package:lifeos_kupler/audio/audio_service.dart';
 import 'package:lifeos_kupler/l10n/strings.dart';
+import 'package:lifeos_kupler/core/blocks/block_puzzle.dart';
 import 'package:lifeos_kupler/core/blocks/level_generator.dart';
 import 'package:lifeos_kupler/core/tetris_game.dart';
 import 'package:lifeos_kupler/game/blocks/blocks_controller.dart';
@@ -157,6 +160,53 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       expect(settings(tester).savedGame, isNotNull);
     }
+  });
+
+  group('a saved Bulmaca game on the main menu', () {
+    Future<Settings> pumpWithSavedPuzzle(WidgetTester tester) async {
+      final saved = BlockPuzzleGame()..startEndless();
+      saved.score = 420;
+      final settings = Settings.memory()
+        ..language = AppLanguage.tr
+        ..lastPlay = 'blocksEndless'
+        ..savedBlocks = jsonEncode({'game': saved.toSave(), 'playTime': 12.0});
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(KuplerApp(settings: settings, audio: AudioService(enabled: false)));
+      await tester.pump(const Duration(milliseconds: 100));
+      return settings;
+    }
+
+    testWidgets('is offered and continues where it was left', (tester) async {
+      await pumpWithSavedPuzzle(tester);
+      expect(find.byKey(const ValueKey('resume-puzzle')), findsOneWidget);
+      expect(find.byKey(const ValueKey('resume-game')), findsNothing, reason: 'no Küpler game is saved');
+
+      await tester.tap(find.byKey(const ValueKey('resume-puzzle')));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 33));
+      }
+      final c = (tester.state(find.byType(BlocksScreen)) as dynamic).c as BlocksController;
+      expect(c.view, BlocksView.playing);
+      expect(c.isEndless, isTrue);
+      expect(c.game.score, 420);
+      expect(c.playTime, greaterThanOrEqualTo(12));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('survives the play button starting a new game', (tester) async {
+      final settings = await pumpWithSavedPuzzle(tester);
+      await tester.tap(find.byKey(const ValueKey('play')));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 33));
+      }
+      final c = (tester.state(find.byType(BlocksScreen)) as dynamic).c as BlocksController;
+      expect(c.view, BlocksView.playing);
+      expect(c.game.score, 0, reason: 'a new game');
+      expect(((jsonDecode(settings.savedBlocks!) as Map)['game'] as Map)['score'], 420, reason: 'kept until the new game is played');
+      expect(tester.takeException(), isNull);
+    });
   });
 
   testWidgets('the daily puzzle opens from the main menu', (tester) async {

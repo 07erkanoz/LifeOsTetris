@@ -44,6 +44,29 @@ void main() {
     expect(again.status, isNot(GameStatus.over));
   });
 
+  test('a sinking ghost line is kept in the save', () {
+    final game = TetrisGame()..start(seed: 7, mode: GameMode.superMode);
+    game.debugSetBoard(['J.J.J.J.J.', 'JJJJJJJJJ.']);
+    game.debugGivePowers([PowerType.ghostLine]);
+    game.usePower(PowerType.ghostLine);
+    game.update(2);
+    final line = game.ghostLine!;
+
+    final again = TetrisGame()..restore(_roundTrip(game.toSave()));
+    expect(again.ghostLine, line);
+    expect(again.powerCount(PowerType.ghostLine), 0);
+    expect(again.moveLeft(), isFalse, reason: 'the piece stays frozen while the line sinks');
+    again.update((TetrisGame.visibleHeight - 2) / TetrisGame.ghostLineSpeed - 2 + 0.01);
+    again.hardDrop();
+    expect(again.drainEvents().whereType<GhostLineFilled>().single.cells, hasLength(5));
+  });
+
+  test('a save without a ghost line restores none', () {
+    final game = TetrisGame()..start(seed: 7, mode: GameMode.superMode);
+    final again = TetrisGame()..restore(_roundTrip(game.toSave()));
+    expect(again.ghostLine, isNull);
+  });
+
   test('a malformed save is rejected', () {
     expect(() => TetrisGame().restore({'mode': 'classic', 'board': []}), throwsA(anything));
   });

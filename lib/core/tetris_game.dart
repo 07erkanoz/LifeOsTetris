@@ -339,6 +339,7 @@ class TetrisGame {
       'lastChaos': _lastChaos?.name,
       'fog': _fog,
       'rush': _rush,
+      'ghostLine': _ghostLine,
       'clearing': status == GameStatus.clearing ? _clearingRows : null,
     };
   }
@@ -384,6 +385,7 @@ class TetrisGame {
     _lastChaos = lastChaos == null ? null : ChaosEvent.values.byName(lastChaos);
     _fog = (save['fog'] as num? ?? 0).toDouble();
     _rush = (save['rush'] as num? ?? 0).toDouble();
+    _ghostLine = (save['ghostLine'] as num?)?.toDouble();
     final clearing = save['clearing'] as List?;
     if (clearing != null && clearing.isNotEmpty) {
       _clearingRows = clearing.cast<int>();
@@ -624,7 +626,7 @@ class TetrisGame {
   /// Stops the ghost line and fills the gaps of the row it is on.
   bool triggerGhostLine() {
     var row = ghostLineRow;
-    if (row == null) return false;
+    if (row == null || paused || status != GameStatus.playing) return false;
     _ghostLine = null;
     // Filling a completely empty row would waste the power: snap down to the
     // first row that has blocks in it (the top of the stack).

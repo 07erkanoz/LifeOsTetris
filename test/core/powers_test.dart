@@ -189,4 +189,50 @@ void main() {
     expect(filled.row, TetrisGame.height - 2);
     expect(filled.cells, hasLength(5));
   });
+
+  test('gravity completing more than four rows clears and scores them all', () {
+    final game = superGame();
+    // Every column holds five blocks: gravity packs them into five full rows.
+    game.debugSetBoard([
+      for (var i = 0; i < 5; i++) ...['IIIIIIIII.', '.........I'],
+    ]);
+    game.debugGivePowers([PowerType.gravity]);
+    expect(game.usePower(PowerType.gravity), isTrue);
+    final cleared = game.drainEvents().whereType<LinesCleared>().single;
+    expect(cleared.count, 5);
+    expect(cleared.perfectClear, isTrue);
+    expect(cleared.points, clearScore(lines: 5, tSpin: TSpin.none, level: 1, backToBack: false, combo: 0, perfectClear: true));
+    expect(game.score, cleared.points);
+    game.update(TetrisGame.lineClearDelay + 0.01);
+    expect(game.lines, 5);
+    expect(game.status, GameStatus.playing);
+  });
+
+  test('more than four rows score more than a quad', () {
+    int points(int lines) => clearScore(lines: lines, tSpin: TSpin.none, level: 1, backToBack: false, combo: 0, perfectClear: false);
+    expect(points(5), greaterThan(points(4)));
+    expect(points(6), greaterThan(points(5)));
+    expect(clearScore(lines: 6, tSpin: TSpin.none, level: 1, backToBack: false, combo: 0, perfectClear: true), greaterThan(points(6)));
+  });
+
+  test('a paused game ignores the ghost line trigger', () {
+    final game = superGame();
+    game.debugSetBoard(['J.J.J.J.J.', 'JJJJJJJJJ.']);
+    game.debugGivePowers([PowerType.ghostLine]);
+    game.usePower(PowerType.ghostLine);
+    game.update((TetrisGame.visibleHeight - 2) / TetrisGame.ghostLineSpeed + 0.01);
+    game.drainEvents();
+    game.togglePause();
+
+    game.hardDrop();
+    expect(game.triggerGhostLine(), isFalse);
+    expect(game.drainEvents().whereType<GhostLineFilled>(), isEmpty);
+    expect(game.ghostLineRow, TetrisGame.visibleHeight - 2, reason: 'the line waits where it was');
+    expect(game.score, 0);
+    expect(game.cellAt(1, TetrisGame.height - 2), isNull, reason: 'the board did not change');
+
+    game.togglePause();
+    game.hardDrop();
+    expect(game.drainEvents().whereType<GhostLineFilled>().single.cells, hasLength(5));
+  });
 }

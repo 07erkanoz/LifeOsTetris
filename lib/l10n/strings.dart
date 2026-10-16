@@ -183,6 +183,8 @@ class AppStrings {
   String clearLabel(int lines, TSpin tSpin) {
     final names = isTurkish ? const ['', 'TEK', 'ÇİFT', 'ÜÇLÜ', 'DÖRTLÜ'] : const ['', 'SINGLE', 'DOUBLE', 'TRIPLE', 'QUAD'];
     final mini = _t('MİNİ T-SPIN', 'MINI T-SPIN');
+    // More than four rows only happens with a power (gravity).
+    if (lines > 4) return _t('$lines SATIR!', '$lines LINES!');
     return switch (tSpin) {
       TSpin.full => lines == 0 ? 'T-SPIN' : 'T-SPIN ${names[lines]}!',
       TSpin.mini => lines == 0 ? mini : '$mini ${names[lines]}',

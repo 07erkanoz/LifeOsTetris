@@ -64,14 +64,19 @@ double gravityInterval(int level, [GameMode mode = GameMode.classic]) {
   return pow(0.25, (l - 1) / (speedCapLevel - 1)).toDouble();
 }
 
+/// Points per line beyond four. Pieces clear at most four rows, but a power
+/// (gravity) can complete more at once.
+const int _extraLinePoints = 400;
+
 int _baseClearPoints(int lines, TSpin tSpin) => switch (tSpin) {
+  TSpin.none when lines > 4 => 800 + (lines - 4) * _extraLinePoints,
   TSpin.none => const [0, 100, 300, 500, 800][lines],
-  TSpin.mini => const [100, 200, 400, 400, 400][lines],
-  TSpin.full => const [400, 800, 1200, 1600, 1600][lines],
+  TSpin.mini => const [100, 200, 400, 400, 400][min(lines, 4)],
+  TSpin.full => const [400, 800, 1200, 1600, 1600][min(lines, 4)],
 };
 
 /// A "difficult" clear keeps the back-to-back chain alive.
-bool isDifficultClear(int lines, TSpin tSpin) => lines == 4 || (lines > 0 && tSpin != TSpin.none);
+bool isDifficultClear(int lines, TSpin tSpin) => lines >= 4 || (lines > 0 && tSpin != TSpin.none);
 
 /// Points for locking a piece that cleared [lines] (possibly zero).
 int clearScore({
@@ -86,6 +91,6 @@ int clearScore({
   if (backToBack) base *= 1.5;
   var points = base.round() * level;
   if (lines > 0 && combo > 0) points += 50 * combo * level;
-  if (perfectClear) points += const [0, 800, 1200, 1800, 2000][lines] * level;
+  if (perfectClear) points += const [0, 800, 1200, 1800, 2000][min(lines, 4)] * level;
   return points;
 }

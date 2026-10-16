@@ -583,41 +583,45 @@ class _LandscapeLayout extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(
-                height: 66,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(
-                      width: 66,
-                      child: _HoldCard(c: c, cell: 10, size: const Size(52, 30)),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: GlassCard(
-                        glow: c.fx.levelPulse,
-                        padding: const EdgeInsets.fromLTRB(12, 7, 12, 7),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            CardLabel(hud.label),
-                            _ScoreText(c: c, size: 21, text: hud.value),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Row(
-                                children: [
-                                  _Stat(hud.stats[0].$1, hud.stats[0].$2),
-                                  const SizedBox(width: 10),
-                                  _Stat(hud.stats[1].$1, hud.stats[1].$2),
-                                ],
+              // At least a square hold card; taller when the theme font needs
+              // more room for the three lines of the score card.
+              ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 66),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(
+                        width: 66,
+                        child: _HoldCard(c: c, cell: 10, size: const Size(52, 30)),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: GlassCard(
+                          glow: c.fx.levelPulse,
+                          padding: const EdgeInsets.fromLTRB(12, 7, 12, 7),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              CardLabel(hud.label),
+                              _ScoreText(c: c, size: 21, text: hud.value),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  children: [
+                                    _Stat(hud.stats[0].$1, hud.stats[0].$2),
+                                    const SizedBox(width: 10),
+                                    _Stat(hud.stats[1].$1, hud.stats[1].$2),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               if (c.game.powersEnabled) ...[const SizedBox(height: 8), PowerBar(c: c)],

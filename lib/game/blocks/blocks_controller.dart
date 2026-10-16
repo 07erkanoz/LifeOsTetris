@@ -15,6 +15,9 @@ import 'blocks_fx.dart';
 
 enum BlocksView { menu, levels, adventure, playing }
 
+/// What the menus show about a saved Bulmaca game.
+typedef BlocksSaveSummary = ({int? level, int movesLeft, int score, bool daily, bool adventure, bool bombs});
+
 /// Glue for "Bulmaca Küpler": game, drag and drop, effects, audio, haptics
 /// and saved progress.
 class BlocksController extends ChangeNotifier {
@@ -200,12 +203,16 @@ class BlocksController extends ChangeNotifier {
     });
   }
 
-  String? _summaryOf;
-  ({int? level, int movesLeft, int score, bool daily, bool adventure, bool bombs})? _summary;
-
   /// Level (null for endless), moves left and score of the saved game.
-  ({int? level, int movesLeft, int score, bool daily, bool adventure, bool bombs})? get savedSummary {
-    final raw = settings.savedBlocks;
+  BlocksSaveSummary? get savedSummary => summaryOf(settings.savedBlocks);
+
+  static String? _summaryOf;
+  static BlocksSaveSummary? _summary;
+
+  /// Reads the summary of a saved game ([Settings.savedBlocks]) without a
+  /// controller, e.g. for the main menu. Null if there is none or it is
+  /// unreadable.
+  static BlocksSaveSummary? summaryOf(String? raw) {
     if (raw == null) return null;
     if (raw != _summaryOf) {
       _summaryOf = raw;
@@ -247,12 +254,15 @@ class BlocksController extends ChangeNotifier {
       isAdventure = (data as Map)['adventure'] == true && level != null;
       final daily = data['daily'] as String?;
       dailyDay = daily == null ? null : DateTime.tryParse(daily);
-    }, keepSave: true);
+    });
     return true;
   }
 
-  void _begin(void Function() start, {bool keepSave = false}) {
-    if (!keepSave) settings.savedBlocks = null;
+  /// The save is not cleared here: the new game replaces it with its first
+  /// save (after a placement, or on leaving). Clearing it right away lost
+  /// the saved game to a start that was never played, and notified the
+  /// menus while a screen opening straight into a game was being built.
+  void _begin(void Function() start) {
     view = BlocksView.playing;
     paused = false;
     newRecord = false;

@@ -28,4 +28,26 @@ void main() {
     c.usePower(PowerType.bomb);
     expect(c.game.active!.type, PieceType.bomb);
   });
+
+  test('gravity clearing more than four rows plays through sound, text and effects', () {
+    final c = GameController(settings: Settings.memory(), audio: AudioService(enabled: false));
+    c.start(GameMode.superMode);
+    c.game.debugSetBoard([
+      for (var i = 0; i < 5; i++) ...['IIIIIIIII.', '.........I'],
+    ]);
+    c.game.debugGivePowers([PowerType.gravity]);
+    var t = Duration.zero;
+    void run(double seconds) {
+      for (var i = 0; i < seconds * 60; i++) {
+        t += const Duration(microseconds: 16667);
+        c.tick(t);
+      }
+    }
+
+    run(0.1);
+    c.usePower(PowerType.gravity);
+    run(2);
+    expect(c.game.lines, 5);
+    expect(c.game.status, GameStatus.playing);
+  });
 }

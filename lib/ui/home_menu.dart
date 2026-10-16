@@ -205,6 +205,7 @@ class _StartOverlay extends StatelessWidget {
     final s = AppStrings.of(context);
     final last = _PlayMode.fromName(c.settings.lastPlay);
     final saved = c.savedSummary;
+    final savedPuzzle = BlocksController.summaryOf(c.settings.savedBlocks);
 
     final best = c.settings.topScore > 0
         ? Row(
@@ -241,6 +242,19 @@ class _StartOverlay extends StatelessWidget {
           icon: Icons.replay_rounded,
           secondary: true,
           onTap: c.resume,
+        ),
+        const SizedBox(height: 12),
+      ],
+      // Bulmaca keeps its own save: without this, the play button was the
+      // only way back in from here and it starts a new game.
+      if (savedPuzzle != null) ...[
+        GradientButton(
+          key: const ValueKey('resume-puzzle'),
+          label: s.resumeGame,
+          subtitle: '${s.puzzleTitle} · ${blocksResumeSubtitle(s, savedPuzzle)}',
+          icon: Icons.replay_rounded,
+          secondary: true,
+          onTap: () => BlocksScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics, entry: BlocksEntry.resume),
         ),
         const SizedBox(height: 12),
       ],

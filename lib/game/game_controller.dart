@@ -337,7 +337,7 @@ class GameController extends ChangeNotifier {
         } else if (tSpin != TSpin.none) {
           audio.play(Sfx.tspin);
         } else {
-          audio.play(Sfx.values.byName('clear$count'));
+          audio.play(Sfx.values.byName('clear${min(count, 4)}'));
         }
         audio.playCombo(combo);
       case TSpinNoLines():

@@ -49,7 +49,19 @@ enum BlocksEntry {
 
   /// A new "Bomba" game.
   bombs,
+
+  /// The saved game (the menu if there is none).
+  resume,
 }
+
+/// One line about a saved game, for its continue button.
+String blocksResumeSubtitle(AppStrings s, BlocksSaveSummary saved) => saved.daily
+    ? s.resumeDaily(saved.movesLeft)
+    : saved.adventure
+    ? '${s.adventureTitle} · ${s.adventureLevel(Adventure.chapterOf(saved.level!), Adventure.stepOf(saved.level!) + 1)}'
+    : saved.level == null
+    ? s.resumeBlocksEndless(saved.bombs ? s.bombTitle : s.endlessMode, saved.score)
+    : s.resumeBlocksLevel(saved.level!, saved.movesLeft);
 
 class BlocksScreen extends StatefulWidget {
   const BlocksScreen({super.key, required this.settings, required this.audio, this.haptics, this.entry = BlocksEntry.menu});
@@ -105,6 +117,8 @@ class _BlocksScreenState extends State<BlocksScreen> with SingleTickerProviderSt
         c.openAdventure();
       case BlocksEntry.bombs:
         c.startBombs();
+      case BlocksEntry.resume:
+        c.resume();
     }
   }
 
@@ -407,13 +421,7 @@ class _Menu extends StatelessWidget {
           GradientButton(
             key: const ValueKey('blocks-resume'),
             label: s.resumeGame,
-            subtitle: saved.daily
-                ? s.resumeDaily(saved.movesLeft)
-                : saved.adventure
-                ? '${s.adventureTitle} · ${s.adventureLevel(Adventure.chapterOf(saved.level!), Adventure.stepOf(saved.level!) + 1)}'
-                : saved.level == null
-                ? s.resumeBlocksEndless(saved.bombs ? s.bombTitle : s.endlessMode, saved.score)
-                : s.resumeBlocksLevel(saved.level!, saved.movesLeft),
+            subtitle: blocksResumeSubtitle(s, saved),
             icon: Icons.play_arrow_rounded,
             onTap: c.resume,
           ),
