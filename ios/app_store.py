@@ -34,7 +34,8 @@ SHOTS = HERE / 'metadata/screenshots'
 # File name prefix → App Store Connect slot (iPhone 6.9", iPad 13").
 DISPLAY_TYPES = {'iphone': 'APP_IPHONE_67', 'ipad': 'APP_IPAD_PRO_3GEN_129'}
 EDITABLE = {'PREPARE_FOR_SUBMISSION', 'DEVELOPER_REJECTED', 'REJECTED', 'METADATA_REJECTED', 'INVALID_BINARY'}
-REVIEW_NOTES = 'No account or sign-in. Every mode opens from the main menu; the game works offline and collects no data.'
+# What App Review reads first (ios/metadata/store.json, reviewNotes).
+REVIEW_NOTES = META.get('reviewNotes') or 'No account or sign-in. Every mode opens from the main menu; the game works offline and collects no data.'
 
 
 class ApiError(Exception):

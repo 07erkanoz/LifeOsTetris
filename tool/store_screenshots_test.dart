@@ -12,13 +12,16 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifeos_kupler/app.dart';
 import 'package:lifeos_kupler/audio/audio_service.dart';
+import 'package:lifeos_kupler/core/chain/chain_game.dart';
 import 'package:lifeos_kupler/core/tetris_game.dart';
 import 'package:lifeos_kupler/game/blocks/blocks_controller.dart';
+import 'package:lifeos_kupler/game/chain/chain_controller.dart';
 import 'package:lifeos_kupler/game/game_controller.dart';
 import 'package:lifeos_kupler/l10n/strings.dart';
 import 'package:lifeos_kupler/settings/settings.dart';
 import 'package:lifeos_kupler/theme/palette.dart';
 import 'package:lifeos_kupler/ui/blocks_screen.dart';
+import 'package:lifeos_kupler/ui/chain_screen.dart';
 import 'package:lifeos_kupler/ui/game_screen.dart';
 
 /// Output folder (`SHOTS_OUT`).
@@ -179,6 +182,33 @@ final Map<String, _Scene> _scenes = {
     game.debugGivePowers([PowerType.ghostLine, PowerType.drill, PowerType.slowMotion, PowerType.single]);
     game.debugSetActive(const Piece(PieceType.t, Rotation.spawn, 4, 3));
     await _pump(tester, 20);
+  },
+  // Zincir Küpler: a chain bursting, garbage on the stack.
+  'chain': (tester, settings) async {
+    settings.chainDifficulty = ChainDifficulty.normal;
+    await _startMode(tester, 'chainEndless');
+    final c = (tester.state(find.byType(ChainScreen)) as dynamic).c as ChainController;
+    await tester.tap(find.byKey(const ValueKey('chain-start')));
+    await _pump(tester, 10);
+    c.game.debugSetBoard([
+      '......',
+      '......',
+      '###...',
+      '......',
+      '......',
+      '......',
+      'G.....',
+      'BBB.Y.',
+      'GMY.BM',
+      'GYM.GB',
+      'MBGYMY',
+      'YGBMBG',
+    ]);
+    c.game.debugSetIncoming('BMYGBY');
+    c.game.stopTime = 100;
+    c.game.score = 1480;
+    c.game.setCursor(3, 7);
+    await _pump(tester, 36);
   },
 };
 
