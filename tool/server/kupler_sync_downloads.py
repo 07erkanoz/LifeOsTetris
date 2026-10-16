@@ -22,6 +22,7 @@ import hashlib
 import json
 import os
 import pathlib
+import re
 import sys
 import time
 import urllib.error
@@ -94,6 +95,30 @@ def write_json(path, data):
     os.replace(tmp, path)
 
 
+def version_of(rel):
+    """"1.0.0-39" from a release named "Test sürümü 1.0.0-39 (abc1234)";
+    the commit for older releases without a number."""
+    name = rel.get('name') or ''
+    m = re.search(r'(\d+\.\d+\.\d+-\d+)', name) or re.search(r'\(([0-9a-f]{7,})\)', name)
+    return m.group(1) if m else (rel.get('target_commitish') or 'dev')[:7]
+
+
+def versioned(name, version):
+    """LifeOS-Kupler-arm64.apk -> LifeOS-Kupler-arm64-1.0.0-39.apk"""
+    for ext in ('.tar.gz', '.apk', '.zip'):
+        if name.endswith(ext):
+            return f'{name[:-len(ext)]}-{version}{ext}'
+    return f'{name}-{version}'
+
+
+def link(src, alias):
+    """Points the fixed name (README, PKGBUILD) at the newest file."""
+    tmp = alias.with_name(f'.{alias.name}.link')
+    tmp.unlink(missing_ok=True)
+    os.link(src, tmp)
+    os.replace(tmp, alias)
+
+
 def main(force=False):
     DEST.mkdir(parents=True, exist_ok=True)
     with open(DEST / '.sync.lock', 'w') as lock:
@@ -106,34 +131,45 @@ def main(force=False):
         except (OSError, ValueError, KeyError):
             old = {}
         rel = release()
+        version = version_of(rel)
         assets, changed = [], []
         for a in sorted(rel['assets'], key=lambda a: a['name']):
             if a['state'] != 'uploaded' or '/' in a['name'] or a['name'].startswith('.'):
                 continue
-            target = DEST / a['name']
+            # Every build is saved under its own name, so no cache (phone,
+            # browser, Cloudflare) can hand out an older file in its place.
+            file = versioned(a['name'], version)
+            target = DEST / file
             prev = old.get(a['name'])
-            if not force and prev and prev.get('id') == a['id'] and prev.get('updated_at') == a['updated_at'] and target.exists():
+            if not force and prev and prev.get('id') == a['id'] and prev.get('updated_at') == a['updated_at'] and prev.get('file') == file and target.exists():
                 sha = prev['sha256']
             else:
                 sha = download(a, target)
-                changed.append(a['name'])
-            # A new URL for every build: caches in front of the site (Cloudflare)
-            # never hand out an older file under the same name.
-            assets.append({'name': a['name'], 'size': a['size'], 'sha256': sha, 'updated_at': a['updated_at'],
-                           'id': a['id'], 'url': f'{PUBLIC}{a["name"]}?v={sha[:12]}'})
-        keep = {a['name'] for a in assets}
-        removed = [n for n in old if n not in keep]
-        for name in removed:
-            (DEST / name).unlink(missing_ok=True)
+                changed.append(file)
+            link(target, DEST / a['name'])
+            assets.append({'name': a['name'], 'file': file, 'size': a['size'], 'sha256': sha, 'updated_at': a['updated_at'],
+                           'id': a['id'], 'url': PUBLIC + file})
+        # Keep this build and the one before it (a page opened earlier may
+        # still link to it); older builds go.
+        keep = {a['file'] for a in assets} | {a.get('file') for a in old.values()} | {a['name'] for a in assets} | {'latest.json'}
+        removed = []
+        for f in DEST.iterdir():
+            if f.name.startswith('.') or not f.is_file() or f.name in keep:
+                continue
+            if f.name.startswith('LifeOS-Kupler'):
+                f.unlink()
+                removed.append(f.name)
         if changed or removed or not MANIFEST.exists():
             write_json(MANIFEST, {
                 'release': rel.get('name'),
+                'version': version,
                 'commit': rel.get('target_commitish'),
                 'updated': max((a['updated_at'] for a in assets), default=None),
                 'synced': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
                 'assets': assets,
             })
             print(time.strftime('%F %T'), rel.get('name'), 'updated:', ', '.join(changed) or '-', 'removed:', ', '.join(removed) or '-', flush=True)
+
 
 
 if __name__ == '__main__':

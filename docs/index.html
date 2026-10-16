@@ -278,6 +278,7 @@
       latest.assets.forEach(function (a) {
         document.querySelectorAll('[data-asset="' + a.name + '"]').forEach(function (el) {
           el.href = a.url;
+          if (a.file) el.setAttribute('download', a.file);
           var size = el.querySelector('.size');
           if (size) size.textContent = Math.round(a.size / 1048576) + ' MB';
         });
@@ -285,7 +286,7 @@
       });
       if (newest) {
         var d = new Date(newest).toLocaleDateString('tr-TR', {day: 'numeric', month: 'long', year: 'numeric'});
-        document.getElementById('release-date').textContent = ' · son güncelleme ' + d;
+        document.getElementById('release-date').textContent = (latest.version ? ' · sürüm ' + latest.version : '') + ' · son güncelleme ' + d;
       }
       if (card && platform !== 'ios') {
         var size = card.querySelector('.size');
