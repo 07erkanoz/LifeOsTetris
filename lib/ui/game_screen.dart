@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
@@ -11,6 +12,7 @@ import '../audio/haptics.dart';
 import '../core/blocks/adventure.dart';
 import '../core/blocks/level_generator.dart';
 import '../core/chain/chain_game.dart';
+import '../core/sugar/sugar_levels.dart';
 import '../core/tetris_game.dart';
 import '../game/blocks/blocks_controller.dart';
 import '../game/game_controller.dart';
@@ -29,6 +31,7 @@ import '../theme/palette.dart';
 import 'about_page.dart';
 import 'blocks_screen.dart';
 import 'chain_screen.dart';
+import 'sugar_map_screen.dart';
 import 'board_view.dart';
 import 'power_bar.dart';
 import 'theme_picker.dart';

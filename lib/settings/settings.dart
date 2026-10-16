@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/chain/chain_game.dart';
+import '../core/sugar/sugar_levels.dart';
 import '../core/scoring.dart';
 import '../game/play_history.dart';
 import '../l10n/strings.dart';
@@ -55,6 +56,10 @@ class Settings extends ChangeNotifier {
   ChainDifficulty _chainDifficulty = ChainDifficulty.easy;
   final Map<int, int> _blockStars = {};
   final Map<int, int> _adventureStars = {};
+  final Map<int, int> _sugarStars = {};
+  final Map<int, int> _sugarBest = {};
+  final Map<SugarBooster, int> _sugarBoosters = {for (final b in SugarBooster.values) b: b.starting};
+  String? _savedSugar;
   PlayHistory _history = PlayHistory();
   LineMemory _lineMemory = LineMemory();
 
@@ -113,6 +118,12 @@ class Settings extends ChangeNotifier {
       s._chainDifficulty = ChainDifficulty.parse(prefs.getString('chainDifficulty'));
       _readStars(prefs.getString('blockStars'), s._blockStars);
       _readStars(prefs.getString('adventureStars'), s._adventureStars);
+      _readStars(prefs.getString('sugarStars'), s._sugarStars);
+      _readStars(prefs.getString('sugarBest'), s._sugarBest);
+      for (final b in SugarBooster.values) {
+        s._sugarBoosters[b] = prefs.getInt('sugarBooster_${b.name}') ?? b.starting;
+      }
+      s._savedSugar = prefs.getString('savedSugar');
       s._gamesPlayed = prefs.getInt('gamesPlayed') ?? 0;
       s._totalLines = prefs.getInt('totalLines') ?? 0;
       s._totalSeconds = prefs.getInt('totalSeconds') ?? 0;
@@ -276,6 +287,70 @@ class Settings extends ChangeNotifier {
   void recordAdventure(int level, int stars) {
     if (stars <= adventureStars(level)) return;
     _set(() => _adventureStars[level] = stars, () => _prefs?.setString('adventureStars', _writeStars(_adventureStars)));
+  }
+
+  // ------------------------------------------------------- şeker küpler
+
+  /// Stars earned on Şeker Küpler level [level] (0 = not passed yet).
+  int sugarStars(int level) => _sugarStars[level] ?? 0;
+
+  /// Best score on Şeker Küpler level [level].
+  int sugarBest(int level) => _sugarBest[level] ?? 0;
+
+  int get totalSugarStars => _sugarStars.values.fold(0, (a, b) => a + b);
+
+  /// The level to play next: one past the highest passed (the last level
+  /// stays the last).
+  int get sugarLevel => min(_sugarStars.keys.fold(0, max) + 1, SugarLevels.count);
+
+  /// Every level passed.
+  bool get sugarAllDone => _sugarStars.length >= SugarLevels.count;
+
+  int sugarBoosters(SugarBooster b) => _sugarBoosters[b] ?? 0;
+
+  /// Spends one [b]; false when none is left.
+  bool useSugarBooster(SugarBooster b) {
+    final left = sugarBoosters(b);
+    if (left <= 0) return false;
+    _set(() => _sugarBoosters[b] = left - 1, () => _prefs?.setInt('sugarBooster_${b.name}', left - 1));
+    return true;
+  }
+
+  /// A Şeker Küpler level in progress (JSON), to continue where it was left.
+  String? get savedSugar => _savedSugar;
+  set savedSugar(String? v) {
+    final changed = (v == null) != (_savedSugar == null);
+    _savedSugar = v;
+    v == null ? _prefs?.remove('savedSugar') : _prefs?.setString('savedSugar', v);
+    if (changed) notifyListeners();
+  }
+
+  /// Records a played Şeker Küpler level ([stars] 0 when lost). Returns the
+  /// chest it opened (passing a fifth level the first time), else empty.
+  Map<SugarBooster, int> recordSugarLevel(int level, {required int stars, required int score, required double seconds}) {
+    final first = stars > 0 && sugarStars(level) == 0;
+    final chest = first && SugarLevels.chestAt(level) ? SugarBooster.chest(level) : const <SugarBooster, int>{};
+    _set(
+      () {
+        if (stars > sugarStars(level)) _sugarStars[level] = stars;
+        if (stars > 0 && score > sugarBest(level)) _sugarBest[level] = score;
+        chest.forEach((b, n) => _sugarBoosters[b] = sugarBoosters(b) + n);
+        _history.markPlayed(clock());
+        _gamesPlayed++;
+        _totalSeconds += seconds.round();
+      },
+      () {
+        _prefs?.setString('sugarStars', _writeStars(_sugarStars));
+        _prefs?.setString('sugarBest', _writeStars(_sugarBest));
+        for (final b in chest.keys) {
+          _prefs?.setInt('sugarBooster_${b.name}', sugarBoosters(b));
+        }
+        _prefs?.setString('playHistory', _history.encode());
+        _prefs?.setInt('gamesPlayed', _gamesPlayed);
+        _prefs?.setInt('totalSeconds', _totalSeconds);
+      },
+    );
+    return chest;
   }
 
   /// Best score of "Bomba".

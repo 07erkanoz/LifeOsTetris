@@ -2,7 +2,7 @@ part of 'game_screen.dart';
 
 // ---------------------------------------------------------------- modes
 
-enum _ModeGroup { superGroup, classic, puzzle, chain, challenges }
+enum _ModeGroup { superGroup, classic, puzzle, chain, sugar, challenges }
 
 /// Everything the play button and the modes page can start.
 enum _PlayMode {
@@ -15,6 +15,7 @@ enum _PlayMode {
   bomb(_ModeGroup.puzzle, isNew: true),
   chainEndless(_ModeGroup.chain, isNew: true),
   chainTime(_ModeGroup.chain, isNew: true),
+  sugar(_ModeGroup.sugar, isNew: true),
   sprint(_ModeGroup.challenges),
   ultra(_ModeGroup.challenges),
   dig(_ModeGroup.challenges),
@@ -56,6 +57,7 @@ enum _PlayMode {
     _PlayMode.bomb => s.bombTitle,
     _PlayMode.chainEndless => s.chainEndlessTitle,
     _PlayMode.chainTime => s.chainTimeTitle,
+    _PlayMode.sugar => s.sugarTitle,
     _PlayMode.target => s.targetTitle,
     _PlayMode.chaos => s.chaosTitle,
   };
@@ -81,6 +83,7 @@ enum _PlayMode {
     _PlayMode.bomb => s.bombSubtitle,
     _PlayMode.chainEndless => s.chainEndlessSubtitle,
     _PlayMode.chainTime => s.chainTimeSubtitle,
+    _PlayMode.sugar => s.sugarSubtitle,
     _PlayMode.target => s.targetSubtitle,
     _PlayMode.chaos => s.chaosSubtitle,
   };
@@ -98,6 +101,7 @@ enum _PlayMode {
     _PlayMode.bomb => Icons.local_fire_department_rounded,
     _PlayMode.chainEndless => Icons.link_rounded,
     _PlayMode.chainTime => Icons.hourglass_bottom_rounded,
+    _PlayMode.sugar => Icons.cake_rounded,
     _PlayMode.target => Icons.star_rounded,
     _PlayMode.chaos => Icons.casino_rounded,
   };
@@ -115,6 +119,7 @@ enum _PlayMode {
         _PlayMode.bomb => PieceType.z,
         _PlayMode.chainEndless => PieceType.t,
         _PlayMode.chainTime => PieceType.o,
+        _PlayMode.sugar => PieceType.z,
         _PlayMode.adventure => PieceType.l,
         _PlayMode.target => PieceType.o,
         _PlayMode.chaos => PieceType.t,
@@ -143,6 +148,7 @@ enum _PlayMode {
       _PlayMode.blocksEndless => settings.blocksBest > 0 ? s.score(settings.blocksBest) : null,
       _PlayMode.adventure => settings.adventureSolved > 0 ? '★ ${settings.totalAdventureStars}/${Adventure.count * 3}' : null,
       _PlayMode.bomb => settings.bombBest > 0 ? s.score(settings.bombBest) : null,
+      _PlayMode.sugar => settings.totalSugarStars > 0 ? '★ ${settings.totalSugarStars}/${SugarLevels.count * 3}' : null,
       _PlayMode.chainEndless || _PlayMode.chainTime => switch (settings.chainBest(chainMode!, settings.chainDifficulty)) {
         0 => null,
         final best => s.score(best),
@@ -158,6 +164,10 @@ void _launch(BuildContext context, GameController c, _PlayMode mode) {
   final game = mode.gameMode;
   if (game != null) {
     c.start(game);
+    return;
+  }
+  if (mode == _PlayMode.sugar) {
+    SugarMapScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics);
     return;
   }
   final chain = mode.chainMode;
@@ -482,6 +492,7 @@ class _ModesPage extends StatelessWidget {
       _ModeGroup.superGroup => s.superGroup,
       _ModeGroup.puzzle => s.puzzleGroup,
       _ModeGroup.chain => s.chainGroup,
+      _ModeGroup.sugar => s.sugarGroup,
       _ModeGroup.challenges => s.challengesLabel,
     };
     return Scaffold(
@@ -496,6 +507,8 @@ class _ModesPage extends StatelessWidget {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1000),
                   child: ListView(
+                    // Small page: build every card, so a far one is there to scroll to.
+                    scrollCacheExtent: const ScrollCacheExtent.pixels(4000),
                     padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
                     children: [
                       Row(

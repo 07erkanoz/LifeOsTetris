@@ -1,0 +1,500 @@
+import 'dart:math';
+import 'dart:ui' as ui;
+
+import 'package:flutter/material.dart';
+
+import '../core/sugar/sugar_game.dart';
+import '../core/sugar/sugar_levels.dart';
+import '../game/sugar/sugar_art.dart';
+
+/// Pieces of the Şeker Küpler screens: candy text, buttons and panels,
+/// goal icons, the star bar, boosters and the backdrop.
+
+const sugarInk = Color(0xFF5A1F7A);
+const sugarPink = [Color(0xFFFF9AD8), Color(0xFFE0247A)];
+const sugarGreen = [Color(0xFF6BF0A0), Color(0xFF1FB85A)];
+const sugarWhite = [Color(0xFFFFFFFF), Color(0xFFFFE3F4)];
+
+/// Text with a thick outline, the candy way.
+class CandyText extends StatelessWidget {
+  const CandyText(this.text, {super.key, this.size = 20, this.color = Colors.white, this.colors, this.outline = const Color(0xFF6A0E4A), this.stroke = 0.18, this.align = TextAlign.center});
+
+  final String text;
+  final double size;
+  final Color color;
+  final List<Color>? colors;
+  final Color outline;
+  final double stroke;
+  final TextAlign align;
+
+  @override
+  Widget build(BuildContext context) {
+    TextStyle style(Paint p) => TextStyle(fontFamily: 'Baloo2', fontSize: size, fontWeight: FontWeight.w800, height: 1.05, foreground: p);
+    final fill = Paint()..color = color;
+    final gradient = colors;
+    if (gradient != null) {
+      fill.shader = ui.Gradient.linear(Offset(0, size * 0.1), Offset(0, size), gradient, [for (var i = 0; i < gradient.length; i++) i / (gradient.length - 1)]);
+    }
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        if (stroke > 0)
+          Text(text, textAlign: align, style: style(Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = size * stroke
+            ..strokeJoin = StrokeJoin.round
+            ..color = outline)),
+        Text(text, textAlign: align, style: style(fill)),
+      ],
+    );
+  }
+}
+
+/// A glossy candy button.
+class CandyButton extends StatefulWidget {
+  const CandyButton({super.key, required this.label, required this.onTap, this.colors = sugarPink, this.icon, this.height = 58, this.width, this.textSize = 22, this.ink = const Color(0xFF8A1550)});
+
+  final String label;
+  final VoidCallback? onTap;
+  final List<Color> colors;
+  final IconData? icon;
+  final double height;
+  final double? width;
+  final double textSize;
+  final Color ink;
+
+  @override
+  State<CandyButton> createState() => _CandyButtonState();
+}
+
+class _CandyButtonState extends State<CandyButton> {
+  bool _down = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final r = BorderRadius.circular(widget.height * 0.4);
+    final enabled = widget.onTap != null;
+    final light = widget.colors == sugarWhite;
+    return Semantics(
+      button: true,
+      label: widget.label,
+      child: GestureDetector(
+        onTapDown: enabled ? (_) => setState(() => _down = true) : null,
+        onTapCancel: () => setState(() => _down = false),
+        onTapUp: enabled ? (_) => setState(() => _down = false) : null,
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _down ? 0.95 : 1,
+          duration: const Duration(milliseconds: 90),
+          child: Opacity(
+            opacity: enabled ? 1 : 0.5,
+            child: Container(
+              width: widget.width,
+              height: widget.height,
+              decoration: BoxDecoration(
+                borderRadius: r,
+                gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: widget.colors),
+                border: Border.all(color: Colors.white, width: 3),
+                boxShadow: [BoxShadow(color: widget.ink, offset: Offset(0, _down ? 3 : 6))],
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    left: 14,
+                    right: 14,
+                    top: 5,
+                    height: widget.height * 0.26,
+                    child: DecoratedBox(decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(widget.height))),
+                  ),
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (widget.icon != null) ...[Icon(widget.icon, color: light ? sugarInk : Colors.white, size: widget.textSize * 1.2), const SizedBox(width: 8)],
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: light
+                                  ? CandyText(widget.label, size: widget.textSize, color: sugarInk, stroke: 0)
+                                  : CandyText(widget.label, size: widget.textSize, outline: widget.ink, stroke: 0.14),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A light candy card.
+class CandyPanel extends StatelessWidget {
+  const CandyPanel({super.key, required this.child, this.padding = const EdgeInsets.fromLTRB(20, 22, 20, 20)});
+
+  final Widget child;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: padding,
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(30),
+      gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFFFF7FD), Color(0xFFFFE3F4)]),
+      border: Border.all(color: Colors.white, width: 3),
+      boxShadow: [BoxShadow(color: const Color(0xFF2A0B4F).withValues(alpha: 0.7), offset: const Offset(0, 8)), const BoxShadow(color: Color(0x66000000), blurRadius: 30)],
+    ),
+    child: child,
+  );
+}
+
+// ------------------------------------------------------------- painters --
+
+/// The icon of a goal: a cube of its colour, a frozen cube, a star.
+class SugarGoalIcon extends StatelessWidget {
+  const SugarGoalIcon(this.goal, {super.key, this.size = 38});
+
+  final SugarGoal goal;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(size: Size.square(size), painter: _GoalIconPainter(goal.kind, goal.color));
+}
+
+class _GoalIconPainter extends CustomPainter {
+  _GoalIconPainter(this.kind, this.color);
+
+  final GoalKind kind;
+  final SugarColor? color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = Offset.zero & size;
+    switch (kind) {
+      case GoalKind.color:
+        paintSugarCube(canvas, r, sugarColors[color]!, bubbles: 1);
+      case GoalKind.ice:
+        paintSugarCube(canvas, r, sugarColors[SugarColor.blue]!);
+        paintIce(canvas, r, layers: 1, seed: 1);
+      case GoalKind.score:
+        paintGoldStar(canvas, r.center, size.width * 0.46);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GoalIconPainter old) => old.kind != kind || old.color != color;
+}
+
+/// Gold stars in a row: [on] of [count] lit.
+class SugarStars extends StatelessWidget {
+  const SugarStars({super.key, required this.on, this.count = 3, this.size = 16, this.arc = false});
+
+  final int on, count;
+  final double size;
+  final bool arc;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(size: Size(size * 2.3 * count, size * (arc ? 2.6 : 2.2)), painter: _StarsPainter(on, count, size, arc));
+}
+
+class _StarsPainter extends CustomPainter {
+  _StarsPainter(this.on, this.count, this.r, this.arc);
+
+  final int on, count;
+  final double r;
+  final bool arc;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var k = 0; k < count; k++) {
+      final x = size.width * (k + 0.5) / count;
+      final lift = arc && count == 3 && k == 1 ? -r * 0.4 : 0.0;
+      paintGoldStar(canvas, Offset(x, size.height / 2 + lift), arc && k == 1 ? r * 1.2 : r, on: k < on);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_StarsPainter old) => old.on != on || old.count != count || old.r != r;
+}
+
+/// The score bar: fills up to three stars.
+class SugarScoreBar extends StatelessWidget {
+  const SugarScoreBar({super.key, required this.score, required this.stars, this.goalsDone = false});
+
+  final int score;
+  final List<int> stars;
+  final bool goalsDone;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(size: const Size(double.infinity, 38), painter: _ScoreBarPainter(score, stars, goalsDone));
+}
+
+class _ScoreBarPainter extends CustomPainter {
+  _ScoreBarPainter(this.score, this.stars, this.goalsDone);
+
+  final int score;
+  final List<int> stars;
+  final bool goalsDone;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bar = RRect.fromRectAndRadius(Rect.fromLTWH(14, size.height / 2 - 10, size.width - 28, 20), const Radius.circular(10));
+    canvas.drawRRect(bar.shift(const Offset(0, 3)), Paint()..color = const Color(0xFF2A0B4F).withValues(alpha: 0.6));
+    canvas.drawRRect(bar, Paint()..color = const Color(0xFF3B1466));
+    final top = stars[2];
+    double at(int s) => min(1.0, s / top) * 0.92;
+    final share = score >= top ? 1.0 : score / top * 0.92;
+    if (share > 0) {
+      final fill = RRect.fromRectAndRadius(Rect.fromLTWH(bar.left, bar.top, max(bar.height, bar.width * share), bar.height), const Radius.circular(10));
+      canvas.drawRRect(fill, Paint()..shader = ui.Gradient.linear(fill.outerRect.centerLeft, fill.outerRect.centerRight, const [Color(0xFFFFE066), Color(0xFFFF8A00)]));
+      canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(bar.left + 6, bar.top + 4, max(0, fill.outerRect.width - 12), 5), const Radius.circular(3)),
+          Paint()..color = Colors.white.withValues(alpha: 0.5));
+    }
+    for (var k = 0; k < 3; k++) {
+      paintGoldStar(canvas, Offset(bar.left + bar.width * at(stars[k]), bar.center.dy), 15, on: score >= stars[k]);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ScoreBarPainter old) => old.score != score || old.goalsDone != goalsDone || old.stars != stars;
+}
+
+/// The moves left, in a pink bubble that throbs red near the end.
+class SugarMovesBubble extends StatelessWidget {
+  const SugarMovesBubble({super.key, required this.moves, required this.label, this.size = 84, this.warn = 0});
+
+  final int moves;
+  final String label;
+  final double size;
+
+  /// 0..1 red throb.
+  final double warn;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = [Color.lerp(const Color(0xFFFF7AC6), const Color(0xFFFF6A6A), warn)!, Color.lerp(const Color(0xFFE0247A), const Color(0xFFC0122A), warn)!];
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(center: const Alignment(-0.25, -0.35), radius: 0.9, colors: colors),
+        border: Border.all(color: Colors.white, width: 4),
+        boxShadow: [BoxShadow(color: const Color(0xFF7A1C5B), offset: const Offset(0, 4)), if (warn > 0) BoxShadow(color: const Color(0xFFFF3B5C).withValues(alpha: 0.6 * warn), blurRadius: 18)],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CandyText('$moves', size: size * 0.42, outline: const Color(0xFF8A1550), stroke: 0.12),
+          CandyText(label, size: size * 0.15, outline: const Color(0xFF8A1550), stroke: 0.2),
+        ],
+      ),
+    );
+  }
+}
+
+/// A booster: a round button with its icon, a count badge and a name.
+class SugarBoosterButton extends StatelessWidget {
+  const SugarBoosterButton({super.key, required this.kind, required this.count, required this.label, required this.onTap, this.active = false, this.size = 64});
+
+  final SugarBooster kind;
+  final int count;
+  final String label;
+  final VoidCallback? onTap;
+  final bool active;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final empty = count <= 0;
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        onTap: empty ? null : onTap,
+        child: Opacity(
+          opacity: empty ? 0.5 : 1,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: size + 14,
+                height: size + 8,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      width: size,
+                      height: size,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          center: const Alignment(-0.25, -0.3),
+                          colors: active ? const [Color(0xFFFFF6B0), Color(0xFFFFC21A)] : const [Color(0xFFFFFFFF), Color(0xFFFFD6F0)],
+                        ),
+                        border: Border.all(color: active ? Colors.white : const Color(0xFFFF7AC6), width: 3),
+                        boxShadow: [
+                          BoxShadow(color: const Color(0xFF2A0B4F).withValues(alpha: 0.7), offset: const Offset(0, 5)),
+                          if (active) const BoxShadow(color: Color(0xAAFFE066), blurRadius: 20),
+                        ],
+                      ),
+                      child: CustomPaint(painter: _BoosterIconPainter(kind)),
+                    ),
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        width: 26,
+                        height: 26,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(shape: BoxShape.circle, color: empty ? const Color(0xFF8E86A8) : const Color(0xFF2BD96B), border: Border.all(color: Colors.white, width: 2.5)),
+                        child: CandyText('$count', size: 14, stroke: 0),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+              CandyText(label, size: 14, outline: const Color(0xFF3A0F60), stroke: 0.22),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BoosterIconPainter extends CustomPainter {
+  _BoosterIconPainter(this.kind);
+
+  final SugarBooster kind;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final k = size.width / 68;
+    canvas.save();
+    canvas.translate(c.dx, c.dy);
+    canvas.scale(k);
+    switch (kind) {
+      case SugarBooster.hammer:
+        canvas.rotate(-0.6);
+        canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: const Offset(0, 6), width: 7, height: 34), const Radius.circular(3)), Paint()..color = const Color(0xFFB0703A));
+        canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: const Offset(0, -12), width: 32, height: 16), const Radius.circular(5)),
+            Paint()..shader = ui.Gradient.linear(const Offset(0, -20), const Offset(0, -4), const [Color(0xFFDDE3EE), Color(0xFF7D879A)]));
+      case SugarBooster.shuffle:
+        final p = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 5
+          ..strokeCap = StrokeCap.round
+          ..color = const Color(0xFFB45BFF);
+        canvas.drawArc(Rect.fromCircle(center: Offset.zero, radius: 15), -pi * 0.95, pi * 0.8, false, p);
+        canvas.drawArc(Rect.fromCircle(center: Offset.zero, radius: 15), pi * 0.05, pi * 0.8, false, p..color = const Color(0xFFFF3B5C));
+        canvas.drawPath(Path()..addPolygon(const [Offset(14, -10), Offset(20, -2), Offset(8, -2)], true), Paint()..color = const Color(0xFFB45BFF));
+        canvas.drawPath(Path()..addPolygon(const [Offset(-14, 10), Offset(-20, 2), Offset(-8, 2)], true), Paint()..color = const Color(0xFFFF3B5C));
+      case SugarBooster.moves:
+        paintSugarLabel(canvas, '+${SugarBooster.extraMoves}', Offset.zero, 28,
+            Paint()..shader = ui.Gradient.linear(const Offset(0, -14), const Offset(0, 14), const [Color(0xFFFF7AC6), Color(0xFFE0247A)]),
+            outline: Colors.white, stroke: 0.18);
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_BoosterIconPainter old) => old.kind != kind;
+}
+
+/// The sweet dusk behind the board, a little different per chapter.
+class SugarBackdrop extends StatelessWidget {
+  const SugarBackdrop({super.key, this.chapter = 0});
+
+  final int chapter;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(painter: _BackdropPainter(chapter), size: Size.infinite);
+}
+
+class _BackdropPainter extends CustomPainter {
+  _BackdropPainter(this.chapter);
+
+  final int chapter;
+
+  static const _skies = [
+    [Color(0xFF5B1FA8), Color(0xFFB0307E), Color(0xFF3A1470)],
+    [Color(0xFF2B3FA8), Color(0xFF6A5AD8), Color(0xFF281470)],
+    [Color(0xFF3A1F6A), Color(0xFF8A2F5E), Color(0xFF1E0F3A)],
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final screen = Offset.zero & size;
+    canvas.drawRect(screen, Paint()..shader = ui.Gradient.linear(screen.topCenter, screen.bottomCenter, _skies[chapter % 3], const [0, 0.55, 1]));
+    final rnd = Random(4 + chapter);
+    for (var i = 0; i < 16; i++) {
+      final c = [const Color(0xFFFFB3E6), const Color(0xFF9FD8FF), const Color(0xFFFFE08A)][i % 3];
+      canvas.drawCircle(Offset(rnd.nextDouble() * size.width, rnd.nextDouble() * size.height), 20 + rnd.nextDouble() * 50, Paint()
+        ..color = c.withValues(alpha: 0.12 + rnd.nextDouble() * 0.1)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 24));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BackdropPainter old) => old.chapter != chapter;
+}
+
+/// Round, light icon button for the top corners.
+class SugarRoundButton extends StatelessWidget {
+  const SugarRoundButton({super.key, required this.icon, required this.onTap, this.tooltip, this.size = 44});
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final String? tooltip;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final button = GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: const RadialGradient(center: Alignment(-0.25, -0.3), colors: [Color(0xFFFFFFFF), Color(0xFFFFD6F0)]),
+          border: Border.all(color: const Color(0xFFFF7AC6), width: 2.5),
+          boxShadow: [BoxShadow(color: const Color(0xFF2A0B4F).withValues(alpha: 0.7), offset: const Offset(0, 4))],
+        ),
+        child: Icon(icon, color: sugarInk, size: size * 0.55),
+      ),
+    );
+    return tooltip == null ? button : Tooltip(message: tooltip, child: button);
+  }
+}
+
+/// A small tag: BOSS, HARD.
+class SugarTag extends StatelessWidget {
+  const SugarTag(this.text, {super.key, this.colors = const [Color(0xFFFF7A3D), Color(0xFFE02424)]});
+
+  final String text;
+  final List<Color> colors;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(12),
+      gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: colors),
+      border: Border.all(color: Colors.white, width: 2),
+    ),
+    child: CandyText(text, size: 14, outline: const Color(0xFF7A0E0E), stroke: 0.16),
+  );
+}
