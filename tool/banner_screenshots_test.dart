@@ -12,7 +12,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lifeos_kupler/app.dart';
 import 'package:lifeos_kupler/audio/audio_service.dart';
 import 'package:lifeos_kupler/core/game_events.dart';
-import 'package:lifeos_kupler/core/powers.dart';
 import 'package:lifeos_kupler/game/game_controller.dart';
 import 'package:lifeos_kupler/l10n/strings.dart';
 import 'package:lifeos_kupler/settings/settings.dart';
