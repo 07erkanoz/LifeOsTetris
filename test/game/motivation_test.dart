@@ -60,6 +60,17 @@ void main() {
       expect(line.text(AppStrings.en), contains('1,240 points'));
     });
 
+    test('one is singular in English, larger numbers are not touched', () {
+      for (var i = 0; i < voiceVariants(Voice.nearBest); i++) {
+        final one = VoiceLine(Voice.nearBest, i, {'gap': 1}).text(AppStrings.en);
+        expect(one, isNot(contains('1 points')));
+        expect(one, contains('1 point'));
+        expect(VoiceLine(Voice.nearBest, i, {'gap': 21}).text(AppStrings.en), contains('21 points'));
+        expect(VoiceLine(Voice.nearBest, i, {'gap': 1001}).text(AppStrings.en), contains('1,001 points'));
+      }
+      expect(VoiceLine(Voice.nearBest, 0, {'gap': 1}).text(AppStrings.tr), contains('1 puan'));
+    });
+
     test('lines do not repeat until every wording was used', () {
       final memory = LineMemory();
       final count = voiceVariants(Voice.comeback);

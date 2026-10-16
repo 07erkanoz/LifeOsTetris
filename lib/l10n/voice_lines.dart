@@ -69,8 +69,12 @@ class VoiceLine {
     for (final e in values.entries) {
       line = line.replaceAll('{${e.key}}', _format(s, e.key, e.value));
     }
+    // English counts are plural except for one ("1 point", "1 day").
+    if (!s.isTurkish) line = line.replaceAllMapped(_one, (m) => '${m[1]}1 ${m[2]}');
     return line;
   }
+
+  static final _one = RegExp(r'(^|[^\d.,])1 (point|day|line|game|quad)s\b');
 
   static String _format(AppStrings s, String key, num value) => switch (key) {
     'gap' || 'best' || 'avg' || 'score' || 'prev' || 'count' => s.score(value.round()),
@@ -333,7 +337,7 @@ const Map<Voice, List<String>> _tr = {
 const Map<Voice, List<String>> _en = {
   Voice.nearBest: [
     "{gap} points from your record. You're racing the best version of yourself.",
-    '{gap} points. That is all between you and your best day.',
+    'Just {gap} points between you and your best game.',
     'Your record is in sight: {gap} points away.',
     'This could really be a record now. {gap} points to go.',
     'No rush. {gap} points come to a steady hand.',
@@ -349,7 +353,7 @@ const Map<Voice, List<String>> _en = {
     "Record broken. Don't stop, see how far it goes.",
     'This is the moment you play for. New record.',
     "Yesterday's impossible score is now below you.",
-    "The record is yours. Now set it where you'll struggle to reach it.",
+    "The record is yours. Now push it so high even you'll struggle to beat it.",
   ],
   Voice.pastBest: [
     "You're not racing your old record anymore. You're racing tomorrow's you.",
@@ -357,7 +361,7 @@ const Map<Voice, List<String>> _en = {
     'Beating a record is one thing. Leaving it this far behind is another.',
     'Every line raises the bar for your next game.',
     "You'll remember this game.",
-    "It's high up here. Steady your breath and keep going.",
+    "You're way up here. Take a breath and keep going.",
   ],
   Voice.aboveAverage: [
     'Past your average. Everything from here is a bonus.',
@@ -382,17 +386,17 @@ const Map<Voice, List<String>> _en = {
     "A moment ago you were about to lose. Now you're in charge again.",
     'Your cleanest moves came at the hardest moment.',
     'Best moment of the game: the comeback.',
-    'The board cornered you, and you breathed.',
+    'The board had you cornered. You stayed calm.',
   ],
   Voice.flow: [
     "You're in the flow. Don't think, just play.",
-    'Your hands are ahead of your eyes. Let them be.',
+    'Your hands are moving before you think. Let them.',
     "You've found the rhythm.",
     'Every piece seems to know where it goes.',
-    'This pace is yours.',
+    'You own this pace.',
     'Calm and fast. Your best state.',
     "You're not reading the board anymore. You're feeling it.",
-    "The chain is growing. Don't let it break.",
+    "The streak is growing. Don't break it.",
   ],
   Voice.firstQuadNew: [
     'First quad of the game. Waiting is a skill, and you have it.',
@@ -419,7 +423,7 @@ const Map<Voice, List<String>> _en = {
     "Level {level}. You haven't been this far lately.",
     "This speed is new to you. And you're holding on.",
     "You've entered a speed you don't know yet. Your hands will catch up in a few pieces.",
-    'Level {level}. This is your territory now too.',
+    'Level {level}. You belong up here now.',
   ],
   Voice.maxSpeed: [
     'Top speed. Everything from here is up to you.',
@@ -554,8 +558,8 @@ const Map<Voice, List<String>> _en = {
   ],
   Voice.homeWeek: [
     '{count} games this week. Your hands are learning this board by heart.',
-    '{count} games in seven days. Practice adds up quietly.',
+    "{count} games in seven days. It's all adding up.",
   ],
-  Voice.homeNight: ['A late round? The board is ready.', 'Quiet hours, calm games.'],
+  Voice.homeNight: ['A late round? The board is ready.', 'Quiet night, calm game.'],
   Voice.homeMorning: ['Good morning. Fresh mind, empty board.', "The day's first game is the cleanest one."],
 };
