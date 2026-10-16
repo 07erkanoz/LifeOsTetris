@@ -8,3 +8,10 @@
     Header set Cache-Control "no-cache"
   </IfModule>
 </Files>
+# The downloads keep their names from build to build: caches may keep them
+# five minutes at most.
+<FilesMatch "\.(apk|zip|gz)$">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "public, max-age=300"
+  </IfModule>
+</FilesMatch>

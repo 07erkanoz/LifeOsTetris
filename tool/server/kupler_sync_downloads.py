@@ -117,8 +117,10 @@ def main(force=False):
             else:
                 sha = download(a, target)
                 changed.append(a['name'])
+            # A new URL for every build: caches in front of the site (Cloudflare)
+            # never hand out an older file under the same name.
             assets.append({'name': a['name'], 'size': a['size'], 'sha256': sha, 'updated_at': a['updated_at'],
-                           'id': a['id'], 'url': PUBLIC + a['name']})
+                           'id': a['id'], 'url': f'{PUBLIC}{a["name"]}?v={sha[:12]}'})
         keep = {a['name'] for a in assets}
         removed = [n for n in old if n not in keep]
         for name in removed:
