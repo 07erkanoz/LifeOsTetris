@@ -12,6 +12,7 @@ import '../game/sugar/sugar_art.dart';
 import '../l10n/strings.dart';
 import '../platform/orientation_lock.dart';
 import '../settings/settings.dart';
+import 'game_screen.dart' show showSettingsDialog;
 import 'sugar_screen.dart';
 import 'sugar_widgets.dart';
 
@@ -177,6 +178,13 @@ class _SugarMapScreenState extends State<SugarMapScreen> {
                                 CandyText('${settings.totalSugarStars}/${SugarLevels.count * 3}', size: 17, stroke: 0),
                               ],
                             ),
+                          ),
+                          const SizedBox(width: 8),
+                          SugarRoundButton(
+                            key: const ValueKey('sugar-map-settings'),
+                            icon: Icons.settings_rounded,
+                            tooltip: s.settingsTitle,
+                            onTap: () => showSettingsDialog(context, settings),
                           ),
                         ],
                       ),

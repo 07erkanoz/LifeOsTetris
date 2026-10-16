@@ -25,6 +25,16 @@ class BoardView extends StatelessWidget {
     final sprites = BlockSprites.of(cell, MediaQuery.devicePixelRatioOf(context), palette);
     final frame = geometry.frameSize;
     final canvasOffset = -geometry.margin;
+    final tiltMatrix = Matrix4.identity()
+      ..setEntry(3, 2, perspective)
+      ..rotateX(-tilt);
+    // The same tilt as the board's Transform (about the bottom centre), for
+    // points on the board canvas; used to place the flat callouts.
+    final pivot = Offset(frame.width / 2, frame.height);
+    Offset project(Offset canvasPoint) {
+      final p = canvasPoint + Offset(canvasOffset, canvasOffset) - pivot;
+      return MatrixUtils.transformPoint(tiltMatrix, p) + pivot - Offset(canvasOffset, canvasOffset);
+    }
 
     final board = Stack(
       clipBehavior: Clip.none,
@@ -65,9 +75,7 @@ class BoardView extends StatelessWidget {
               onPanEnd: (d) => controller.dragEnd(d.velocity.pixelsPerSecond),
               child: Transform(
                 alignment: Alignment.bottomCenter,
-                transform: Matrix4.identity()
-                  ..setEntry(3, 2, perspective)
-                  ..rotateX(-tilt),
+                transform: tiltMatrix,
                 child: SizedBox.fromSize(size: frame, child: board),
               ),
             ),
@@ -82,6 +90,8 @@ class BoardView extends StatelessWidget {
                     cell: cell,
                     origin: geometry.wellOrigin,
                     repaint: controller.frame,
+                    project: project,
+                    wellTop: project(geometry.wellOrigin - Offset(0, geometry.framePad)).dy,
                   ),
                 ),
               ),

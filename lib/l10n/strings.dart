@@ -118,6 +118,7 @@ class AppStrings {
   String get newRecord => _t('★ YENİ REKOR! ★', '★ NEW RECORD! ★');
   String get playAgain => _t('Tekrar oyna', 'Play again');
   String get mainMenu => _t('Ana menü', 'Main menu');
+  String get quitGame => _t('Çıkış', 'Quit');
 
   // ------------------------------------------------------------ about
 

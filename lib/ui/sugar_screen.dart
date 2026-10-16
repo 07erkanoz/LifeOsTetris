@@ -14,6 +14,7 @@ import '../game/sugar/sugar_painter.dart';
 import '../l10n/strings.dart';
 import '../platform/orientation_lock.dart';
 import '../settings/settings.dart';
+import 'game_screen.dart' show showSettingsDialog;
 import 'sugar_widgets.dart';
 
 String _thousands(int n) {
@@ -118,6 +119,12 @@ class _SugarScreenState extends State<SugarScreen> with SingleTickerProviderStat
     if (mounted) Navigator.of(context).pop();
   }
 
+  /// Straight back to the home menu (past the map); the level is kept.
+  void _home() {
+    c.saveProgress();
+    if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
   KeyEventResult _onKey(FocusNode node, KeyEvent e) {
     if (e is! KeyDownEvent) return KeyEventResult.ignored;
     final key = e.logicalKey;
@@ -158,7 +165,7 @@ class _SugarScreenState extends State<SugarScreen> with SingleTickerProviderStat
                       if (!c.started)
                         _StartPanel(c: c, onBack: _leave)
                       else if (c.paused)
-                        _PausePanel(c: c, onMenu: _leave)
+                        _PausePanel(c: c, onMenu: _leave, onHome: _home)
                       else if (c.showResult)
                         c.game.status == SugarStatus.won ? _WonPanel(c: c, onMap: _leave) : _LostPanel(c: c, onMap: _leave),
                     ],
@@ -662,10 +669,11 @@ class _StartPanel extends StatelessWidget {
 }
 
 class _PausePanel extends StatelessWidget {
-  const _PausePanel({required this.c, required this.onMenu});
+  const _PausePanel({required this.c, required this.onMenu, required this.onHome});
 
   final SugarController c;
   final VoidCallback onMenu;
+  final VoidCallback onHome;
 
   @override
   Widget build(BuildContext context) {
@@ -701,15 +709,45 @@ class _PausePanel extends StatelessWidget {
               },
             ),
             const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: CandyButton(
+                    key: const ValueKey('sugar-settings'),
+                    label: s.settingsTitle,
+                    colors: sugarWhite,
+                    ink: const Color(0xFFD08ABF),
+                    height: 48,
+                    textSize: 17,
+                    icon: Icons.settings_rounded,
+                    onTap: () => showSettingsDialog(context, c.settings),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: CandyButton(
+                    label: s.sugarMap,
+                    colors: sugarWhite,
+                    ink: const Color(0xFFD08ABF),
+                    height: 48,
+                    textSize: 17,
+                    icon: Icons.map_rounded,
+                    onTap: onMenu,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             CandyButton(
-              label: s.sugarMap,
+              key: const ValueKey('sugar-home'),
+              label: s.mainMenu,
               colors: sugarWhite,
               ink: const Color(0xFFD08ABF),
               width: double.infinity,
               height: 48,
               textSize: 18,
-              icon: Icons.map_rounded,
-              onTap: onMenu,
+              icon: Icons.home_rounded,
+              onTap: onHome,
             ),
           ],
         ),

@@ -768,7 +768,8 @@ Path _star(double x, double y, double r) {
 /// Floating callouts ("DÖRTLÜ!", "+800", "KOMBO ×2"). Painted without the
 /// board's perspective tilt so text stays crisp and readable.
 class FloaterPainter extends CustomPainter {
-  FloaterPainter({required this.floaters, required this.cell, required this.origin, required Listenable repaint}) : super(repaint: repaint);
+  FloaterPainter({required this.floaters, required this.cell, required this.origin, required Listenable repaint, this.project, this.wellTop})
+    : super(repaint: repaint);
 
   /// The live list of an effects engine; read on every repaint.
   final List<Floater> floaters;
@@ -776,6 +777,15 @@ class FloaterPainter extends CustomPainter {
 
   /// Canvas position of the board's (0, 0) cell corner.
   final Offset origin;
+
+  /// Where a point of the board's own (untilted) canvas shows on this
+  /// canvas: the board is drawn tilted, its top rows pushed back and down,
+  /// while the text stays flat and readable.
+  final Offset Function(Offset)? project;
+
+  /// The highest a callout may reach (this canvas), usually the shown top
+  /// of the board frame, so a callout near the top stays on screen.
+  final double? wellTop;
 
   static const _outline = Color(0xE60F172A);
 
@@ -818,8 +828,12 @@ class FloaterPainter extends CustomPainter {
       final widest = painters.fold<double>(0, (w, p) => max(w, p.$1.width));
       var y = -total / 2;
 
+      var at = origin + Offset(f.x * c, (f.y - rise) * c);
+      if (project != null) at = project!(at);
+      final top = wellTop;
+      if (top != null) at = Offset(at.dx, max(at.dy, top + total / 2));
       canvas.save();
-      canvas.translate(origin.dx + f.x * c, origin.dy + (f.y - rise) * c);
+      canvas.translate(at.dx, at.dy);
       canvas.scale(scale);
       // Bounded layer for the fade so only the text area is composited.
       canvas.saveLayer(

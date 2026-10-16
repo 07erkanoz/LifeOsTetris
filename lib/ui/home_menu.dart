@@ -295,6 +295,8 @@ class _StartOverlay extends StatelessWidget {
           ('open-themes', Icons.palette_rounded, s.themeLabel, () => _ThemeSheet.open(context, c.settings)),
           ('open-settings', Icons.settings_rounded, s.settingsTitle, () => _SettingsSheet.open(context, c.settings)),
           ('open-about', Icons.info_outline_rounded, s.about, () => AboutPage.open(context, c.settings)),
+          // Phones leave with the system's back or home; desktops need a way out.
+          if (_canQuit) ('quit-game', Icons.power_settings_new_rounded, s.quitGame, () => ServicesBinding.instance.exitApplication(ui.AppExitType.required)),
         ].indexed) ...[
           if (i > 0) const SizedBox(width: 8),
           Expanded(
@@ -439,6 +441,15 @@ class _ShortcutTile extends StatelessWidget {
     );
   }
 }
+
+bool get _canQuit =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.macOS);
+
+/// The settings dialog, for screens outside the home menu.
+Future<void> showSettingsDialog(BuildContext context, Settings settings) => _SettingsSheet.open(context, settings);
 
 /// Every setting in a dialog, opened from the home screen.
 class _SettingsSheet extends StatelessWidget {

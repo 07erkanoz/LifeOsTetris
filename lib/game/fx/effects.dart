@@ -438,7 +438,7 @@ class EffectsEngine implements BackdropFx {
         lastPower = type;
         final colors = powerColors[type]!;
         floaters.add(
-          Floater(5, 3.0, [
+          Floater(5, 2.4, [
             FloaterLine(strings.newPower, 0.5, const [Color(0xFFFFFFFF), Color(0xFFE9D5FF)]),
             FloaterLine(strings.powerName(type), 1.05, [const Color(0xFFFFFFFF), ...colors], glow: colors.last),
             FloaterLine(strings.powerDescription(type), 0.42, const [Color(0xFFF8FAFC), Color(0xFFCBD5E1)]),
