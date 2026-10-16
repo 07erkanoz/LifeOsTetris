@@ -2,7 +2,7 @@ part of 'game_screen.dart';
 
 // ---------------------------------------------------------------- modes
 
-enum _ModeGroup { superGroup, classic, puzzle, challenges }
+enum _ModeGroup { superGroup, classic, puzzle, chain, challenges }
 
 /// Everything the play button and the modes page can start.
 enum _PlayMode {
@@ -13,6 +13,8 @@ enum _PlayMode {
   blocksEndless(_ModeGroup.puzzle),
   adventure(_ModeGroup.puzzle, isNew: true),
   bomb(_ModeGroup.puzzle, isNew: true),
+  chainEndless(_ModeGroup.chain, isNew: true),
+  chainTime(_ModeGroup.chain, isNew: true),
   sprint(_ModeGroup.challenges),
   ultra(_ModeGroup.challenges),
   dig(_ModeGroup.challenges),
@@ -52,6 +54,8 @@ enum _PlayMode {
     _PlayMode.ultra => s.ultraTitle,
     _PlayMode.dig => s.digTitle,
     _PlayMode.bomb => s.bombTitle,
+    _PlayMode.chainEndless => s.chainEndlessTitle,
+    _PlayMode.chainTime => s.chainTimeTitle,
     _PlayMode.target => s.targetTitle,
     _PlayMode.chaos => s.chaosTitle,
   };
@@ -60,6 +64,7 @@ enum _PlayMode {
   String fullTitle(AppStrings s) => switch (group) {
     _ModeGroup.classic => '${s.classicTitle} · ${title(s)}',
     _ModeGroup.puzzle => '${s.puzzleTitle} · ${title(s)}',
+    _ModeGroup.chain => '${s.chainTitle} · ${title(s)}',
     _ => title(s),
   };
 
@@ -74,6 +79,8 @@ enum _PlayMode {
     _PlayMode.ultra => s.ultraSubtitle,
     _PlayMode.dig => s.digSubtitle,
     _PlayMode.bomb => s.bombSubtitle,
+    _PlayMode.chainEndless => s.chainEndlessSubtitle,
+    _PlayMode.chainTime => s.chainTimeSubtitle,
     _PlayMode.target => s.targetSubtitle,
     _PlayMode.chaos => s.chaosSubtitle,
   };
@@ -89,6 +96,8 @@ enum _PlayMode {
     _PlayMode.ultra => Icons.timer_rounded,
     _PlayMode.dig => Icons.layers_rounded,
     _PlayMode.bomb => Icons.local_fire_department_rounded,
+    _PlayMode.chainEndless => Icons.link_rounded,
+    _PlayMode.chainTime => Icons.hourglass_bottom_rounded,
     _PlayMode.target => Icons.star_rounded,
     _PlayMode.chaos => Icons.casino_rounded,
   };
@@ -104,10 +113,19 @@ enum _PlayMode {
         _PlayMode.ultra => PieceType.l,
         _PlayMode.dig => PieceType.s,
         _PlayMode.bomb => PieceType.z,
+        _PlayMode.chainEndless => PieceType.t,
+        _PlayMode.chainTime => PieceType.o,
         _PlayMode.adventure => PieceType.l,
         _PlayMode.target => PieceType.o,
         _PlayMode.chaos => PieceType.t,
       }]!;
+
+  /// The Zincir Küpler mode behind it, if any.
+  ChainMode? get chainMode => switch (this) {
+    _PlayMode.chainEndless => ChainMode.endless,
+    _PlayMode.chainTime => ChainMode.timeAttack,
+    _ => null,
+  };
 
   /// Best result so far, or null before the first one.
   String? record(Settings settings, AppStrings s) {
@@ -125,6 +143,10 @@ enum _PlayMode {
       _PlayMode.blocksEndless => settings.blocksBest > 0 ? s.score(settings.blocksBest) : null,
       _PlayMode.adventure => settings.adventureSolved > 0 ? '★ ${settings.totalAdventureStars}/${Adventure.count * 3}' : null,
       _PlayMode.bomb => settings.bombBest > 0 ? s.score(settings.bombBest) : null,
+      _PlayMode.chainEndless || _PlayMode.chainTime => switch (settings.chainBest(chainMode!, settings.chainDifficulty)) {
+        0 => null,
+        final best => s.score(best),
+      },
       _ => null,
     };
   }
@@ -136,6 +158,11 @@ void _launch(BuildContext context, GameController c, _PlayMode mode) {
   final game = mode.gameMode;
   if (game != null) {
     c.start(game);
+    return;
+  }
+  final chain = mode.chainMode;
+  if (chain != null) {
+    ChainScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics, mode: chain);
     return;
   }
   BlocksScreen.open(
@@ -438,6 +465,7 @@ class _ModesPage extends StatelessWidget {
       _ModeGroup.classic => s.classicTitle.toUpperCase(),
       _ModeGroup.superGroup => s.superGroup,
       _ModeGroup.puzzle => s.puzzleGroup,
+      _ModeGroup.chain => s.chainGroup,
       _ModeGroup.challenges => s.challengesLabel,
     };
     return Scaffold(

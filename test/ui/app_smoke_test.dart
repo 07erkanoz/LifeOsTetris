@@ -25,7 +25,8 @@ Future<void> startMode(WidgetTester tester, String name) async {
     await tester.pump(const Duration(milliseconds: 40));
   }
   final card = find.byKey(ValueKey('mode-$name'));
-  await tester.ensureVisible(card);
+  // Cards far down the modes page count as offstage until scrolled to.
+  await tester.ensureVisible(find.byKey(ValueKey('mode-$name'), skipOffstage: false));
   await tester.pump(const Duration(milliseconds: 40));
   await tester.tap(card);
   for (var i = 0; i < 10; i++) {

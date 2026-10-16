@@ -87,6 +87,17 @@ sürükle; dolan **satır ve sütunlar** birlikte patlar. Parçalar dönmez, dü
 - Nişan alırken patlayacak satır ve sütunlar parçanın rengiyle parlar. Arka arkaya
   patlatmak kombo verir, tahtayı tamamen boşaltmak bonus verir.
 
+### 🔗 Zincir Küpler
+Yan yana iki küpün yerini değiştir; aynı renkten 3 ya da daha fazla küp yatay veya dikey
+dizilince patlar. Üstteki küpler düşüp yeniden eşleşirse **zincir** (×2, ×3…) olur, aynı anda
+4+ küp patlatmak **kombo** sayılır. Yığın alttan sürekli yükselir: tepeye değerse oyun biter.
+
+- **Sonsuz** ve **Zamana Karşı** (2 dakika). Her biri için **Kolay / Normal / Zor**; rekorlar
+  ayrı tutulur. Kolay 4 renkle ve yavaş oynanır, çöp blok gelmez.
+- Kırmızı **çöp bloklar** yukarıdan iner; yanlarında bir eşleşme yapınca küplere dönüşür.
+- Gri küpler eşleşince **BONUS** verir. **Yükselt**'i basılı tutmak yığını hızlandırır (puanlı).
+- Kontroller: küpü parmakla sağa sola sürükle; klavyede oklar imleç, Space takas, Shift yükselt.
+
 ### 🎮 Klasik Küpler
 - **Normal:** Hız 10. seviyeye kadar yavaşça artar, sonra sabit kalır.
 - **Rahat:** Sabit, sakin hız; oyun sonsuza kadar sürer.

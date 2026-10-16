@@ -267,6 +267,36 @@ class AppStrings {
   String get adventureSubtitle => _t('Bölümleri bitir, resmi tamamla', 'Finish chapters, complete the picture');
   String get bombTitle => _t('Bomba', 'Bombs');
   String get bombSubtitle => _t('Patlamadan önce satırını temizle', 'Clear their rows before they blow');
+
+  // ------------------------------------------------------- zincir küpler
+  String get chainGroup => _t('ZİNCİR', 'CHAIN');
+  String get chainTitle => _t('Zincir Küpler', 'Chain Blocks');
+  String get chainEndlessTitle => _t('Sonsuz', 'Endless');
+  String get chainEndlessSubtitle => _t('Küpleri kaydır, zincir kur', 'Swap cubes, build chains');
+  String get chainTimeTitle => _t('Zamana Karşı', 'Time Attack');
+  String get chainTimeSubtitle => _t('2 dakikada en yüksek skor', 'Top score in 2 minutes');
+  String get chainLabel => _t('ZİNCİR', 'CHAIN');
+  String chainCallout(int n) => _t('ZİNCİR ×$n', 'CHAIN ×$n');
+  String chainCombo(int n) => _t('$n KÜP!', '$n CUBES!');
+  String get chainBonus => 'BONUS';
+  String chainLevel(int n) => _t('SEVİYE $n', 'LEVEL $n');
+  String get chainDifficulty => _t('ZORLUK', 'DIFFICULTY');
+  String get chainEasy => _t('Kolay', 'Easy');
+  String get chainNormal => _t('Normal', 'Normal');
+  String get chainHard => _t('Zor', 'Hard');
+  String get chainEasyHint => _t('Yavaş, 4 renk, çöp blok yok', 'Slow, 4 colours, no garbage');
+  String get chainNormalHint => _t('Orta hız, arada bir çöp blok', 'Medium speed, some garbage');
+  String get chainHardHint => _t('Hızlı, sık çöp blok', 'Fast, frequent garbage');
+  String get chainHowSwap => _t('Küpü parmağınla sağa sola kaydır', 'Drag a cube left or right');
+  String get chainHowMatch => _t('Aynı renkten 3 küpü yan yana ya da üst üste getir', 'Line up 3 of a colour across or down');
+  String get chainHowChain => _t('Düşen küpler yeniden eşleşirse ZİNCİR olur', 'Falling cubes that match again make a CHAIN');
+  String get chainHowGarbage => _t('Kırmızı blokların yanında eşleştir, kırılsınlar', 'Match next to red slabs to break them');
+  String get chainHowTop => _t('Küpler tepeye değmesin!', 'Keep the cubes off the top!');
+  String get chainHowKeys => _t('Oklar: imleç · Boşluk: takas · Shift: yükselt', 'Arrows: cursor · Space: swap · Shift: raise');
+  String get chainStart => _t('BAŞLA', 'START');
+  String get chainRaise => _t('Yükselt', 'Raise');
+  String chainLongest(int n) => _t('En uzun zincir ×$n', 'Longest chain ×$n');
+  String chainCubes(int n) => _t('$n küp patlattın', '$n cubes cleared');
   String get targetTitle => _t('Hedef', 'Targets');
   String get targetSubtitle => _t('Yıldızları topla, süre kazan', 'Collect stars to win time');
   String get chaosTitle => _t('Kaos', 'Chaos');

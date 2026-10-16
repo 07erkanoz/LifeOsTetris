@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../core/chain/chain_game.dart';
 import '../core/scoring.dart';
 import '../l10n/strings.dart';
 import '../theme/palette.dart';
@@ -49,6 +50,8 @@ class Settings extends ChangeNotifier {
   int? _lastTrack;
   int _blocksBest = 0;
   int _bombBest = 0;
+  final Map<String, int> _chainBest = {};
+  ChainDifficulty _chainDifficulty = ChainDifficulty.easy;
   final Map<int, int> _blockStars = {};
   final Map<int, int> _adventureStars = {};
 
@@ -95,6 +98,13 @@ class Settings extends ChangeNotifier {
       s._lastTrack = prefs.getInt('lastTrack');
       s._blocksBest = prefs.getInt('blocksBest') ?? 0;
       s._bombBest = prefs.getInt('bombBest') ?? 0;
+      for (final m in ChainMode.values) {
+        for (final d in ChainDifficulty.values) {
+          final best = prefs.getInt(_chainKey(m, d));
+          if (best != null) s._chainBest[_chainKey(m, d)] = best;
+        }
+      }
+      s._chainDifficulty = ChainDifficulty.parse(prefs.getString('chainDifficulty'));
       _readStars(prefs.getString('blockStars'), s._blockStars);
       _readStars(prefs.getString('adventureStars'), s._adventureStars);
       s._gamesPlayed = prefs.getInt('gamesPlayed') ?? 0;
@@ -284,8 +294,36 @@ class Settings extends ChangeNotifier {
     return record;
   }
 
+  static String _chainKey(ChainMode mode, ChainDifficulty difficulty) => 'chainBest_${mode.name}_${difficulty.name}';
+
+  /// Zincir Küpler's best score for [mode] at [difficulty] (0 before any).
+  int chainBest(ChainMode mode, ChainDifficulty difficulty) => _chainBest[_chainKey(mode, difficulty)] ?? 0;
+
+  /// The difficulty last picked for Zincir Küpler; easy at first.
+  ChainDifficulty get chainDifficulty => _chainDifficulty;
+  set chainDifficulty(ChainDifficulty v) => _set(() => _chainDifficulty = v, () => _prefs?.setString('chainDifficulty', v.name));
+
+  /// Records a finished Zincir Küpler game. Returns true for a new best.
+  bool recordChainGame({required ChainMode mode, required ChainDifficulty difficulty, required int score, required double seconds}) {
+    final key = _chainKey(mode, difficulty);
+    final record = score > 0 && score > (_chainBest[key] ?? 0);
+    _set(
+      () {
+        if (record) _chainBest[key] = score;
+        _gamesPlayed++;
+        _totalSeconds += seconds.round();
+      },
+      () {
+        if (record) _prefs?.setInt(key, score);
+        _prefs?.setInt('gamesPlayed', _gamesPlayed);
+        _prefs?.setInt('totalSeconds', _totalSeconds);
+      },
+    );
+    return record;
+  }
+
   /// Highest score across all modes.
-  int get topScore => _best.values.fold(max(_blocksBest, _bombBest), (a, b) => a > b ? a : b);
+  int get topScore => [..._best.values, _blocksBest, _bombBest, ..._chainBest.values].fold(0, max);
 
   set themeMode(ThemeMode v) => _set(() => _themeMode = v, () => _prefs?.setInt('themeMode', v.index));
   set language(AppLanguage v) => _set(() => _language = v, () => _prefs?.setInt('language', v.index));

@@ -71,7 +71,7 @@ Future<void> _startMode(WidgetTester tester, String name) async {
   await tester.tap(find.byKey(const ValueKey('change-mode')));
   await _pump(tester, 10, 40);
   final card = find.byKey(ValueKey('mode-$name'));
-  await tester.ensureVisible(card);
+  await tester.ensureVisible(find.byKey(ValueKey('mode-$name'), skipOffstage: false));
   await tester.pump(const Duration(milliseconds: 40));
   await tester.tap(card);
   await _pump(tester, 10, 40);
