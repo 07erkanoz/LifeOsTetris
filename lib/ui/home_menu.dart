@@ -226,10 +226,12 @@ class _StartOverlay extends StatelessWidget {
         child: FittedBox(fit: BoxFit.scaleDown, child: LogoTitle(fontSize: 32)),
       ),
       const SizedBox(height: 8),
+      // A line about the player when there is something to say.
       Text(
-        s.tagline,
+        c.homeNote?.text(s) ?? s.tagline,
+        key: const ValueKey('home-note'),
         textAlign: TextAlign.center,
-        style: TextStyle(fontSize: 14, color: p.muted, fontWeight: FontWeight.w600),
+        style: TextStyle(fontSize: 14, height: 1.35, color: p.muted, fontWeight: FontWeight.w600),
       ),
       if (best != null) ...[const SizedBox(height: 12), best],
     ];

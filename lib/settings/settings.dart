@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/chain/chain_game.dart';
 import '../core/scoring.dart';
+import '../game/play_history.dart';
 import '../l10n/strings.dart';
 import '../theme/palette.dart';
 
@@ -54,6 +55,11 @@ class Settings extends ChangeNotifier {
   ChainDifficulty _chainDifficulty = ChainDifficulty.easy;
   final Map<int, int> _blockStars = {};
   final Map<int, int> _adventureStars = {};
+  PlayHistory _history = PlayHistory();
+  LineMemory _lineMemory = LineMemory();
+
+  /// The time used for play history; tests may move it.
+  DateTime Function() clock = DateTime.now;
 
   static Future<Settings> load() async {
     SharedPreferences? prefs;
@@ -110,6 +116,8 @@ class Settings extends ChangeNotifier {
       s._gamesPlayed = prefs.getInt('gamesPlayed') ?? 0;
       s._totalLines = prefs.getInt('totalLines') ?? 0;
       s._totalSeconds = prefs.getInt('totalSeconds') ?? 0;
+      s._history = PlayHistory.decode(prefs.getString('playHistory'));
+      s._lineMemory = LineMemory(prefs.getStringList('recentLines'));
     }
     applyVisualTheme(s._visualTheme);
     return s;
@@ -280,12 +288,14 @@ class Settings extends ChangeNotifier {
     _set(
       () {
         if (record) bombs ? _bombBest = score : _blocksBest = score;
+        _history.markPlayed(clock());
         _gamesPlayed++;
         _totalLines += lines;
         _totalSeconds += seconds.round();
       },
       () {
         if (record) _prefs?.setInt(bombs ? 'bombBest' : 'blocksBest', score);
+        _prefs?.setString('playHistory', _history.encode());
         _prefs?.setInt('gamesPlayed', _gamesPlayed);
         _prefs?.setInt('totalLines', _totalLines);
         _prefs?.setInt('totalSeconds', _totalSeconds);
@@ -310,11 +320,13 @@ class Settings extends ChangeNotifier {
     _set(
       () {
         if (record) _chainBest[key] = score;
+        _history.markPlayed(clock());
         _gamesPlayed++;
         _totalSeconds += seconds.round();
       },
       () {
         if (record) _prefs?.setInt(key, score);
+        _prefs?.setString('playHistory', _history.encode());
         _prefs?.setInt('gamesPlayed', _gamesPlayed);
         _prefs?.setInt('totalSeconds', _totalSeconds);
       },
@@ -364,6 +376,20 @@ class Settings extends ChangeNotifier {
     );
     return record;
   }
+
+  // ------------------------------------------------------------ voice
+
+  /// Recent Küpler games and the days with any game, for the in-game voice.
+  PlayHistory get history => _history;
+
+  /// Lines the voice said lately; saved with [saveLineMemory].
+  LineMemory get lineMemory => _lineMemory;
+
+  /// Adds a finished Küpler game to the history.
+  void recordHistory(GameRecord record) => _set(() => _history.add(record), () => _prefs?.setString('playHistory', _history.encode()));
+
+  /// Stores [lineMemory] without rebuilding anything.
+  void saveLineMemory() => _prefs?.setStringList('recentLines', _lineMemory.recent);
 
   void toggleTheme(Brightness current) => themeMode = current == Brightness.dark ? ThemeMode.light : ThemeMode.dark;
 

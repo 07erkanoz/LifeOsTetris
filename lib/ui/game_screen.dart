@@ -15,6 +15,7 @@ import '../core/tetris_game.dart';
 import '../game/blocks/blocks_controller.dart';
 import '../game/game_controller.dart';
 import '../game/motivation.dart';
+import '../l10n/voice_lines.dart';
 import '../l10n/strings.dart';
 import '../platform/display_mode.dart';
 import '../platform/orientation_lock.dart';
@@ -1310,6 +1311,15 @@ class _GameOverOverlay extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(color: p.muted, fontWeight: FontWeight.w600),
         ),
+        if (c.endNote case final note?) ...[
+          const SizedBox(height: 14),
+          Text(
+            note.text(s),
+            key: const ValueKey('end-note'),
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 15, height: 1.4, fontWeight: FontWeight.w600, color: p.text),
+          ),
+        ],
         const SizedBox(height: 20),
         GradientButton(label: s.playAgain, icon: Icons.replay_rounded, onTap: () => c.start()),
         const SizedBox(height: 10),
@@ -1319,7 +1329,7 @@ class _GameOverOverlay extends StatelessWidget {
   }
 }
 
-/// Slides in from the top of the board with a short cheer.
+/// Slides in from the top of the board with a line about the player.
 class _MotivationBanner extends StatelessWidget {
   const _MotivationBanner({required this.c});
 
@@ -1347,6 +1357,24 @@ class _MotivationBanner extends StatelessWidget {
   }
 }
 
+/// How a line looks: its icon and colours.
+enum _Mood { record, heart, flow, power, steady, opening }
+
+_Mood _moodOf(Voice voice) => switch (voice) {
+  Voice.newBest ||
+  Voice.pastBest ||
+  Voice.nearBest ||
+  Voice.quadRecord ||
+  Voice.levelRecord ||
+  Voice.todayBest ||
+  Voice.aboveAverage => _Mood.record,
+  Voice.comeback => _Mood.heart,
+  Voice.flow => _Mood.flow,
+  Voice.firstQuad || Voice.firstQuadNew || Voice.maxSpeed => _Mood.power,
+  Voice.endurance => _Mood.steady,
+  _ => _Mood.opening,
+};
+
 class _BannerPill extends StatelessWidget {
   const _BannerPill({super.key, required this.motivation});
 
@@ -1356,92 +1384,93 @@ class _BannerPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
     final s = AppStrings.of(context);
-    final (IconData icon, List<Color> colors) = switch (motivation.kind) {
-      MotivationKind.newBest || MotivationKind.scoreMilestone => (Icons.emoji_events_rounded, const [Color(0xFFFDE047), Color(0xFFF97316)]),
-      MotivationKind.combo ||
-      MotivationKind.backToBack => (Icons.local_fire_department_rounded, const [Color(0xFFF97316), Color(0xFFEF4444)]),
-      MotivationKind.maxSpeed || MotivationKind.firstQuad => (Icons.bolt_rounded, const [Color(0xFFA855F7), Color(0xFF6366F1)]),
-      MotivationKind.closeCall => (Icons.favorite_rounded, const [Color(0xFF22C55E), Color(0xFF14B8A6)]),
-      MotivationKind.linesMilestone => (Icons.layers_rounded, const [Color(0xFF22D3EE), Color(0xFF3B82F6)]),
-      MotivationKind.praise => (Icons.star_rounded, [p.accent1, p.accent2]),
+    final mood = _moodOf(motivation.kind);
+    final (IconData icon, List<Color> colors) = switch (mood) {
+      _Mood.record => (Icons.emoji_events_rounded, const [Color(0xFFFDE047), Color(0xFFF97316)]),
+      _Mood.flow => (Icons.local_fire_department_rounded, const [Color(0xFFF97316), Color(0xFFEF4444)]),
+      _Mood.power => (Icons.bolt_rounded, const [Color(0xFFA855F7), Color(0xFF6366F1)]),
+      _Mood.heart => (Icons.favorite_rounded, const [Color(0xFF22C55E), Color(0xFF14B8A6)]),
+      _Mood.steady => (Icons.layers_rounded, const [Color(0xFF22D3EE), Color(0xFF3B82F6)]),
+      _Mood.opening => (Icons.auto_awesome_rounded, [p.accent1, p.accent2]),
     };
+    // Lines are sentences now: up to two lines, a little smaller.
+    final text = Flexible(
+      child: Text(
+        motivation.text(s),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(fontSize: 14, height: 1.25, fontWeight: FontWeight.w700, color: p.text),
+      ),
+    );
     if (p.flat) {
       // One solid badge colour taken from the theme's own blocks.
-      final tone = switch (motivation.kind) {
-        MotivationKind.newBest || MotivationKind.scoreMilestone => blockColors[PieceType.o]!,
-        MotivationKind.combo || MotivationKind.backToBack => blockColors[PieceType.l]!,
-        MotivationKind.maxSpeed || MotivationKind.firstQuad => blockColors[PieceType.t]!,
-        MotivationKind.closeCall => blockColors[PieceType.s]!,
-        MotivationKind.linesMilestone => blockColors[PieceType.i]!,
-        MotivationKind.praise => p.accent1,
+      final tone = switch (mood) {
+        _Mood.record => blockColors[PieceType.o]!,
+        _Mood.flow => blockColors[PieceType.l]!,
+        _Mood.power => blockColors[PieceType.t]!,
+        _Mood.heart => blockColors[PieceType.s]!,
+        _Mood.steady => blockColors[PieceType.i]!,
+        _Mood.opening => p.accent1,
       };
       return Center(
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(6, 6, 18, 6),
-          decoration: flatCardDecoration(p, radius: 40, depth: 3),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  shape: p.skin == GameSkin.pixel ? BoxShape.rectangle : BoxShape.circle,
-                  color: tone,
-                  border: Border.all(color: p.ink, width: 2),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(6, 6, 18, 6),
+            decoration: flatCardDecoration(p, radius: 28, depth: 3),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    shape: p.skin == GameSkin.pixel ? BoxShape.rectangle : BoxShape.circle,
+                    color: tone,
+                    border: Border.all(color: p.ink, width: 2),
+                  ),
+                  child: GameIcon(icon, size: 17, color: tone.computeLuminance() > 0.45 ? p.ink : Colors.white),
                 ),
-                child: GameIcon(icon, size: 17, color: tone.computeLuminance() > 0.45 ? p.ink : Colors.white),
-              ),
-              const SizedBox(width: 10),
-              Flexible(
-                child: Text(
-                  motivation.text(s),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: p.text),
-                ),
-              ),
-            ],
+                const SizedBox(width: 10),
+                text,
+              ],
+            ),
           ),
         ),
       );
     }
     return Center(
-      child: Container(
-        padding: const EdgeInsets.all(1.6),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(40),
-          gradient: LinearGradient(colors: colors),
-          boxShadow: [BoxShadow(color: colors.first.withValues(alpha: 0.45), blurRadius: 22, offset: const Offset(0, 6))],
-        ),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(6, 6, 18, 6),
+          padding: const EdgeInsets.all(1.6),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(40),
-            color: p.isDark ? const Color(0xF0111630) : const Color(0xF7FFFFFF),
+            borderRadius: BorderRadius.circular(28),
+            gradient: LinearGradient(colors: colors),
+            boxShadow: [BoxShadow(color: colors.first.withValues(alpha: 0.45), blurRadius: 22, offset: const Offset(0, 6))],
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(colors: colors),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(6, 6, 18, 6),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(28),
+              color: p.isDark ? const Color(0xF0111630) : const Color(0xF7FFFFFF),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(colors: colors),
+                  ),
+                  child: GameIcon(icon, size: 18, color: Colors.white),
                 ),
-                child: GameIcon(icon, size: 18, color: Colors.white),
-              ),
-              const SizedBox(width: 10),
-              Flexible(
-                child: Text(
-                  motivation.text(s),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: p.text),
-                ),
-              ),
-            ],
+                const SizedBox(width: 10),
+                text,
+              ],
+            ),
           ),
         ),
       ),

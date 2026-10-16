@@ -10,7 +10,10 @@ import '../core/tetris_game.dart';
 import '../settings/settings.dart';
 import '../l10n/strings.dart';
 import 'fx/effects.dart';
+import '../l10n/voice_lines.dart';
 import 'motivation.dart';
+import 'play_history.dart';
+import 'voice_notes.dart';
 
 /// Glue between the pure game, input, effects, audio and haptics.
 ///
@@ -42,7 +45,11 @@ class GameController extends ChangeNotifier {
   static const double repaintTolerance = 0.004;
   double get _interval => settings.highRefreshRate ? 0 : repaintInterval;
   int _paintCount = 0;
-  final MotivationEngine motivation = MotivationEngine();
+  late final MotivationEngine motivation = MotivationEngine(memory: settings.lineMemory);
+  final Random _voiceRandom = Random();
+
+  /// The line under the result of the last finished game.
+  VoiceLine? endNote;
   int _lastMotivationId = 0;
 
   AppStrings _strings = AppStrings.tr;
@@ -96,8 +103,17 @@ class GameController extends ChangeNotifier {
     if (mode != null) this.mode = mode;
     if (_demoSuper) this.mode = GameMode.superMode;
     fx.reset();
-    motivation.reset(bestScore: settings.bestScore(this.mode));
+    motivation.reset(
+      context: VoiceContext.forGame(
+        this.mode,
+        best: settings.bestScore(this.mode),
+        history: settings.history,
+        now: settings.clock(),
+        gamesPlayed: settings.gamesPlayed,
+      ),
+    );
     newRecord = false;
+    endNote = null;
     playTime = 0;
     _lastSave = 0;
     settings.savedGame = null;
@@ -190,8 +206,18 @@ class GameController extends ChangeNotifier {
     }
     mode = game.mode;
     fx.reset();
-    motivation.reset(bestScore: settings.bestScore(mode));
+    // A continued game picks up without an opening line.
+    motivation.reset(
+      context: VoiceContext.forGame(
+        mode,
+        best: settings.bestScore(mode),
+        history: settings.history,
+        now: settings.clock(),
+        gamesPlayed: settings.gamesPlayed,
+      ).withoutOpening(),
+    );
     newRecord = false;
+    endNote = null;
     _lastSave = playTime;
     _leftHeld = _rightHeld = false;
     _shiftDir = 0;
@@ -207,7 +233,7 @@ class GameController extends ChangeNotifier {
     saveProgress();
     game.abandon();
     fx.reset();
-    motivation.reset(bestScore: settings.bestScore(mode));
+    motivation.reset();
     audio.duck = 1;
     _releaseAll();
     notifyListeners();
@@ -236,7 +262,8 @@ class GameController extends ChangeNotifier {
     final shown = motivation.current;
     if (shown != null && shown.id != _lastMotivationId) {
       _lastMotivationId = shown.id;
-      audio.play(Sfx.combo4, volume: 0.35);
+      // Records get a chime; quieter lines just appear.
+      if (shown.loud) audio.play(Sfx.combo4, volume: 0.35);
     }
     fx.update(game.paused ? 0 : dt, game);
     // Nothing moves behind the pause / menu / results screens, so stop
@@ -303,16 +330,72 @@ class GameController extends ChangeNotifier {
       _haptic(e);
       if (e is GameOver) {
         settings.savedGame = null;
-        newRecord = settings.recordGame(
-          mode: mode,
-          score: game.score,
-          lines: game.lines,
-          seconds: mode.recordsTime ? game.time : playTime,
-          won: e.won,
-        );
+        _recordFinished(e.won);
         audio.duck = 0.4;
       }
     }
+  }
+
+  /// Saves the finished game (best, stats, history) and picks the line
+  /// shown with its result.
+  void _recordFinished(bool won) {
+    final now = settings.clock();
+    final history = settings.history;
+    final bestBefore = settings.bestScore(mode);
+    final bestTimeBefore = settings.bestTime(mode);
+    final averageBefore = history.averageScore(mode);
+    final todayBestBefore = history.todayBest(mode, now);
+    final seconds = mode.recordsTime ? game.time : playTime;
+    newRecord = settings.recordGame(mode: mode, score: game.score, lines: game.lines, seconds: seconds, won: won);
+    final record = GameRecord(
+      mode: mode,
+      score: game.score,
+      level: game.level,
+      lines: game.lines,
+      seconds: seconds,
+      ended: now,
+      quads: motivation.quads,
+      maxCombo: motivation.maxCombo,
+      peak: motivation.peak,
+      comebacks: motivation.comebacks,
+      won: won,
+      record: newRecord,
+    );
+    settings.recordHistory(record);
+    endNote = pickEndNote(
+      game: record,
+      history: settings.history,
+      bestBefore: bestBefore,
+      bestTimeBefore: bestTimeBefore,
+      averageBefore: averageBefore,
+      todayBestBefore: todayBestBefore,
+      memory: settings.lineMemory,
+      random: _voiceRandom,
+    );
+    _homeNoteKey = null;
+    settings.saveLineMemory();
+  }
+
+  Object? _homeNoteKey;
+  VoiceLine? _homeNote;
+
+  /// The main menu's line about the player, or null for the tagline. Kept
+  /// until something changes, so the menu does not flicker between lines.
+  VoiceLine? get homeNote {
+    final now = settings.clock();
+    final key = (settings.history.games.length, settings.history.days.length, PlayHistory.dayKey(now), now.hour < 5, now.hour < 10);
+    if (key != _homeNoteKey) {
+      _homeNoteKey = key;
+      _homeNote = pickHomeNote(
+        history: settings.history,
+        bestOf: settings.bestScore,
+        now: now,
+        memory: settings.lineMemory,
+        random: _voiceRandom,
+      );
+      settings.saveLineMemory();
+    }
+    return _homeNote;
   }
 
   void _sound(GameEvent e) {
