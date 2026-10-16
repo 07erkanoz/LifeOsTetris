@@ -608,7 +608,9 @@ class SugarSprites {
     final side = cell * (1 + 2 * pad) * scale;
     final centre = origin + Offset(cell / 2, cell / 2);
     final dst = Rect.fromCenter(center: centre + Offset(0, side * (1 - scaleY) / 2 * 0.8), width: side * (2 - scaleY), height: side * scaleY);
-    final paint = Paint()..filterQuality = FilterQuality.medium;
+    // Sprites are drawn at their own size; a cheaper filter keeps Windows
+    // (Skia on integrated GPUs) smooth.
+    final paint = Paint()..filterQuality = FilterQuality.low;
     if (opacity < 1) paint.color = Colors.white.withValues(alpha: opacity.clamp(0, 1));
     canvas.drawImageRect(image, Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()), dst, paint);
   }
