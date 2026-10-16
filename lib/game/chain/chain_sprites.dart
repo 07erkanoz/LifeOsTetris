@@ -138,7 +138,8 @@ class ChainSprites {
     final side = cell * (1 + 2 * pad) * scale;
     final centre = origin + Offset(cell / 2, cell / 2);
     final dst = Rect.fromCenter(center: centre, width: side, height: side);
-    final paint = Paint()..filterQuality = FilterQuality.medium;
+    // Bilinear: mipmapped filtering is costly on some Windows GPUs.
+    final paint = Paint()..filterQuality = FilterQuality.low;
     if (opacity < 1) paint.color = Colors.white.withValues(alpha: opacity);
     canvas.drawImageRect(image, Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()), dst, paint);
   }

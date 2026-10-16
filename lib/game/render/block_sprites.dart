@@ -640,8 +640,11 @@ class BlockSprites {
   /// top-left corner is ([x], [y]), optionally scaled around its centre.
   void draw(Canvas canvas, ui.Image image, double x, double y, {double scale = 1, double opacity = 1, double rotation = 0}) {
     final extent = (cell + 2 * pad) * scale;
+    // The sprites are drawn at their own size: plain bilinear filtering is
+    // enough, and mipmapped filtering made each draw a costly copy on some
+    // Windows GPUs (a frame took 35 ms instead of 9).
     final paint = Paint()
-      ..filterQuality = FilterQuality.medium
+      ..filterQuality = FilterQuality.low
       ..color = Color.fromRGBO(255, 255, 255, opacity.clamp(0.0, 1.0));
     final src = Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble());
     if (rotation == 0) {
