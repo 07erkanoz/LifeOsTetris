@@ -444,7 +444,14 @@ def public_group(app, build):
 def beta_review(build, beta):
     state = (beta or {}).get('attributes', {}).get('externalBuildState')
     if state == 'READY_FOR_BETA_SUBMISSION':
-        call('POST', '/v1/betaAppReviewSubmissions', {'data': {'type': 'betaAppReviewSubmissions', 'relationships': {'build': rel('builds', build['id'])}}})
+        try:
+            call('POST', '/v1/betaAppReviewSubmissions', {'data': {'type': 'betaAppReviewSubmissions', 'relationships': {'build': rel('builds', build['id'])}}})
+        except ApiError as e:
+            # Apple reviews one build of a version at a time; once that one
+            # is approved, later builds usually need no review of their own.
+            if 'Another build' in str(e):
+                return 'waiting: an earlier build of this version is in beta review'
+            raise
         return 'submitted to Apple (usually reviewed within a day)'
     return f'state {state}'
 
