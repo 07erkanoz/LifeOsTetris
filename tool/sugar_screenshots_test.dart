@@ -1,7 +1,7 @@
 // Screenshots of the real Şeker Küpler screens, for review.
 //   flutter test tool/sugar_screenshots_test.dart
 // Writes SHOTS_OUT (default build/sugar-shots/): harita.png, baslangic.png,
-// oyun.png, patlama.png, kazandin.png.
+// oyun.png, sov.png, final.png, kazandin.png.
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -88,55 +88,74 @@ Future<SugarController> _play(WidgetTester tester) async {
 void main() {
   setUpAll(_loadFonts);
 
+  Future<void> settle(WidgetTester tester, SugarController c) async {
+    for (var k = 0; k < 300 && (c.busy || !c.game.isOver && c.game.status != SugarStatus.idle); k++) {
+      await tester.pump(const Duration(milliseconds: 33));
+    }
+  }
+
   testWidgets('map', (tester) async {
-    await _openMap(tester, 10);
+    await _openMap(tester, 33);
     await _shot(tester, 'harita.png');
   });
 
   testWidgets('start panel', (tester) async {
-    await _openMap(tester, 10);
+    await _openMap(tester, 40);
     await tester.tap(find.byKey(const ValueKey('sugar-continue')));
     await _pump(tester, 15, 40);
     await _shot(tester, 'baslangic.png');
   });
 
-  testWidgets('playing, with specials and obstacles', (tester) async {
-    await _openMap(tester, 10);
+  testWidgets('playing: boxes, a timed bomb, specials, Lokum', (tester) async {
+    await _openMap(tester, 43);
     final c = await _play(tester);
     final g = c.game;
-    // A few moves in, then specials and chains where they show well.
-    for (var i = 0; i < 3; i++) {
+    for (var i = 0; i < 2; i++) {
       final m = SugarSolver.best(g)!;
       c.trySwap(m.$1, m.$2);
-      for (var k = 0; k < 200 && (c.busy || g.status != SugarStatus.idle); k++) {
-        await tester.pump(const Duration(milliseconds: 33));
-      }
+      await settle(tester, c);
     }
-    g.board[2][1]!.special = Special.lineV;
-    g.board[6][2]!.special = Special.lineH;
-    g.board[2][6]!.special = Special.bomb;
-    g.board[5][1]!.special = Special.prism;
-    g.board[5][6]!.chained = true;
-    g.board[0][3]!.chained = true;
-    await _pump(tester, 8);
+    SugarPiece? at(int x, int y) => g.board[y][x];
+    at(0, 1)?.special = Special.lineV;
+    at(5, 6)?.special = Special.lineH;
+    at(7, 3)?.special = Special.bomb;
+    at(1, 6)?.special = Special.prism;
+    g.rushMeter = 0.7;
+    await _pump(tester, 50);
     await _shot(tester, 'oyun.png');
-
-    // Fire the vertical line cube with the hammer, mid-blast.
-    c.toggleHammer();
-    c.tapCell(1, 2);
-    c.fx.callout(c.strings.sugarCallout(4));
-    await _pump(tester, 13);
-    await _shot(tester, 'patlama.png');
   });
 
-  testWidgets('level won, chest opened', (tester) async {
+  testWidgets('sugar rush show', (tester) async {
+    await _openMap(tester, 43);
+    final c = await _play(tester);
+    final g = c.game;
+    g.rushMeter = 0.99;
+    final m = SugarSolver.best(g)!;
+    c.trySwap(m.$1, m.$2);
+    var shot = false;
+    for (var k = 0; k < 300 && !shot; k++) {
+      await tester.pump(const Duration(milliseconds: 33));
+      if (c.fx.floaters.any((f) => f.text == c.strings.sugarRush && f.age > 0.3)) {
+        await _shot(tester, 'sov.png');
+        shot = true;
+      }
+    }
+    expect(shot, isTrue);
+  });
+
+  testWidgets('finale and the win panel', (tester) async {
     await _openMap(tester, 4);
     final c = await _play(tester);
+    var finale = false;
     for (var i = 0; i < 40 && !c.game.isOver; i++) {
       final m = SugarSolver.best(c.game);
       if (m != null) c.trySwap(m.$1, m.$2);
-      for (var k = 0; k < 300 && (c.busy || !c.game.isOver && c.game.status != SugarStatus.idle); k++) {
+      for (var k = 0; k < 400 && (c.busy || !c.game.isOver && c.game.status != SugarStatus.idle); k++) {
         await tester.pump(const Duration(milliseconds: 33));
+        if (!finale && c.fx.floaters.any((f) => f.text.startsWith('+') && f.size > 0.6)) {
+          await _shot(tester, 'final.png');
+          finale = true;
+        }
       }
     }
     await _pump(tester, 60);

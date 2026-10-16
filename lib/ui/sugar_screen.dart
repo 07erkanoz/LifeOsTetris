@@ -8,6 +8,7 @@ import '../audio/audio_service.dart';
 import '../audio/haptics.dart';
 import '../core/sugar/sugar_game.dart';
 import '../core/sugar/sugar_levels.dart';
+import '../game/sugar/sugar_art.dart';
 import '../game/sugar/sugar_controller.dart';
 import '../game/sugar/sugar_painter.dart';
 import '../l10n/strings.dart';
@@ -191,8 +192,26 @@ class _Play extends StatelessWidget {
         children: [
           _TopBar(c: c, onBack: onBack),
           const SizedBox(height: 6),
-          SugarScoreBar(score: g.score, stars: c.level.stars, goalsDone: g.goalsDone),
-          CandyText(_thousands(g.score), size: 22 + 4 * c.fx.scorePulse, stroke: 0.18),
+          // The bar, the counting score and the meter move every frame.
+          ValueListenableBuilder(
+            valueListenable: c.frame,
+            builder: (context, _, _) => Column(
+              children: [
+                SugarScoreBar(score: c.shownScore.round(), stars: c.level.stars, goalsDone: g.goalsDone, pulse: c.fx.starPulse),
+                Row(
+                  children: [
+                    SizedBox(
+                      width: 120,
+                      child: CandyText(_thousands(c.shownScore.round()), size: 23 + 4 * c.fx.scorePulse, stroke: 0.18),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(child: SugarRushMeter(value: g.rushMeter, label: s.sugarRushMeter)),
+                    const SizedBox(width: 64),
+                  ],
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 4),
           Expanded(
             child: LayoutBuilder(
@@ -200,23 +219,40 @@ class _Play extends StatelessWidget {
                 // The boosters sit right under the board; both float in the
                 // middle of what is left.
                 const below = 128.0;
-                final cell = SugarGeometry.fit(Size(box.maxWidth, box.maxHeight - below));
+                final cell = SugarGeometry.fit(Size(box.maxWidth, box.maxHeight - below - 18));
                 final geometry = SugarGeometry(cell);
+                final hint = switch (c.armed) {
+                  SugarBooster.hammer => s.sugarHammerHint,
+                  SugarBooster.rainbow => s.sugarRainbowHint,
+                  _ => null,
+                };
                 return Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _BoardInput(
-                      c: c,
-                      geometry: geometry,
-                      child: CustomPaint(
-                        key: const ValueKey('sugar-board'),
-                        size: geometry.canvas,
-                        painter: SugarBoardPainter(c: c, geometry: geometry, dpr: MediaQuery.devicePixelRatioOf(context)),
-                      ),
+                    const SizedBox(height: 18),
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        _BoardInput(
+                          c: c,
+                          geometry: geometry,
+                          child: CustomPaint(
+                            key: const ValueKey('sugar-board'),
+                            size: geometry.canvas,
+                            painter: SugarBoardPainter(c: c, geometry: geometry, dpr: MediaQuery.devicePixelRatioOf(context)),
+                          ),
+                        ),
+                        // Lokum sits on the tray's top-right corner.
+                        Positioned(
+                          right: -6,
+                          top: -cell * 1.25,
+                          child: IgnorePointer(child: _Mascot(c: c, size: cell * 1.05)),
+                        ),
+                      ],
                     ),
                     SizedBox(
                       height: 26,
-                      child: c.hammerArmed ? Center(child: CandyText(s.sugarHammerHint, size: 16, outline: const Color(0xFF3A0F60), stroke: 0.2)) : null,
+                      child: hint != null ? Center(child: FittedBox(child: CandyText(hint, size: 16, outline: const Color(0xFF3A0F60), stroke: 0.2))) : null,
                     ),
                     _Boosters(c: c, running: running),
                   ],
@@ -228,6 +264,23 @@ class _Play extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Lokum, hopping when its mood changes.
+class _Mascot extends StatelessWidget {
+  const _Mascot({required this.c, required this.size});
+
+  final SugarController c;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: c.frame,
+    builder: (context, _, _) {
+      final t = (c.now - c.mascot.changed) / 0.4;
+      return SugarMascotView(key: const ValueKey('sugar-mascot'), pose: c.mascot.pose, line: c.mascot.line, hop: t >= 0 && t < 1 ? t : 0, size: size);
+    },
+  );
 }
 
 class _Boosters extends StatelessWidget {
@@ -249,14 +302,15 @@ class _Boosters extends StatelessWidget {
           count: settings.sugarBoosters(SugarBooster.hammer),
           label: s.sugarHammer,
           active: c.hammerArmed,
-          onTap: running ? c.toggleHammer : null,
+          onTap: running ? () => c.toggleBooster(SugarBooster.hammer) : null,
         ),
         SugarBoosterButton(
-          key: const ValueKey('sugar-shuffle'),
-          kind: SugarBooster.shuffle,
-          count: settings.sugarBoosters(SugarBooster.shuffle),
-          label: s.sugarShuffle,
-          onTap: running ? c.useShuffle : null,
+          key: const ValueKey('sugar-rainbow'),
+          kind: SugarBooster.rainbow,
+          count: settings.sugarBoosters(SugarBooster.rainbow),
+          label: s.sugarRainbow,
+          active: c.rainbowArmed,
+          onTap: running ? () => c.toggleBooster(SugarBooster.rainbow) : null,
         ),
         SugarBoosterButton(
           key: const ValueKey('sugar-moves'),
@@ -497,6 +551,7 @@ class _GoalLine extends StatelessWidget {
       GoalKind.score => s.sugarGoalScore(_thousands(goal.target)),
       GoalKind.color => s.sugarGoalColor(goal.target),
       GoalKind.ice => s.sugarGoalIce(goal.target),
+      GoalKind.box => s.sugarGoalBox(goal.target),
     };
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
@@ -679,6 +734,7 @@ class _WonPanel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const SugarMascotView(pose: LokumPose.cheer, size: 70),
             CandyText(s.sugarWon, size: 32, colors: const [Color(0xFFFFF6B0), Color(0xFFFFC21A), Color(0xFFFF6A00)], outline: const Color(0xFF6A0E4A)),
             const SizedBox(height: 8),
             TweenAnimationBuilder<double>(
@@ -709,7 +765,7 @@ class _WonPanel extends StatelessWidget {
                           Text(
                             '${switch (e.key) {
                               SugarBooster.hammer => s.sugarHammer,
-                              SugarBooster.shuffle => s.sugarShuffle,
+                              SugarBooster.rainbow => s.sugarRainbow,
                               SugarBooster.moves => s.sugarExtraMoves(SugarBooster.extraMoves),
                             }} ×${e.value}',
                             style: const TextStyle(fontFamily: 'Baloo2', fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF6A3A00)),
@@ -782,7 +838,8 @@ class _LostPanel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CandyText(s.sugarLost, size: 32, outline: const Color(0xFF8A1550)),
+            const SugarMascotView(pose: LokumPose.wow, size: 64),
+            CandyText(c.lostToBomb ? s.sugarBombLost : s.sugarLost, size: 32, outline: const Color(0xFF8A1550)),
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,

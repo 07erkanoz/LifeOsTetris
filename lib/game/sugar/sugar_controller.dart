@@ -9,9 +9,10 @@ import '../../core/sugar/sugar_game.dart';
 import '../../core/sugar/sugar_levels.dart';
 import '../../l10n/strings.dart';
 import '../../settings/settings.dart';
+import 'sugar_art.dart';
 import 'sugar_fx.dart';
 
-/// How a cube moves on screen: from one cell to another (a swap, a fall),
+/// How a sweet moves on screen: from one cell to another (a swap, a fall),
 /// or out and back (a refused swap).
 class SugarMotion {
   SugarMotion(this.from, this.to, this.start, this.duration, {this.fall = false, this.back = false});
@@ -40,7 +41,7 @@ class SugarMotion {
   }
 }
 
-/// A cube that has left the board, drawn while it pops.
+/// A sweet that has left the board, drawn while it pops.
 class SugarGhost {
   SugarGhost(this.piece, this.x, this.y, this.start);
 
@@ -50,8 +51,19 @@ class SugarGhost {
   static const double life = 0.24;
 }
 
+/// Lokum, the mascot: how it looks and what it says right now.
+class SugarMascot {
+  LokumPose pose = LokumPose.happy;
+  String? line;
+  double lineUntil = 0;
+  int priority = 0;
+
+  /// When the pose last changed (for the hop).
+  double changed = -10;
+}
+
 /// Runs a Şeker Küpler level: plays each phase of a move as an animation,
-/// input, boosters, sound, haptics, progress and the saved game.
+/// input, boosters, sound, haptics, the mascot, progress and the saved game.
 class SugarController extends ChangeNotifier {
   SugarController({required this.settings, required this.audio, Haptics? haptics, required this.level, int? seed})
     : haptics = haptics ?? Haptics(),
@@ -66,19 +78,30 @@ class SugarController extends ChangeNotifier {
   SugarGame game;
   SugarLevel level;
   final SugarFx fx = SugarFx();
+  final SugarMascot mascot = SugarMascot();
   AppStrings strings = AppStrings.tr;
 
   /// Repaints the board.
   final ValueNotifier<int> frame = ValueNotifier(0);
 
   bool paused = false;
-  bool hammerArmed = false;
+
+  /// A booster waiting for the player to pick a sweet.
+  SugarBooster? armed;
+  bool get hammerArmed => armed == SugarBooster.hammer;
+  bool get rainbowArmed => armed == SugarBooster.rainbow;
   bool newBest = false;
+  bool lostToBomb = false;
   Map<SugarBooster, int> chest = const {};
   double _overAge = -1;
   double _playTime = 0;
   int _lastCallout = 1;
   bool _warnedLastMoves = false;
+  bool _warnedBomb = false;
+  int _lineCount = 0;
+
+  /// The score as shown: it counts up to the real one.
+  double shownScore = 0;
 
   /// Board time, which stops while paused.
   double now = 0;
@@ -86,7 +109,7 @@ class SugarController extends ChangeNotifier {
   final List<SugarGhost> ghosts = [];
   double _waitUntil = 0;
 
-  /// Cells the player picked (tap one cube, then a neighbour).
+  /// Cells the player picked (tap one sweet, then a neighbour).
   Cell? selected;
   (Cell, Cell)? hint;
   double _idle = 0;
@@ -96,7 +119,7 @@ class SugarController extends ChangeNotifier {
   bool get canPlay => game.status == SugarStatus.idle && !paused && !busy;
 
   /// The result panel waits a moment so the end can be seen.
-  bool get showResult => game.isOver && _overAge > (game.status == SugarStatus.won ? 0.6 : 0.8);
+  bool get showResult => game.isOver && _overAge > (game.status == SugarStatus.won ? 0.9 : 1.0);
 
   void _applySettings() {
     fx.particlesEnabled = settings.effects;
@@ -105,6 +128,21 @@ class SugarController extends ChangeNotifier {
     audio.musicOn = settings.music;
     audio.musicVolume = settings.musicVolume;
     haptics.strength = settings.vibrationStrength;
+  }
+
+  // --------------------------------------------------------------- mascot --
+
+  /// Lokum strikes [pose] and, unless a more important line is showing,
+  /// says the line for [key].
+  void say(String? key, LokumPose pose, {int priority = 1, double hold = 2.2}) {
+    if (mascot.line != null && now < mascot.lineUntil && priority < mascot.priority) return;
+    if (pose != mascot.pose || key != null) mascot.changed = now;
+    mascot.pose = pose;
+    if (key != null) {
+      mascot.line = strings.lokum(key, _lineCount++);
+      mascot.lineUntil = now + hold;
+      mascot.priority = priority;
+    }
   }
 
   // ---------------------------------------------------------------- start --
@@ -122,7 +160,8 @@ class SugarController extends ChangeNotifier {
     fx.reset();
     motions.clear();
     ghosts.clear();
-    paused = hammerArmed = newBest = false;
+    paused = newBest = lostToBomb = false;
+    armed = null;
     chest = const {};
     selected = hint = null;
     _overAge = -1;
@@ -130,7 +169,12 @@ class SugarController extends ChangeNotifier {
     _idle = 0;
     _lastCallout = 1;
     _warnedLastMoves = game.moves <= 5;
-    // Cubes drop in from above, row by row.
+    _warnedBomb = false;
+    shownScore = game.score.toDouble();
+    mascot
+      ..line = null
+      ..priority = 0;
+    // Sweets drop in from above, row by row.
     for (var y = 0; y < SugarGame.size; y++) {
       for (var x = 0; x < SugarGame.size; x++) {
         final p = game.board[y][x];
@@ -138,6 +182,7 @@ class SugarController extends ChangeNotifier {
       }
     }
     _waitUntil = now + 0.65;
+    say('start', LokumPose.happy);
     if (settings.lastPlay != 'sugar') settings.lastPlay = 'sugar';
     audio.startMusic();
     audio.duck = 1;
@@ -172,7 +217,7 @@ class SugarController extends ChangeNotifier {
   void togglePause() {
     if (!started || game.isOver) return;
     paused = !paused;
-    hammerArmed = false;
+    armed = null;
     audio.duck = paused ? 0.35 : 1;
     audio.play(Sfx.click);
     if (paused) saveProgress();
@@ -209,6 +254,20 @@ class SugarController extends ChangeNotifier {
       }
       motions.removeWhere((_, m) => m.done(now));
       ghosts.removeWhere((g) => now > g.start + SugarGhost.life);
+      if (mascot.line != null && now > mascot.lineUntil) {
+        mascot.line = null;
+        mascot.priority = 0;
+        if (mascot.pose != LokumPose.happy && !game.isOver) {
+          mascot
+            ..pose = LokumPose.happy
+            ..changed = now;
+        }
+      }
+    }
+    // The score counts up, quickly for small gains, a roll for big ones.
+    final target = game.score.toDouble();
+    if (shownScore != target) {
+      shownScore = min(target, shownScore + max(dt * 600, (target - shownScore) * min(1, dt * 6)));
     }
     if (_overAge >= 0) _overAge += dt;
     fx.update(running ? dt : 0);
@@ -219,9 +278,11 @@ class SugarController extends ChangeNotifier {
       _sinceRepaint = 0;
       frame.value++;
     }
-    final hud = (game.status, paused, game.score, game.moves, showResult, hammerArmed, (fx.scorePulse * 4).round(), [for (final g in game.goals) g.progress]);
-    if (hud.toString() != _hud) {
-      _hud = hud.toString();
+    final hud = (game.status, paused, shownScore.round(), game.moves, showResult, armed, (fx.scorePulse * 4).round(), (game.rushMeter * 40).round(),
+        [for (final g in game.goals) g.progress], mascot.line, mascot.pose);
+    final key = hud.toString();
+    if (key != _hud) {
+      _hud = key;
       notifyListeners();
     }
   }
@@ -239,9 +300,16 @@ class SugarController extends ChangeNotifier {
   void tapCell(int x, int y) {
     _touched();
     if (!canPlay || x < 0 || y < 0 || x >= SugarGame.size || y >= SugarGame.size) return;
-    if (hammerArmed) {
-      if (settings.useSugarBooster(SugarBooster.hammer) && game.hammer(x, y)) {
-        hammerArmed = false;
+    final booster = armed;
+    if (booster != null) {
+      final ok = switch (booster) {
+        SugarBooster.hammer => game.board[y][x] != null || game.box[y][x] > 0,
+        SugarBooster.rainbow => game.board[y][x] != null && !game.board[y][x]!.chained && !game.board[y][x]!.isPrism,
+        SugarBooster.moves => false,
+      };
+      if (ok && settings.useSugarBooster(booster)) {
+        booster == SugarBooster.hammer ? game.hammer(x, y) : game.rainbow(x, y);
+        armed = null;
         audio.play(Sfx.poweruse);
         if (settings.vibration) haptics.heavy();
         _process(game.drainEvents());
@@ -268,7 +336,7 @@ class SugarController extends ChangeNotifier {
   }
 
   void trySwap(Cell a, Cell b) {
-    if (!canPlay || hammerArmed) return;
+    if (!canPlay || armed != null) return;
     if (!game.canSwap(a, b)) {
       final pa = game.board[a.$2][a.$1];
       if (pa != null && pa.chained) {
@@ -284,22 +352,17 @@ class SugarController extends ChangeNotifier {
 
   // ------------------------------------------------------------- boosters --
 
-  void toggleHammer() {
-    if (!canPlay && !hammerArmed) return;
-    if (!hammerArmed && settings.sugarBoosters(SugarBooster.hammer) <= 0) return;
-    hammerArmed = !hammerArmed;
-    selected = null;
+  /// Arms (or disarms) the hammer or the rainbow; the next tap uses it.
+  void toggleBooster(SugarBooster b) {
+    if (armed == b) {
+      armed = null;
+    } else {
+      if (!canPlay || settings.sugarBoosters(b) <= 0) return;
+      armed = b;
+      selected = null;
+    }
     audio.play(Sfx.click);
     notifyListeners();
-  }
-
-  void useShuffle() {
-    if (!canPlay || settings.sugarBoosters(SugarBooster.shuffle) <= 0) return;
-    if (settings.useSugarBooster(SugarBooster.shuffle) && game.shuffle()) {
-      audio.play(Sfx.poweruse);
-      _process(game.drainEvents());
-      notifyListeners();
-    }
   }
 
   void useExtraMoves() {
@@ -310,6 +373,7 @@ class SugarController extends ChangeNotifier {
     if (lost) {
       game.extraMoves(SugarBooster.extraMoves);
       _overAge = -1;
+      lostToBomb = false;
       audio.duck = 1;
     } else {
       game.addMoves(SugarBooster.extraMoves);
@@ -317,6 +381,7 @@ class SugarController extends ChangeNotifier {
     _warnedLastMoves = game.moves <= 5;
     audio.play(Sfx.power);
     fx.callout(strings.sugarExtraMoves(SugarBooster.extraMoves), size: 1.0);
+    say('start', LokumPose.cheer, priority: 2);
     notifyListeners();
   }
 
@@ -352,20 +417,23 @@ class SugarController extends ChangeNotifier {
             sy += y + 0.5;
           }
           if (e.pieces.isNotEmpty) {
-            fx.points(e.points, sx / e.pieces.length, sy / e.pieces.length, delay: start - now);
+            final cx = sx / e.pieces.length, cy = sy / e.pieces.length;
+            fx.points(e.points, cx, cy, delay: start - now);
+            if (e.cascade >= 2) fx.multiplier(e.cascade, min(7.2, cx + 0.9), max(0.8, cy - 0.7), delay: start - now);
           }
           if (e.cascade >= 2 && e.cascade > _lastCallout) {
             _lastCallout = e.cascade;
             fx.callout(strings.sugarCallout(e.cascade), delay: start - now);
             audio.playCombo(min(8, e.cascade - 1));
+            if (e.cascade >= 3) say(e.cascade >= 4 ? 'great' : 'nice', e.cascade >= 4 ? LokumPose.cheer : LokumPose.wink);
           }
           final n = e.pieces.length;
-          audio.play(Sfx.values.byName('clear${n >= 12 ? 4 : n >= 7 ? 3 : n >= 4 ? 2 : 1}'), volume: 0.8);
-          if (settings.vibration) e.cascade >= 3 || n >= 8 ? haptics.medium() : haptics.light();
+          if (n > 0) audio.play(Sfx.values.byName('clear${n >= 12 ? 4 : n >= 7 ? 3 : n >= 4 ? 2 : 1}'), volume: 0.8);
+          if (settings.vibration && n > 0) e.cascade >= 3 || n >= 8 ? haptics.medium() : haptics.light();
           _wait(start - now + SugarGhost.life);
         case SugarCreated():
-          // A special made from a match pops in; one made by the finale or a
-          // prism is off the board until it fires.
+          // A special made from a match pops in; one made by the finale, a
+          // rush or a rainbow combo is off the board until it fires.
           final on = game.board[e.y][e.x];
           if (on == null || on.id != e.piece.id) {
             ghosts.add(SugarGhost(e.piece.copy(), e.x.toDouble(), e.y.toDouble(), at + 0.25));
@@ -375,17 +443,19 @@ class SugarController extends ChangeNotifier {
           audio.play(Sfx.power, volume: 0.55);
         case SugarBlast():
           final start = at;
-          final colour = switch (e.kind) {
-            Special.prism => const Color(0xFFFFFFFF),
-            _ => const Color(0xFFFFB3E6),
-          };
-          fx.beam(e, colour, delay: start - now);
+          fx.beam(e, e.kind == Special.prism ? const Color(0xFFFFFFFF) : const Color(0xFFFFB3E6), delay: start - now);
           audio.play(switch (e.kind) {
             Special.lineH || Special.lineV => Sfx.drill,
             Special.bomb => Sfx.bomb,
             Special.prism => Sfx.power,
             Special.none => Sfx.hard,
           });
+          if (e.combo) {
+            fx.callout(strings.sugarCombo, size: 1.0, delay: start - now);
+            fx.flash = 0.7;
+            fx.confetti(count: 40, delay: start - now);
+            say('great', LokumPose.wow, priority: 2);
+          }
           if (settings.vibration && e.kind != Special.none) haptics.heavy();
           _wait(start - now + 0.3);
         case SugarIceCracked():
@@ -394,15 +464,48 @@ class SugarController extends ChangeNotifier {
         case SugarUnchained():
           fx.chips(e.x + 0.5, e.y + 0.5, const Color(0xFFC9CED8), count: 9);
           audio.play(Sfx.lock, volume: 0.6);
+        case SugarBoxHit():
+          fx.chips(e.x + 0.5, e.y + 0.5, e.left > 0 ? const Color(0xFFFF9AD8) : const Color(0xFFFFC21A), count: e.left > 0 ? 7 : 14);
+          audio.play(e.left > 0 ? Sfx.hard : Sfx.bomb, volume: e.left > 0 ? 0.5 : 0.6);
+          if (e.left == 0) fx.kick(0.15);
         case SugarFell():
           var longest = 0.0;
-          for (final (id, x, fromY, toY) in e.moves) {
-            final d = (toY - fromY).toDouble();
+          for (final (id, fx0, fy, tx, ty) in e.moves) {
+            final d = (Offset(tx.toDouble(), ty.toDouble()) - Offset(fx0.toDouble(), fy.toDouble())).distance;
             final dur = min(0.5, 0.14 + 0.05 * d);
-            motions[id] = SugarMotion(Offset(x.toDouble(), fromY.toDouble()), Offset(x.toDouble(), toY.toDouble()), now, dur, fall: true);
+            motions[id] = SugarMotion(Offset(fx0.toDouble(), fy.toDouble()), Offset(tx.toDouble(), ty.toDouble()), now, dur, fall: true);
             longest = max(longest, dur);
           }
           _wait(longest);
+        case SugarLucky():
+          fx.floaters.add(SugarFloater(strings.sugarLucky, e.x + 0.5, e.y + 0.2, 0.5, const [Color(0xFFFFFFFF), Color(0xFF9FFFC8)], duration: 1.2, delay: 0.3));
+          say('lucky', LokumPose.wink);
+          audio.play(Sfx.power, volume: 0.6);
+        case SugarBombTick():
+          final low = e.bombs.map((b) => b.$3).fold(99, min);
+          if (low <= 3) {
+            audio.play(Sfx.bump, volume: 0.6);
+            if (!_warnedBomb || low <= 1) say('bomb', LokumPose.wow, priority: 3);
+            _warnedBomb = true;
+          }
+        case SugarBombExploded():
+          fx.beam(SugarBlast(Special.bomb, e.x, e.y, [for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) (e.x + dx, e.y + dy)]), const Color(0xFFFF6A3A));
+          fx.kick(1);
+          fx.flash = 1;
+          audio.play(Sfx.bomb);
+          lostToBomb = true;
+        case SugarRush():
+          fx.callout(strings.sugarRush, size: 1.2);
+          fx.flash = 1;
+          fx.confetti();
+          audio.play(Sfx.perfect);
+          if (settings.vibration) haptics.celebrate();
+          say('rush', LokumPose.cheer, priority: 2);
+          _wait(0.9);
+        case SugarStarReached():
+          fx.starPulse[e.star - 1] = 1;
+          fx.floaters.add(SugarFloater(strings.sugarStar(e.star), SugarGame.size - 1.4, 0.6, 0.55, const [Color(0xFFFFF6B0), Color(0xFFFFB000)], duration: 1.3));
+          audio.play(Sfx.levelup, volume: 0.6);
         case SugarShuffled():
           for (var y = 0; y < SugarGame.size; y++) {
             for (var x = 0; x < SugarGame.size; x++) {
@@ -415,9 +518,15 @@ class SugarController extends ChangeNotifier {
           _wait(0.5);
         case SugarFinale():
           fx.callout(strings.sugarFinale, size: 1.15);
+          fx.confetti(count: 30);
           audio.play(Sfx.perfect);
           if (settings.vibration) haptics.celebrate();
+          say('finale', LokumPose.cheer, priority: 3);
           _wait(1.0);
+        case SugarFinaleShot():
+          fx.floaters.add(SugarFloater('+${e.points}', e.x + 0.5, e.y + 0.5, 0.55 + min(0.35, e.index * 0.03), const [Color(0xFFFFFFFF), Color(0xFFFFE066)], duration: 1.0, delay: 0.25));
+          audio.playCombo(min(8, e.index + 1));
+          _wait(0.32);
         case SugarWon():
           _finish();
         case SugarLost():
@@ -427,6 +536,7 @@ class SugarController extends ChangeNotifier {
     if (!_warnedLastMoves && game.moves <= 5 && game.moves > 0 && !game.goalsDone) {
       _warnedLastMoves = true;
       fx.floaters.add(SugarFloater(strings.sugarLastMoves, SugarGame.size / 2, 3.8, 0.75, const [Color(0xFFFFE0F0), Color(0xFFFF4D8D)], duration: 1.4, delay: max(0, _waitUntil - now)));
+      say('last', LokumPose.wow, priority: 2);
       if (settings.vibration) haptics.light();
     }
   }
@@ -440,13 +550,16 @@ class SugarController extends ChangeNotifier {
     if (won) {
       chest = settings.recordSugarLevel(level.number, stars: game.starCount, score: game.score, seconds: _playTime);
       newBest = before > 0 && game.score > before;
+      fx.confetti(count: 80);
       audio.play(Sfx.levelup);
+      say('win', LokumPose.cheer, priority: 5, hold: 99);
       if (settings.vibration) haptics.celebrate();
     } else {
       // A loss counts towards play time only; the level stays as it was.
       settings.recordSugarLevel(level.number, stars: 0, score: game.score, seconds: _playTime);
       audio.play(Sfx.gameover);
       audio.duck = 0.4;
+      say('lose', LokumPose.wow, priority: 5, hold: 99);
       if (settings.vibration) haptics.heavy();
     }
     notifyListeners();

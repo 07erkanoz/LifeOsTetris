@@ -46,10 +46,13 @@ class SugarBoardPainter extends CustomPainter {
     final tray = RRect.fromRectAndRadius(board.inflate(cell * 0.18), Radius.circular(cell * 0.5));
     canvas.drawRRect(tray.shift(Offset(0, cell * 0.14)), Paint()..color = const Color(0xFF2A0B4F).withValues(alpha: 0.7));
     canvas.drawRRect(tray, Paint()..color = const Color(0xFF3A1270).withValues(alpha: 0.9));
-    canvas.drawRRect(tray, Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = max(2, cell * 0.055)
-      ..color = (c.hammerArmed ? const Color(0xFFFFE066) : const Color(0xFFFF9AD8)).withValues(alpha: c.hammerArmed ? 0.6 + 0.4 * sin(fx.time * 8) : 0.7));
+    canvas.drawRRect(
+      tray,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(2, cell * 0.055)
+        ..color = (c.hammerArmed ? const Color(0xFFFFE066) : const Color(0xFFFF9AD8)).withValues(alpha: c.hammerArmed ? 0.6 + 0.4 * sin(fx.time * 8) : 0.7),
+    );
     final tile = Paint();
     for (var y = 0; y < SugarGame.size; y++) {
       for (var x = 0; x < SugarGame.size; x++) {
@@ -66,12 +69,23 @@ class SugarBoardPainter extends CustomPainter {
     final sel = c.selected;
     if (sel != null) {
       final r = Rect.fromLTWH(o.dx + sel.$1 * cell, o.dy + sel.$2 * cell, cell, cell);
-      canvas.drawRRect(RRect.fromRectAndRadius(r.inflate(cell * 0.02), Radius.circular(cell * 0.26)), Paint()
-        ..color = Colors.white.withValues(alpha: 0.35 + 0.15 * sin(fx.time * 9))
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * 0.12));
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(r.inflate(cell * 0.02), Radius.circular(cell * 0.26)),
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.35 + 0.15 * sin(fx.time * 9))
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * 0.12),
+      );
     }
 
-    // Cubes, where their motions put them.
+    // Candy boxes stay put.
+    for (var y = 0; y < SugarGame.size; y++) {
+      for (var x = 0; x < SugarGame.size; x++) {
+        final b = g.box[y][x];
+        if (b > 0) sprites.draw(canvas, sprites.box(b), o + Offset(x * cell, y * cell));
+      }
+    }
+
+    // Sweets, where their motions put them.
     final hint = c.hint;
     final hintScale = 1 + 0.07 * max(0, sin(fx.time * 7));
     final now = c.now;
@@ -93,14 +107,36 @@ class SugarBoardPainter extends CustomPainter {
         var scale = 1.0;
         if (hint != null && ((x, y) == hint.$1 || (x, y) == hint.$2)) scale = hintScale;
         if (sel == (x, y)) scale = 1.08;
-        sprites.draw(canvas, sprites.piece(p.color, p.special, (x * 7 + y * 13 + p.id) % SugarSprites.variants), at, scale: scale, scaleY: squash);
+        final timer = p.timer;
+        if (timer != null && timer <= 3) {
+          // A bomb about to go off throbs red.
+          canvas.drawCircle(
+            at + Offset(cell / 2, cell / 2),
+            cell * (0.52 + 0.06 * sin(fx.time * 10)),
+            Paint()
+              ..color = const Color(0xFFFF3B3B).withValues(alpha: 0.55)
+              ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * 0.14),
+          );
+        }
+        sprites.draw(canvas, sprites.piece(p), at, scale: scale, scaleY: squash);
         if (p.chained) sprites.draw(canvas, sprites.chains, at);
+        if (timer != null && p.special == Special.none) {
+          paintSugarLabel(
+            canvas,
+            '$timer',
+            at + Offset(cell / 2, cell * 0.55),
+            cell * 0.42,
+            Paint()..color = timer <= 3 ? const Color(0xFFFFD0D0) : Colors.white,
+            outline: const Color(0xFF2E140A),
+            stroke: 0.2,
+          );
+        }
       }
     }
     // Cubes popping.
     for (final gh in c.ghosts) {
       final at = o + Offset(gh.x, gh.y) * cell;
-      final img = sprites.piece(gh.piece.color, gh.piece.special, gh.piece.id % SugarSprites.variants);
+      final img = sprites.piece(gh.piece);
       if (now < gh.start) {
         sprites.draw(canvas, img, at);
         continue;
@@ -120,6 +156,9 @@ class SugarBoardPainter extends CustomPainter {
 
     _beams(canvas, o, cell, fx);
     _sparks(canvas, o, cell, fx);
+    if (fx.flash > 0) {
+      canvas.drawRRect(tray, Paint()..color = Colors.white.withValues(alpha: 0.45 * fx.flash));
+    }
     _floaters(canvas, o, cell, fx);
     canvas.restore();
   }
@@ -140,24 +179,48 @@ class SugarBoardPainter extends CustomPainter {
             final beam = h
                 ? Rect.fromCenter(center: Offset(o.dx + SugarGame.size * cell / 2, centre.dy), width: len, height: cell * 0.5)
                 : Rect.fromCenter(center: Offset(centre.dx, o.dy + SugarGame.size * cell / 2), width: cell * 0.5, height: len);
-            canvas.drawRRect(RRect.fromRectAndRadius(beam.inflate(cell * 0.3), Radius.circular(cell)), Paint()
-              ..color = b.color.withValues(alpha: 0.55 * fade)
-              ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * 0.4));
-            canvas.drawRRect(RRect.fromRectAndRadius(beam, Radius.circular(cell)), Paint()
-              ..shader = h
-                  ? ui.Gradient.linear(beam.topCenter, beam.bottomCenter, [Colors.white.withValues(alpha: 0.15 * fade), Colors.white.withValues(alpha: fade), Colors.white.withValues(alpha: 0.15 * fade)], const [0, 0.5, 1])
-                  : ui.Gradient.linear(beam.centerLeft, beam.centerRight, [Colors.white.withValues(alpha: 0.15 * fade), Colors.white.withValues(alpha: fade), Colors.white.withValues(alpha: 0.15 * fade)], const [0, 0.5, 1]));
+            canvas.drawRRect(
+              RRect.fromRectAndRadius(beam.inflate(cell * 0.3), Radius.circular(cell)),
+              Paint()
+                ..color = b.color.withValues(alpha: 0.55 * fade)
+                ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * 0.4),
+            );
+            canvas.drawRRect(
+              RRect.fromRectAndRadius(beam, Radius.circular(cell)),
+              Paint()
+                ..shader = h
+                    ? ui.Gradient.linear(
+                        beam.topCenter,
+                        beam.bottomCenter,
+                        [Colors.white.withValues(alpha: 0.15 * fade), Colors.white.withValues(alpha: fade), Colors.white.withValues(alpha: 0.15 * fade)],
+                        const [0, 0.5, 1],
+                      )
+                    : ui.Gradient.linear(
+                        beam.centerLeft,
+                        beam.centerRight,
+                        [Colors.white.withValues(alpha: 0.15 * fade), Colors.white.withValues(alpha: fade), Colors.white.withValues(alpha: 0.15 * fade)],
+                        const [0, 0.5, 1],
+                      ),
+            );
           }
         case Special.bomb:
           final reach = b.targets.length > 9 ? 2.6 : 1.6;
           final r = cell * reach * Curves.easeOut.transform(t);
-          canvas.drawCircle(centre, r, Paint()
-            ..color = const Color(0xFFFFE066).withValues(alpha: 0.5 * fade)
-            ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * 0.3));
-          canvas.drawCircle(centre, r, Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = cell * 0.22 * fade
-            ..color = Colors.white.withValues(alpha: fade));
+          canvas.drawCircle(
+            centre,
+            r,
+            Paint()
+              ..color = const Color(0xFFFFE066).withValues(alpha: 0.5 * fade)
+              ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * 0.3),
+          );
+          canvas.drawCircle(
+            centre,
+            r,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = cell * 0.22 * fade
+              ..color = Colors.white.withValues(alpha: fade),
+          );
         case Special.prism:
           final ray = Paint()
             ..strokeWidth = cell * 0.09
@@ -171,14 +234,22 @@ class SugarBoardPainter extends CustomPainter {
             canvas.drawLine(centre, Offset.lerp(centre, end, reach)!, ray);
             canvas.drawCircle(end, cell * 0.25 * fade, Paint()..color = Colors.white.withValues(alpha: 0.6 * fade));
           }
-          canvas.drawCircle(centre, cell * (0.5 + t), Paint()
-            ..color = Colors.white.withValues(alpha: 0.6 * fade)
-            ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * 0.35));
+          canvas.drawCircle(
+            centre,
+            cell * (0.5 + t),
+            Paint()
+              ..color = Colors.white.withValues(alpha: 0.6 * fade)
+              ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * 0.35),
+          );
         case Special.none:
-          canvas.drawCircle(centre, cell * (0.3 + 0.6 * t), Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = cell * 0.12 * fade
-            ..color = const Color(0xFFFFE066).withValues(alpha: fade));
+          canvas.drawCircle(
+            centre,
+            cell * (0.3 + 0.6 * t),
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = cell * 0.12 * fade
+              ..color = const Color(0xFFFFE066).withValues(alpha: fade),
+          );
       }
     }
   }
@@ -201,6 +272,20 @@ class SugarBoardPainter extends CustomPainter {
           canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset.zero, width: side, height: side), Radius.circular(side * 0.3)), paint);
           paint.color = Colors.white.withValues(alpha: 0.6 * fade);
           canvas.drawCircle(Offset(-side * 0.18, -side * 0.18), side * 0.15, paint);
+          canvas.restore();
+        case 3:
+          canvas.save();
+          canvas.translate(p.dx, p.dy);
+          canvas.rotate(s.spin * 0.6);
+          final side = s.size * cell;
+          paint.color = s.color.withValues(alpha: min(1, fade * 2));
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(
+              Rect.fromCenter(center: Offset.zero, width: side * 1.6, height: side * 0.7 * cos(s.spin).abs() + side * 0.1),
+              Radius.circular(side * 0.2),
+            ),
+            paint,
+          );
           canvas.restore();
         default:
           canvas.save();
@@ -225,19 +310,51 @@ class SugarBoardPainter extends CustomPainter {
       canvas.save();
       canvas.translate(at.dx, at.dy);
       if (f.big) canvas.rotate(-0.08);
-      canvas.scale(pop);
-      final size = f.size * cell;
-      paintSugarLabel(
-        canvas,
-        f.text,
-        Offset.zero,
-        size,
-        Paint()
-          ..shader = ui.Gradient.linear(Offset(0, -size / 2), Offset(0, size / 2), [for (final c in f.colors) c.withValues(alpha: fade)], [for (var i = 0; i < f.colors.length; i++) i / (f.colors.length - 1)])
-          ..color = Colors.white.withValues(alpha: fade),
-        outline: const Color(0xFF6A0E4A).withValues(alpha: fade),
-        stroke: f.big ? 0.2 : 0.18,
-      );
+      canvas.scale(f.bubble ? (t < 0.2 ? Curves.easeOutBack.transform(t / 0.2) : 1.0) : pop);
+      var size = f.size * cell;
+      final lines = f.text.split('\n');
+      if (f.big) {
+        // Big callouts fit the board, a line at a time.
+        final widest = lines.map((l) => sugarLabelWidth(l, size)).reduce(max);
+        size *= min(1.0, SugarGame.size * cell * 0.92 / widest);
+      }
+      if (f.bubble) {
+        canvas.drawCircle(
+          Offset(0, size * 0.04),
+          size * 0.95,
+          Paint()
+            ..shader = ui.Gradient.radial(Offset(-size * 0.2, -size * 0.25), size * 1.2, [
+              const Color(0xFF8AF0FF).withValues(alpha: fade),
+              const Color(0xFF2E86FF).withValues(alpha: fade),
+            ]),
+        );
+        canvas.drawCircle(
+          Offset(0, size * 0.04),
+          size * 0.95,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = size * 0.12
+            ..color = Colors.white.withValues(alpha: fade),
+        );
+      }
+      for (var i = 0; i < lines.length; i++) {
+        paintSugarLabel(
+          canvas,
+          lines[i],
+          Offset(0, size * 1.02 * (i - (lines.length - 1) / 2)),
+          size,
+          Paint()
+            ..shader = ui.Gradient.linear(
+              Offset(0, -size / 2),
+              Offset(0, size / 2),
+              [for (final c in f.colors) c.withValues(alpha: fade)],
+              [for (var i = 0; i < f.colors.length; i++) i / (f.colors.length - 1)],
+            )
+            ..color = Colors.white.withValues(alpha: fade),
+          outline: (f.bubble ? const Color(0xFF0E4A9A) : const Color(0xFF6A0E4A)).withValues(alpha: fade),
+          stroke: f.big ? 0.2 : 0.18,
+        );
+      }
       canvas.restore();
     }
   }

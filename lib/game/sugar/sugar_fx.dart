@@ -13,7 +13,7 @@ class SugarSpark {
   final Color color;
   final double life;
 
-  /// 0 sparkle, 1 cube shard, 2 ice chip.
+  /// 0 sparkle, 1 sweet shard, 2 ice chip, 3 confetti.
   final int kind;
   double delay;
   double age = 0;
@@ -23,7 +23,7 @@ class SugarSpark {
 
 /// Floating text: points, callouts.
 class SugarFloater {
-  SugarFloater(this.text, this.x, this.y, this.size, this.colors, {this.duration = 1.1, this.big = false, this.delay = 0});
+  SugarFloater(this.text, this.x, this.y, this.size, this.colors, {this.duration = 1.1, this.big = false, this.delay = 0, this.bubble = false});
 
   final String text;
   final double x, y;
@@ -33,6 +33,9 @@ class SugarFloater {
   final List<Color> colors;
   final double duration;
   final bool big;
+
+  /// Drawn on a round badge (multipliers).
+  final bool bubble;
   double delay;
   double age = 0;
   double get t => (age / duration).clamp(0, 1);
@@ -66,7 +69,13 @@ class SugarFx {
   double _trauma = 0;
   double scorePulse = 0;
 
-  bool get busy => sparks.isNotEmpty || floaters.isNotEmpty || beams.isNotEmpty || _trauma > 0.01;
+  /// A white flash over the board (a sugar rush, a big combo).
+  double flash = 0;
+
+  /// Glow on each star of the score bar when it is reached.
+  final List<double> starPulse = [0, 0, 0];
+
+  bool get busy => sparks.isNotEmpty || floaters.isNotEmpty || beams.isNotEmpty || _trauma > 0.01 || flash > 0;
 
   /// Board offset for screen shake, in cells.
   Offset get shake {
@@ -81,13 +90,18 @@ class SugarFx {
     sparks.clear();
     floaters.clear();
     beams.clear();
-    _trauma = scorePulse = 0;
+    _trauma = scorePulse = flash = 0;
+    starPulse.fillRange(0, 3, 0);
   }
 
   void update(double dt) {
     time += dt;
     _trauma = max(0, _trauma - dt * 1.8);
     scorePulse = max(0, scorePulse - dt * 2.5);
+    flash = max(0, flash - dt * 2.2);
+    for (var i = 0; i < 3; i++) {
+      starPulse[i] = max(0, starPulse[i] - dt * 0.9);
+    }
     for (final s in sparks) {
       if (s.delay > 0) {
         s.delay -= dt;
@@ -96,7 +110,11 @@ class SugarFx {
       s.age += dt;
       s.x += s.vx * dt;
       s.y += s.vy * dt;
-      s.vy += (s.kind == 0 ? 2.5 : 10) * dt;
+      s.vy += switch (s.kind) {
+        0 => 2.5,
+        3 => 3.0,
+        _ => 10.0,
+      } * dt;
       s.vx *= 1 - dt * 1.4;
       s.spin += dt * 9;
     }
@@ -158,7 +176,24 @@ class SugarFx {
     }
   }
 
+  /// Confetti raining over the board.
+  void confetti({int count = 60, double delay = 0}) {
+    if (!particlesEnabled) return;
+    for (var i = 0; i < count; i++) {
+      sparks.add(SugarSpark(_random.nextDouble() * SugarGame.size, -0.5 - _random.nextDouble() * 2, (_random.nextDouble() - 0.5) * 2,
+          1 + _random.nextDouble() * 3, 0.1 + _random.nextDouble() * 0.06, sugarColors.values.elementAt(i % 6), 1.6 + _random.nextDouble() * 0.8,
+          kind: 3, delay: delay + _random.nextDouble() * 0.3));
+    }
+  }
+
+  /// "×N" on a badge where a cascade landed.
+  void multiplier(int n, double x, double y, {double delay = 0}) {
+    floaters.add(SugarFloater('×$n', x, y, 0.62, const [Color(0xFFFFFFFF), Color(0xFFDDF4FF)], duration: 0.9, bubble: true, delay: delay));
+  }
+
   void callout(String text, {double y = 3.2, double size = 1.25, double delay = 0}) {
+    // One big callout at a time: the newest replaces the others.
+    floaters.removeWhere((f) => f.big);
     floaters.add(SugarFloater(text, SugarGame.size / 2, y, size, const [Color(0xFFFFF6B0), Color(0xFFFFC21A), Color(0xFFFF6A00)],
         duration: 1.3, big: true, delay: delay));
   }

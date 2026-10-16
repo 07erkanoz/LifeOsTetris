@@ -41,7 +41,7 @@ SugarController controller(WidgetTester tester) => (tester.state(find.byType(Sug
 Future<void> playMove(WidgetTester tester, SugarController c) async {
   final m = SugarSolver.best(c.game)!;
   c.trySwap(m.$1, m.$2);
-  for (var i = 0; i < 300 && (c.busy || !c.game.isOver && c.game.status != SugarStatus.idle); i++) {
+  for (var i = 0; i < 1500 && (c.busy || !c.game.isOver && c.game.status != SugarStatus.idle); i++) {
     await tester.pump(const Duration(milliseconds: 33));
   }
 }
@@ -65,6 +65,8 @@ void main() {
     final c = controller(tester);
     expect(c.started, isTrue);
     expect(settings.lastPlay, 'sugar');
+    expect(find.byKey(const ValueKey('sugar-mascot')), findsOneWidget);
+    expect(c.mascot.line, isNotNull, reason: 'Lokum greets the player');
     expect(c.canPlay, isTrue);
 
     final moves = c.game.moves;
@@ -189,13 +191,24 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('sugar-hammer')));
     await tester.pump(const Duration(milliseconds: 50));
     expect(c.hammerArmed, isTrue);
-    expect(find.text('Kırmak istediğin küpe dokun'), findsWidgets);
+    expect(find.text('Kırmak istediğin şekere dokun'), findsWidgets);
     final box = tester.getRect(find.byKey(const ValueKey('sugar-board')));
     await tester.tapAt(box.center);
     await pumpFor(tester, 40);
     expect(settings.sugarBoosters(SugarBooster.hammer), hammers - 1);
     expect(c.hammerArmed, isFalse);
     expect(c.game.moves, SugarBooster.extraMoves, reason: 'the hammer costs no move');
+
+    // The rainbow turns a sweet into a rainbow ball.
+    final rainbows = settings.sugarBoosters(SugarBooster.rainbow);
+    await tester.tap(find.byKey(const ValueKey('sugar-rainbow')));
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(c.rainbowArmed, isTrue);
+    await tester.tapAt(box.center + const Offset(12, 12));
+    await pumpFor(tester, 10);
+    expect(settings.sugarBoosters(SugarBooster.rainbow), rainbows - 1);
+    expect(c.game.board.expand((r) => r).where((p) => p?.isPrism ?? false), isNotEmpty);
+    expect(c.armed, isNull);
     expect(tester.takeException(), isNull);
   });
 
@@ -205,6 +218,6 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('sugar-level-3')), warnIfMissed: false);
     await pumpFor(tester, 10, 40);
     expect(find.byType(SugarScreen), findsNothing);
-    expect(SugarLevels.count, 30);
+    expect(SugarLevels.count, 60);
   });
 }

@@ -320,13 +320,13 @@ class AppStrings {
   String get sugarHammer => _t('Çekiç', 'Hammer');
   String get sugarShuffle => _t('Karıştır', 'Shuffle');
   String sugarExtraMoves(int n) => _t('+$n Hamle', '+$n Moves');
-  String get sugarHammerHint => _t('Kırmak istediğin küpe dokun', 'Tap the cube to smash');
+  String get sugarHammerHint => _t('Kırmak istediğin şekere dokun', 'Tap the sweet to smash');
   String get sugarPlay => _t('OYNA', 'PLAY');
   String sugarContinueLevel(int n) => _t('Devam: Seviye $n', 'Continue: Level $n');
   String get sugarResume => _t('Kaldığın yerden devam', 'Continue where you left off');
   String get sugarGoals => _t('HEDEFLER', 'GOALS');
   String sugarGoalScore(String n) => _t('$n puan topla', 'Score $n points');
-  String sugarGoalColor(int n) => _t('$n küp topla', 'Collect $n cubes');
+  String sugarGoalColor(int n) => _t('$n şeker topla', 'Collect $n sweets');
   String sugarGoalIce(int n) => _t('$n buzu kır', 'Break $n ice');
   String sugarMovesLeft(int n) => _t('$n hamlen var', '$n moves');
   String get sugarWon => _t('SEVİYE TAMAM!', 'LEVEL CLEARED!');
@@ -343,16 +343,50 @@ class AppStrings {
   String sugarChapter(int n) => switch (n) {
     0 => _t('BÖLÜM 1 · Şeker Kasabası', 'CHAPTER 1 · Candy Town'),
     1 => _t('BÖLÜM 2 · Buzlu Vadi', 'CHAPTER 2 · Frosty Valley'),
-    _ => _t('BÖLÜM 3 · Zincir Kalesi', 'CHAPTER 3 · Chain Castle'),
+    2 => _t('BÖLÜM 3 · Zincir Kalesi', 'CHAPTER 3 · Chain Castle'),
+    3 => _t('BÖLÜM 4 · Kutu Fabrikası', 'CHAPTER 4 · Box Factory'),
+    4 => _t('BÖLÜM 5 · Bomba Kanyonu', 'CHAPTER 5 · Bomb Canyon'),
+    _ => _t('BÖLÜM 6 · Gökkuşağı Adası', 'CHAPTER 6 · Rainbow Island'),
   };
+  String get sugarRush => _t('ŞEKER\nÇILGINLIĞI!', 'SUGAR\nRUSH!');
+  String get sugarRushMeter => _t('ŞEKER ÇILGINLIĞI', 'SUGAR RUSH');
+  String get sugarLucky => _t('ŞANSLI ŞEKER!', 'LUCKY SWEET!');
+  String sugarStar(int n) => _t('$n. YILDIZ!', 'STAR $n!');
+  String get sugarCombo => _t('SÜPER KOMBO!', 'SUPER COMBO!');
+  String get sugarBombLost => _t('BOMBA PATLADI', 'THE BOMB WENT OFF');
+  String get sugarRainbow => _t('Gökkuşağı', 'Rainbow');
+  String get sugarRainbowHint => _t('Gökkuşağı topu yapmak istediğin şekere dokun', 'Tap the sweet to turn into a rainbow ball');
+  String sugarGoalBox(int n) => _t('$n kutuyu aç', 'Open $n boxes');
+
+  /// What Lokum, the mascot, says: [key] picks the moment, [i] the line.
+  String lokum(String key, int i) {
+    final lines = switch (key) {
+      'start' => [_t('Hadi başlayalım!', "Let's go!"), _t('Bu seviye bizim!', 'This one is ours!'), _t('Hazırım!', 'Ready!')],
+      'nice' => [_t('Güzel!', 'Nice!'), _t('Tatlı hamle!', 'Sweet move!'), _t('Böyle devam!', 'Keep it up!')],
+      'great' => [_t('Vay canına!', 'Wow!'), _t('Harika gidiyorsun!', "You're on fire!"), _t('Bu muhteşem!!', 'Amazing!!')],
+      'rush' => [_t('Şeker çılgınlığı!', 'Sugar rush!'), _t('Yağmur gibi şeker!', "It's raining sweets!")],
+      'lucky' => [_t('Şanslı gün!', 'Lucky day!'), _t('Gökten hediye!', 'A gift from the sky!')],
+      'bomb' => [_t('Dikkat, bomba!', 'Watch the bomb!'), _t('Bombayı patlat!', 'Pop that bomb!')],
+      'last' => [_t('Son hamleler!', 'Last moves!'), _t('Az kaldı!', 'Almost there!')],
+      'finale' => [_t('Şölen zamanı!', 'Party time!'), _t('Hepsi patlasın!', 'Pop them all!')],
+      'win' => [_t('Yaşasın!', 'Hooray!'), _t('Sen bir şampiyonsun!', "You're a champ!")],
+      'lose' => [_t('Bir daha deneyelim!', "Let's try again!"), _t('Az kalmıştı!', 'So close!')],
+      _ => [''],
+    };
+    return lines[i % lines.length];
+  }
   String sugarHint(String key) => switch (key) {
-    'swap' => _t('Yan yana iki küpü yer değiştir, aynı renkten 3 tanesini diz.', 'Swap two neighbouring cubes to line up 3 of a colour.'),
-    'line' => _t('4 küp diz: ÇİZGİ KÜP çıkar, bir sırayı temizler.', 'Line up 4: a LINE CUBE clears a whole row.'),
-    'bomb' => _t('L ya da T yap: BOMBA KÜP çevresini patlatır.', 'Make an L or T: a BOMB CUBE blasts around it.'),
-    'prism' => _t('5 küp diz: PRİZMA çıkar, bir rengin hepsini alır.', 'Line up 5: a PRISM takes every cube of a colour.'),
+    'swap' => _t('Yan yana iki şekerin yerini değiştir, aynı renkten 3 tanesini diz.', 'Swap two neighbouring sweets to line up 3 of a colour.'),
+    'line' => _t('4 şeker diz: ÇİZGİLİ ŞEKER çıkar, bir sırayı temizler.', 'Line up 4: a STRIPED SWEET clears a whole row.'),
+    'bomb' => _t('L ya da T yap: PAKETLİ ŞEKER çevresini patlatır.', 'Make an L or T: a WRAPPED SWEET blasts around it.'),
+    'prism' => _t('5 şeker diz: GÖKKUŞAĞI TOPU çıkar, bir rengin hepsini alır.', 'Line up 5: a RAINBOW BALL takes every sweet of a colour.'),
     'ice' => _t('Buzlu karelerde eşleştir, buzu kır.', 'Match on icy squares to break the ice.'),
     'thickIce' => _t('Kalın buz iki kez kırılır.', 'Thick ice takes two hits.'),
-    'chain' => _t('Zincirli küp kaymaz; yanında eşleştir, zinciri kır.', 'Chained cubes stay put; match them to break the chain.'),
+    'chain' => _t('Zincirli şeker kaymaz; eşleştir, zinciri kır.', 'Chained sweets stay put; match them to break the chain.'),
+    'rush' => _t('Her eşleşme Şeker Çılgınlığı göstergesini doldurur. Dolunca şekerler kendiliğinden patlar!', 'Every match fills the Sugar Rush meter. When it is full, sweets pop on their own!'),
+    'box' => _t('Şeker kutusunun yanında eşleştir, kutu açılsın.', 'Match next to a candy box to open it.'),
+    'box2' => _t('Pembe kurdeleli kutular iki kez açılır.', 'Boxes with a ribbon take two hits.'),
+    'timed' => _t('Süreli bombayı sayısı sıfıra inmeden eşleştir!', 'Match the timed bomb before its count reaches zero!'),
     _ => '',
   };
   String get targetTitle => _t('Hedef', 'Targets');

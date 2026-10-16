@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../audio/audio_service.dart';
 import '../audio/haptics.dart';
+import '../core/sugar/sugar_game.dart';
 import '../core/sugar/sugar_levels.dart';
 import '../game/sugar/sugar_art.dart';
 import '../l10n/strings.dart';
@@ -221,8 +222,11 @@ class _Ribbon extends StatelessWidget {
     [Color(0xFFFF9AD8), Color(0xFFE0247A)],
     [Color(0xFF7AD8FF), Color(0xFF2E86FF)],
     [Color(0xFFC79BFF), Color(0xFF6A2FC8)],
+    [Color(0xFFFFC08A), Color(0xFFFF7A1A)],
+    [Color(0xFFFF8A8A), Color(0xFFD0203A)],
+    [Color(0xFF8AF0B0), Color(0xFF1FB85A)],
   ];
-  static const _ink = [Color(0xFF8A1550), Color(0xFF0E4A9A), Color(0xFF3A0F7A)];
+  static const _ink = [Color(0xFF8A1550), Color(0xFF0E4A9A), Color(0xFF3A0F7A), Color(0xFF8A3A00), Color(0xFF7A0E1A), Color(0xFF0E6A32)];
 
   @override
   Widget build(BuildContext context) {
@@ -231,15 +235,15 @@ class _Ribbon extends StatelessWidget {
       height: 54,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: _colors[chapter % 3]),
+        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: _colors[chapter % 6]),
         border: Border.all(color: Colors.white, width: 3),
         boxShadow: [BoxShadow(color: const Color(0xFF2A0B4F).withValues(alpha: 0.6), offset: const Offset(0, 5))],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CandyText(parts.first, size: 13, outline: _ink[chapter % 3], stroke: 0.18),
-          if (parts.length > 1) FittedBox(child: CandyText(parts.last, size: 21, outline: _ink[chapter % 3], stroke: 0.18)),
+          CandyText(parts.first, size: 13, outline: _ink[chapter % 6], stroke: 0.18),
+          if (parts.length > 1) FittedBox(child: CandyText(parts.last, size: 21, outline: _ink[chapter % 6], stroke: 0.18)),
         ],
       ),
     );
@@ -257,12 +261,18 @@ class _MapPainter extends CustomPainter {
   static const _skies = [
     [Color(0xFFFFB6D9), Color(0xFFFF8AC2), Color(0xFFB45BFF)],
     [Color(0xFFF2A6D8), Color(0xFF8A5AD8), Color(0xFF3B2A8F)],
-    [Color(0xFF6A2FC8), Color(0xFF3A1A6A), Color(0xFF1A0B33)],
+    [Color(0xFF6A2FC8), Color(0xFF3A1A6A), Color(0xFF2A1250)],
+    [Color(0xFF5A2A8A), Color(0xFFE08A5A), Color(0xFFFFC08A)],
+    [Color(0xFFFFB07A), Color(0xFFE0603A), Color(0xFF7A2040)],
+    [Color(0xFF7A2040), Color(0xFF3AA8E0), Color(0xFF8AE8FF)],
   ];
   static const _hills = [
     [[Color(0xFFB6F2C8), Color(0xFF5CC98A)], [Color(0xFFD6FFE0), Color(0xFF7ADBA0)]],
     [[Color(0xFFE9E1FF), Color(0xFFB9A6F0)], [Color(0xFFFFFFFF), Color(0xFFCFC2F7)]],
     [[Color(0xFF7A5AA8), Color(0xFF4A2F78)], [Color(0xFF9A7AC8), Color(0xFF5A3A8A)]],
+    [[Color(0xFFFFD9B0), Color(0xFFE0A070)], [Color(0xFFFFE8CC), Color(0xFFF0B888)]],
+    [[Color(0xFFE08A5A), Color(0xFFA04A2A)], [Color(0xFFF0A070), Color(0xFFB85A30)]],
+    [[Color(0xFFFFF2B0), Color(0xFFF0D070)], [Color(0xFF8AF0B0), Color(0xFF3AC878)]],
   ];
 
   @override
@@ -272,9 +282,9 @@ class _MapPainter extends CustomPainter {
     double edge(int ch) => h - (SugarMapScreen.bottom + (ch * SugarLevels.perChapter - 0.5) * step);
     // One sky for the whole map, each chapter's colours fading into the next.
     final colors = <Color>[], stops = <double>[];
-    for (var ch = 0; ch < 3; ch++) {
+    for (var ch = 0; ch < SugarLevels.chapters; ch++) {
       final bottom = ch == 0 ? h : edge(ch);
-      final top = ch == 2 ? 0.0 : edge(ch + 1);
+      final top = ch == SugarLevels.chapters - 1 ? 0.0 : edge(ch + 1);
       for (var k = 0; k < 3; k++) {
         colors.add(_skies[ch][k]);
         stops.add(1 - (bottom - (bottom - top) * (0.1 + 0.4 * k)) / h);
@@ -289,9 +299,9 @@ class _MapPainter extends CustomPainter {
     // Hills, far (high on the map) to near, each down to the bottom so they
     // overlap without seams.
     final hills = <(double, int, int)>[];
-    for (var ch = 0; ch < 3; ch++) {
+    for (var ch = 0; ch < SugarLevels.chapters; ch++) {
       final bottom = ch == 0 ? h : edge(ch);
-      final top = ch == 2 ? 0.0 : edge(ch + 1);
+      final top = ch == SugarLevels.chapters - 1 ? 0.0 : edge(ch + 1);
       for (var k = 0; k < 4; k++) {
         hills.add((top + (bottom - top) * (k + 0.75) / 4, ch, k));
       }
@@ -310,9 +320,9 @@ class _MapPainter extends CustomPainter {
         ..close();
       canvas.drawPath(p, Paint()..shader = ui.Gradient.linear(Offset(0, y - amp), Offset(0, y + 260), _hills[ch][k % 2]));
     }
-    for (var ch = 0; ch < 3; ch++) {
+    for (var ch = 0; ch < SugarLevels.chapters; ch++) {
       final bottom = ch == 0 ? h : edge(ch);
-      final top = ch == 2 ? 0.0 : edge(ch + 1);
+      final top = ch == SugarLevels.chapters - 1 ? 0.0 : edge(ch + 1);
       final rnd = Random(40 + ch);
       for (var i = 0; i < 7; i++) {
         final x = (i.isEven ? 0.08 : 0.9) * width + (rnd.nextDouble() - 0.5) * 40;
@@ -322,8 +332,15 @@ class _MapPainter extends CustomPainter {
             _lollipop(canvas, Offset(x, y), 30 + rnd.nextDouble() * 20, i);
           case 1:
             _pine(canvas, Offset(x, y), 46 + rnd.nextDouble() * 24);
-          default:
+          case 2:
             _tower(canvas, Offset(x, y), 50 + rnd.nextDouble() * 26);
+          case 3:
+            final side = 34 + rnd.nextDouble() * 16;
+            paintCandyBox(canvas, Rect.fromCenter(center: Offset(x, y - side / 2), width: side, height: side), layers: 2);
+          case 4:
+            _rock(canvas, Offset(x, y), 50 + rnd.nextDouble() * 30);
+          default:
+            _palm(canvas, Offset(x, y), 56 + rnd.nextDouble() * 20, i);
         }
       }
     }
@@ -418,7 +435,7 @@ class _MapPainter extends CustomPainter {
       final pin = c - Offset(0, r + 46);
       canvas.drawPath(Path()..addPolygon([pin + const Offset(-14, 10), pin + const Offset(14, 10), pin + const Offset(0, 34)], true), Paint()..color = Colors.white);
       canvas.drawCircle(pin, 24, Paint()..color = Colors.white);
-      paintSugarCube(canvas, Rect.fromCenter(center: pin, width: 34, height: 34), sugarColors.values.elementAt(n % 6), bubbles: 1);
+      paintCandy(canvas, Rect.fromCenter(center: pin, width: 36, height: 36), SugarColor.values[n % 6], shadow: false);
       final tag = RRect.fromRectAndRadius(Rect.fromCenter(center: c + Offset(0, r + 26), width: 92, height: 32), const Radius.circular(16));
       canvas.drawRRect(tag.shift(const Offset(0, 4)), Paint()..color = const Color(0xFF0E6A32));
       canvas.drawRRect(tag, Paint()..shader = ui.Gradient.linear(tag.outerRect.topCenter, tag.outerRect.bottomCenter, sugarGreen));
@@ -497,6 +514,51 @@ class _MapPainter extends CustomPainter {
       ..strokeWidth = h * 0.08
       ..color = Colors.white.withValues(alpha: 0.85));
     canvas.drawCircle(c - Offset(h * 0.12, h * 0.14), h * 0.07, Paint()..color = Colors.white.withValues(alpha: 0.8));
+  }
+
+  /// A canyon rock spire.
+  void _rock(Canvas canvas, Offset base, double h) {
+    final p = Path()
+      ..moveTo(base.dx - h * 0.3, base.dy)
+      ..lineTo(base.dx - h * 0.18, base.dy - h * 0.7)
+      ..lineTo(base.dx - h * 0.04, base.dy - h)
+      ..lineTo(base.dx + h * 0.12, base.dy - h * 0.82)
+      ..lineTo(base.dx + h * 0.28, base.dy)
+      ..close();
+    canvas.drawPath(p, Paint()..shader = ui.Gradient.linear(base - Offset(h * 0.3, 0), base + Offset(h * 0.3, 0), const [Color(0xFFE0905A), Color(0xFF9A4A2A)]));
+    for (var i = 1; i < 4; i++) {
+      canvas.drawLine(Offset(base.dx - h * 0.2, base.dy - h * 0.2 * i), Offset(base.dx + h * 0.2, base.dy - h * 0.2 * i - h * 0.04), Paint()
+        ..strokeWidth = 2
+        ..color = const Color(0xFF7A3A20).withValues(alpha: 0.5));
+    }
+  }
+
+  /// A palm tree with a rainbow-coloured fruit.
+  void _palm(Canvas canvas, Offset base, double h, int i) {
+    final top = base - Offset(h * 0.1, h);
+    canvas.drawPath(
+        Path()
+          ..moveTo(base.dx, base.dy)
+          ..quadraticBezierTo(base.dx + h * 0.08, base.dy - h * 0.5, top.dx, top.dy),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = h * 0.09
+          ..strokeCap = StrokeCap.round
+          ..color = const Color(0xFFB07A4A));
+    for (var k = 0; k < 5; k++) {
+      final a = -pi + k * pi / 4;
+      final tip = top + Offset(cos(a), sin(a) * 0.6 + 0.35) * h * 0.42;
+      canvas.drawPath(
+          Path()
+            ..moveTo(top.dx, top.dy)
+            ..quadraticBezierTo((top.dx + tip.dx) / 2, top.dy - h * 0.18, tip.dx, tip.dy),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = h * 0.08
+            ..strokeCap = StrokeCap.round
+            ..color = const Color(0xFF2FA85A));
+    }
+    canvas.drawCircle(top + Offset(0, h * 0.06), h * 0.07, Paint()..color = sugarColors.values.elementAt(i % 6));
   }
 
   void _tower(Canvas canvas, Offset base, double h) {

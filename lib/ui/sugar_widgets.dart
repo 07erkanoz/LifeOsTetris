@@ -179,10 +179,12 @@ class _GoalIconPainter extends CustomPainter {
     final r = Offset.zero & size;
     switch (kind) {
       case GoalKind.color:
-        paintSugarCube(canvas, r, sugarColors[color]!, bubbles: 1);
+        paintCandy(canvas, r, color!);
       case GoalKind.ice:
-        paintSugarCube(canvas, r, sugarColors[SugarColor.blue]!);
+        paintCandy(canvas, r, SugarColor.blue);
         paintIce(canvas, r, layers: 1, seed: 1);
+      case GoalKind.box:
+        paintCandyBox(canvas, r);
       case GoalKind.score:
         paintGoldStar(canvas, r.center, size.width * 0.46);
     }
@@ -226,31 +228,47 @@ class _StarsPainter extends CustomPainter {
 
 /// The score bar: fills up to three stars.
 class SugarScoreBar extends StatelessWidget {
-  const SugarScoreBar({super.key, required this.score, required this.stars, this.goalsDone = false});
+  const SugarScoreBar({super.key, required this.score, required this.stars, this.goalsDone = false, this.pulse = const [0, 0, 0]});
 
   final int score;
   final List<int> stars;
   final bool goalsDone;
 
+  /// 0..1 glow on each star just reached.
+  final List<double> pulse;
+
   @override
-  Widget build(BuildContext context) => CustomPaint(size: const Size(double.infinity, 38), painter: _ScoreBarPainter(score, stars, goalsDone));
+  Widget build(BuildContext context) => CustomPaint(size: const Size(double.infinity, 38), painter: _ScoreBarPainter(score, stars, goalsDone, List.of(pulse)));
 }
 
 class _ScoreBarPainter extends CustomPainter {
-  _ScoreBarPainter(this.score, this.stars, this.goalsDone);
+  _ScoreBarPainter(this.score, this.stars, this.goalsDone, this.pulse);
 
   final int score;
   final List<int> stars;
   final bool goalsDone;
+  final List<double> pulse;
+
+  static const _marks = [0.3, 0.62, 0.92];
+
+  /// Where [score] sits on the bar: the stars are evenly spaced and the
+  /// fill runs between them.
+  double share(int score) {
+    var from = 0, at = 0.0;
+    for (var k = 0; k < 3; k++) {
+      if (score < stars[k]) return at + (_marks[k] - at) * (score - from) / max(1, stars[k] - from);
+      from = stars[k];
+      at = _marks[k];
+    }
+    return min(1.0, at + 0.08 * (score - from) / max(1, stars[2] * 0.3));
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
     final bar = RRect.fromRectAndRadius(Rect.fromLTWH(14, size.height / 2 - 10, size.width - 28, 20), const Radius.circular(10));
     canvas.drawRRect(bar.shift(const Offset(0, 3)), Paint()..color = const Color(0xFF2A0B4F).withValues(alpha: 0.6));
     canvas.drawRRect(bar, Paint()..color = const Color(0xFF3B1466));
-    final top = stars[2];
-    double at(int s) => min(1.0, s / top) * 0.92;
-    final share = score >= top ? 1.0 : score / top * 0.92;
+    final share = this.share(score);
     if (share > 0) {
       final fill = RRect.fromRectAndRadius(Rect.fromLTWH(bar.left, bar.top, max(bar.height, bar.width * share), bar.height), const Radius.circular(10));
       canvas.drawRRect(fill, Paint()..shader = ui.Gradient.linear(fill.outerRect.centerLeft, fill.outerRect.centerRight, const [Color(0xFFFFE066), Color(0xFFFF8A00)]));
@@ -258,12 +276,18 @@ class _ScoreBarPainter extends CustomPainter {
           Paint()..color = Colors.white.withValues(alpha: 0.5));
     }
     for (var k = 0; k < 3; k++) {
-      paintGoldStar(canvas, Offset(bar.left + bar.width * at(stars[k]), bar.center.dy), 15, on: score >= stars[k]);
+      final c = Offset(bar.left + bar.width * _marks[k], bar.center.dy);
+      if (pulse[k] > 0) {
+        canvas.drawCircle(c, 26 * pulse[k] + 10, Paint()
+          ..color = const Color(0xFFFFE066).withValues(alpha: 0.7 * pulse[k])
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10));
+      }
+      paintGoldStar(canvas, c, 15 * (1 + 0.45 * pulse[k]), on: score >= stars[k]);
     }
   }
 
   @override
-  bool shouldRepaint(_ScoreBarPainter old) => old.score != score || old.goalsDone != goalsDone || old.stars != stars;
+  bool shouldRepaint(_ScoreBarPainter old) => old.score != score || old.goalsDone != goalsDone || old.stars != stars || old.pulse.join() != pulse.join();
 }
 
 /// The moves left, in a pink bubble that throbs red near the end.
@@ -391,16 +415,8 @@ class _BoosterIconPainter extends CustomPainter {
         canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: const Offset(0, 6), width: 7, height: 34), const Radius.circular(3)), Paint()..color = const Color(0xFFB0703A));
         canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: const Offset(0, -12), width: 32, height: 16), const Radius.circular(5)),
             Paint()..shader = ui.Gradient.linear(const Offset(0, -20), const Offset(0, -4), const [Color(0xFFDDE3EE), Color(0xFF7D879A)]));
-      case SugarBooster.shuffle:
-        final p = Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 5
-          ..strokeCap = StrokeCap.round
-          ..color = const Color(0xFFB45BFF);
-        canvas.drawArc(Rect.fromCircle(center: Offset.zero, radius: 15), -pi * 0.95, pi * 0.8, false, p);
-        canvas.drawArc(Rect.fromCircle(center: Offset.zero, radius: 15), pi * 0.05, pi * 0.8, false, p..color = const Color(0xFFFF3B5C));
-        canvas.drawPath(Path()..addPolygon(const [Offset(14, -10), Offset(20, -2), Offset(8, -2)], true), Paint()..color = const Color(0xFFB45BFF));
-        canvas.drawPath(Path()..addPolygon(const [Offset(-14, 10), Offset(-20, 2), Offset(-8, 2)], true), Paint()..color = const Color(0xFFFF3B5C));
+      case SugarBooster.rainbow:
+        paintRainbow(canvas, Rect.fromCenter(center: Offset.zero, width: 44, height: 44));
       case SugarBooster.moves:
         paintSugarLabel(canvas, '+${SugarBooster.extraMoves}', Offset.zero, 28,
             Paint()..shader = ui.Gradient.linear(const Offset(0, -14), const Offset(0, 14), const [Color(0xFFFF7AC6), Color(0xFFE0247A)]),
@@ -497,4 +513,94 @@ class SugarTag extends StatelessWidget {
     ),
     child: CandyText(text, size: 14, outline: const Color(0xFF7A0E0E), stroke: 0.16),
   );
+}
+
+/// The sugar-rush meter: a rainbow fill with its name on it.
+class SugarRushMeter extends StatelessWidget {
+  const SugarRushMeter({super.key, required this.value, required this.label, this.height = 26});
+
+  final double value;
+  final String label;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(size: Size(double.infinity, height), painter: _RushPainter(value.clamp(0, 1), label));
+}
+
+class _RushPainter extends CustomPainter {
+  _RushPainter(this.value, this.label);
+
+  final double value;
+  final String label;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = Offset.zero & size;
+    final rr = RRect.fromRectAndRadius(r, Radius.circular(size.height / 2));
+    if (value > 0.85) {
+      canvas.drawRRect(rr.inflate(3), Paint()
+        ..color = const Color(0xFFFF7AC6).withValues(alpha: (value - 0.85) / 0.15)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8));
+    }
+    canvas.drawRRect(rr, Paint()..color = const Color(0xFF2A0B4F).withValues(alpha: 0.75));
+    if (value > 0.04) {
+      final fill = RRect.fromRectAndRadius(Rect.fromLTWH(3, 3, max(size.height - 6, (size.width - 6) * value), size.height - 6), Radius.circular(size.height / 2));
+      canvas.drawRRect(fill, Paint()..shader = ui.Gradient.linear(Offset.zero, Offset(size.width, 0), [...sugarColors.values], const [0, 0.2, 0.4, 0.6, 0.8, 1]));
+      canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(fill.left + 6, fill.top + 3, max(0, fill.width - 12), 4), const Radius.circular(2)),
+          Paint()..color = Colors.white.withValues(alpha: 0.45));
+    }
+    paintSugarLabel(canvas, label, r.center, size.height * 0.5, Paint()..color = Colors.white, outline: const Color(0xFF3A0F60), stroke: 0.25);
+  }
+
+  @override
+  bool shouldRepaint(_RushPainter old) => old.value != value || old.label != label;
+}
+
+/// Lokum, with a speech bubble when it has something to say.
+class SugarMascotView extends StatelessWidget {
+  const SugarMascotView({super.key, required this.pose, this.line, this.hop = 0, this.size = 62, this.bubbleLeft = true});
+
+  final LokumPose pose;
+  final String? line;
+  final double hop;
+  final double size;
+
+  /// The bubble opens to the left of Lokum (else to the right).
+  final bool bubbleLeft;
+
+  @override
+  Widget build(BuildContext context) {
+    final lokum = SizedBox(width: size * 1.25, height: size * 1.3, child: CustomPaint(painter: _LokumPainter(pose, hop)));
+    final text = line;
+    if (text == null) return lokum;
+    final bubble = Container(
+      constraints: BoxConstraints(maxWidth: size * 3.2),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: const Color(0xFF2A0B4F).withValues(alpha: 0.4), offset: const Offset(0, 3))],
+      ),
+      child: Text(text, style: const TextStyle(fontFamily: 'Baloo2', fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF7A2A9E), height: 1.1)),
+    );
+    final padded = Padding(padding: const EdgeInsets.only(top: 4), child: bubble);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: bubbleLeft ? [padded, lokum] : [lokum, padded],
+    );
+  }
+}
+
+class _LokumPainter extends CustomPainter {
+  _LokumPainter(this.pose, this.hop);
+
+  final LokumPose pose;
+  final double hop;
+
+  @override
+  void paint(Canvas canvas, Size size) => paintLokum(canvas, Offset(size.width / 2, size.height * 0.56), size.height / 1.3, pose: pose, hop: hop);
+
+  @override
+  bool shouldRepaint(_LokumPainter old) => old.pose != pose || old.hop != hop;
 }
