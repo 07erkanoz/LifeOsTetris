@@ -136,6 +136,11 @@ def versioned(name, version):
 def link(src, alias):
     """Points the fixed name (README, PKGBUILD) at the newest file."""
     tmp = alias.with_name(f'.{alias.name}.link')
+    # rename() between two names of one file does nothing and would leave
+    # the temporary name behind.
+    if alias.exists() and os.path.samefile(src, alias):
+        tmp.unlink(missing_ok=True)  # left over by older versions
+        return
     tmp.unlink(missing_ok=True)
     os.link(src, tmp)
     os.replace(tmp, alias)

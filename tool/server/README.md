@@ -46,11 +46,16 @@ browser gets either the old page with the old build or the new page with
 the new build. Files in a build folder never change, so Cloudflare and
 browsers may cache them as long as they like.
 
-On the server nginx serves `.js`, `.html` and other static files itself, so
-the `Cache-Control` rules of the `.htaccess` files only reach the files
-Apache serves (`oyna/` and `latest.json`). The folder per build does not
-depend on them; a browser that keeps an old `index.html` for a while still
-finds that build's folder.
+Every request reaches Apache, which hands static files to nginx
+(`X-Accel-Redirect`), so the `Cache-Control` rules of the `.htaccess` files
+do reach the visitor; the ETag is nginx's own. Cloudflare's *Browser Cache
+TTL* (four hours by default) raises any lower `max-age`, so a Cache Rule for
+`/kupler/indir/*` sets the browser TTL to *respect origin*; `no-cache`
+(`latest.json`, `oyna/index.html`) passes unchanged. To see what the server
+itself sends, skip Cloudflare:
+`curl -sI --resolve lifeos.com.tr:443:185.223.77.31 https://lifeos.com.tr/kupler/indir/latest.json`.
+The folder per build does not depend on any of this; a browser that keeps an
+old `index.html` for a while still finds that build's folder.
 
 `latest.json` in `indir/` records the live build under `web`.
 
