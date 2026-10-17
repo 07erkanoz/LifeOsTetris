@@ -1,2 +1,2 @@
 Bu dosyadaki sayıyı değiştirmek TestFlight için yeni bir iOS derlemesi başlatır.
-6
+7

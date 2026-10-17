@@ -64,8 +64,9 @@ jobs:
       - name: Prepare the Xcode project
         run: flutter build ios --release --config-only --build-number=$(( ${{ github.run_number }} * 10 + ${{ github.run_attempt }} ))
 
-      # A short-lived distribution certificate and App Store profile, made
-      # through the API key and removed again at the end.
+      # A distribution certificate and App Store profile, made through the
+      # API key. They stay on the account: revoking them would invalidate the
+      # build (ITMS-90035, expired TestFlight builds).
       - name: Set up signing
         run: python3 ios/ci_signing.py setup
 
@@ -81,7 +82,7 @@ jobs:
             -exportOptionsPlist "$EXPORT_OPTIONS" -exportPath "$RUNNER_TEMP/export" \
             -authenticationKeyPath "$ASC_KEY_PATH" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
 
-      - name: Remove the temporary certificate
+      - name: Remove the signing identity from the runner
         if: always()
         run: python3 ios/ci_signing.py cleanup
 

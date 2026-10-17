@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """App Store signing for CI without a Mac or stored certificates.
 
-`setup` creates a short-lived Apple Distribution certificate and an App Store
+`setup` creates an Apple Distribution certificate and an App Store
 provisioning profile through the App Store Connect API, installs both on the
 runner and switches the Runner target to manual signing with them.
-`cleanup` deletes the profile and revokes the certificate again; builds that
-were already uploaded are not affected (the App Store re-signs them).
+`cleanup` only removes them from the runner. The certificate stays valid:
+revoking it would make the builds signed with it invalid (TestFlight expires
+them, and App Review rejects them with ITMS-90035). Only when Apple's limit
+of distribution certificates is reached does `setup` revoke the oldest one
+this workflow made, with its profiles.
 
 Needs ASC_KEY_ID, ASC_ISSUER_ID and ASC_KEY_PATH (the .p8 file). Only the
 Python standard library and the system openssl/security tools are used.
@@ -29,6 +32,14 @@ TEAM_ID = '8PYZ45XP74'
 OPENSSL = '/usr/bin/openssl'
 WORK = pathlib.Path(os.environ.get('RUNNER_TEMP', '/tmp')) / 'signing'
 STATE = WORK / 'state.json'
+# The common name of the certificates this workflow makes.
+CI_NAME = 'LifeOS Kupler CI'
+
+
+class ApiError(Exception):
+    def __init__(self, code: int, text: str):
+        super().__init__(f'{code} {text}')
+        self.code = code
 
 
 def b64url(data: bytes) -> str:
@@ -60,7 +71,7 @@ def token() -> str:
     return f'{signing_input.decode()}.{b64url(der_to_raw(sig))}'
 
 
-def api(method: str, path: str, body=None):
+def api(method: str, path: str, body=None, check=True):
     req = urllib.request.Request(
         API + path,
         method=method,
@@ -72,22 +83,60 @@ def api(method: str, path: str, body=None):
             raw = res.read()
             return json.loads(raw) if raw else None
     except urllib.error.HTTPError as e:
-        sys.exit(f'App Store Connect API {method} {path} failed: {e.code} {e.read().decode()}')
+        text = e.read().decode()
+        if not check:
+            raise ApiError(e.code, text)
+        sys.exit(f'App Store Connect API {method} {path} failed: {e.code} {text}')
 
 
 def run(*cmd, **kw):
     return subprocess.run(cmd, check=True, **kw)
 
 
+def ci_certificates():
+    """The distribution certificates this workflow made, oldest first."""
+    mine = []
+    for c in api('GET', '/certificates?filter[certificateType]=DISTRIBUTION&limit=200')['data']:
+        der = base64.b64decode(c['attributes']['certificateContent'])
+        subject = subprocess.run([OPENSSL, 'x509', '-inform', 'DER', '-noout', '-subject'],
+                                 input=der, capture_output=True, check=True).stdout.decode()
+        if f'CN={CI_NAME}' in subject.replace(' = ', '='):
+            mine.append(c)
+    return sorted(mine, key=lambda c: c['attributes']['expirationDate'])
+
+
+def revoke(cert):
+    """Revokes [cert] and deletes the App Store profiles made with it."""
+    profiles = api('GET', '/profiles?filter[profileType]=IOS_APP_STORE&include=certificates&limit=200')['data']
+    for p in profiles:
+        certs = p.get('relationships', {}).get('certificates', {}).get('data') or []
+        if p['attributes']['name'].startswith(CI_NAME) and any(c['id'] == cert['id'] for c in certs):
+            api('DELETE', f'/profiles/{p["id"]}')
+    api('DELETE', f'/certificates/{cert["id"]}')
+    print(f'Revoked the oldest CI certificate {cert["id"]} (expires {cert["attributes"]["expirationDate"][:10]})')
+
+
 def setup():
     WORK.mkdir(parents=True, exist_ok=True)
     key, csr = WORK / 'dist.key', WORK / 'dist.csr'
     run(OPENSSL, 'req', '-new', '-newkey', 'rsa:2048', '-nodes', '-keyout', str(key), '-out', str(csr),
-        '-subj', '/CN=LifeOS Kupler CI/C=TR')
+        '-subj', f'/CN={CI_NAME}/C=TR')
     csr_text = ''.join(l for l in csr.read_text().splitlines() if 'CERTIFICATE REQUEST' not in l)
 
-    cert = api('POST', '/certificates', {'data': {'type': 'certificates', 'attributes': {
-        'certificateType': 'DISTRIBUTION', 'csrContent': csr_text}}})['data']
+    def create():
+        return api('POST', '/certificates', {'data': {'type': 'certificates', 'attributes': {
+            'certificateType': 'DISTRIBUTION', 'csrContent': csr_text}}}, check=False)['data']
+
+    try:
+        cert = create()
+    except ApiError as e:
+        # Apple allows only a few distribution certificates: make room by
+        # revoking the oldest one made here (its builds are long superseded).
+        old = ci_certificates()
+        if e.code != 409 or not old:
+            sys.exit(f'Could not create a distribution certificate: {e}')
+        revoke(old[0])
+        cert = create()
     state = {'certificate': cert['id']}
     STATE.write_text(json.dumps(state))
     der = WORK / 'dist.cer'
@@ -113,7 +162,7 @@ def setup():
 
     bundles = api('GET', f'/bundleIds?filter[identifier]={BUNDLE_ID}')['data']
     bundle = next(b for b in bundles if b['attributes']['identifier'] == BUNDLE_ID)
-    name = f'LifeOS Kupler CI {int(time.time())}'
+    name = f'{CI_NAME} {int(time.time())}'
     profile = api('POST', '/profiles', {'data': {
         'type': 'profiles',
         'attributes': {'name': name, 'profileType': 'IOS_APP_STORE'},
@@ -161,17 +210,15 @@ def setup():
 
 
 def cleanup():
+    """Removes the signing identity from the runner. The certificate and the
+    profile stay on the account: the uploaded build is signed with them."""
     if not STATE.exists():
         return
     state = json.loads(STATE.read_text())
-    if 'profile' in state:
-        api('DELETE', f'/profiles/{state["profile"]}')
-    if 'certificate' in state:
-        api('DELETE', f'/certificates/{state["certificate"]}')
     if 'keychain' in state:
         subprocess.run(['security', 'delete-keychain', state['keychain']], check=False)
     subprocess.run(['rm', '-rf', str(WORK)], check=False)
-    print('Temporary certificate and profile removed')
+    print('Signing identity removed from the runner')
 
 
 if __name__ == '__main__':
