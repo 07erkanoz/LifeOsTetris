@@ -27,6 +27,8 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      # The icon font the frames use comes with Flutter's shared artifacts.
+      - run: flutter precache --universal
 
       # App Store app previews: H.264 at 30 fps, stereo AAC, 15 to 30 s;
       # 886×1920 for iPhones, 1200×1600 for iPads.
