@@ -23,6 +23,10 @@ class AppStrings {
   bool get isTurkish => languageCode == 'tr';
   String _t(String tr, String en) => isTurkish ? tr : en;
 
+  /// [text] in capitals the way the language writes them: Turkish keeps
+  /// the dot on i (İ) and drops it from ı (I), which toUpperCase does not.
+  String upper(String text) => isTurkish ? text.replaceAll('i', 'İ').replaceAll('ı', 'I').toUpperCase() : text.toUpperCase();
+
   // ------------------------------------------------------------ numbers
 
   String score(int value) {
@@ -242,7 +246,7 @@ class AppStrings {
   String get jarFull => _t('Kavanoz doldu!', 'The jar is full!');
   String get jarOpen => _t('AÇ', 'OPEN');
   String get chestsTitle => _t('Yıldız sandıkları', 'Star chests');
-  String chestsHint(int every) => _t("Şeker Küpler'de her $every yıldızda bir sandık.", 'A chest for every $every Şeker stars.');
+  String chestsHint(int every) => _t("Şeker Küpler'de her $every yıldızda bir sandık.", 'A chest for every $every Sugar Blocks stars.');
   String chestNext(int stars) => _t('Sonraki sandık: $stars yıldız', 'Next chest: $stars stars');
   String chestName(int tier) => switch (tier) {
     2 => _t('ALTIN SANDIK!', 'GOLD CHEST!'),
@@ -269,7 +273,7 @@ class AppStrings {
   ({String when, String fact}) eventFact(String e) => switch (e) {
     'tulip' => (
       when: _t('LALE DEVRİ · 1718–1730', 'THE TULIP ERA · 1718–1730'),
-      fact: _t("İstanbul'da lale bahçeleri, Sadabad köşkleri ve helva sohbetleri moda oldu; nadir lale soğanları servet değerinde alınıp satıldı.", 'Tulip gardens, the Sadabad pavilions and halva gatherings were the fashion in İstanbul; rare bulbs sold for fortunes.'),
+      fact: _t("İstanbul'da lale bahçeleri, Sadabad köşkleri ve helva sohbetleri moda oldu; nadir lale soğanları servet değerinde alınıp satıldı.", 'Tulip gardens, the Sadabad pavilions and halva gatherings were the fashion in Istanbul; rare bulbs sold for fortunes.'),
     ),
     'ferry' => (
       when: _t('ŞİRKET-İ HAYRİYE · 1851', 'ŞİRKET-İ HAYRİYE · 1851'),
@@ -277,7 +281,7 @@ class AppStrings {
     ),
     'coffee' => (
       when: _t('TAHTAKALE · 1554', 'TAHTAKALE · 1554'),
-      fact: _t("İstanbul'un ilk kahvehaneleri Tahtakale'de açıldı; kısa sürede sohbetin, tavlanın ve şiirin buluşma yeri oldular.", "İstanbul's first coffeehouses opened in Tahtakale and soon became the place for talk, backgammon and poetry."),
+      fact: _t("İstanbul'un ilk kahvehaneleri Tahtakale'de açıldı; kısa sürede sohbetin, tavlanın ve şiirin buluşma yeri oldular.", "Istanbul's first coffeehouses opened in Tahtakale and soon became the place for talk, backgammon and poetry."),
     ),
     _ => (
       when: _t('ÜSKÜDAR · 1593', 'ÜSKÜDAR · 1593'),
@@ -303,23 +307,23 @@ class AppStrings {
     _ => _t('Simit kolye', 'Simit necklace'),
   };
   String unlockText(String u) => switch (u) {
-    'cubesLokum' => _t("Zincir Küpler'de pudra şekerli lokum küpler.", 'Powdered lokum cubes for Zincir Küpler.'),
-    'cubesCini' => _t("Zincir Küpler'de İznik çinisi görünümü.", 'İznik tile cubes for Zincir Küpler.'),
-    'sceneGalata' || 'sceneSnow' || 'sceneIslands' => _t('Şeker tahtasının arkasında yeni bir İstanbul manzarası.', 'A new İstanbul scene behind the Şeker board.'),
-    'shuffle' => _t("Şeker'de takıldığında tahtayı karıştırır.", 'Shuffles the Şeker board when you are stuck.'),
-    'freeze' => _t("Zincir'de yükselişi birkaç saniye durdurur.", 'Holds the Zincir stack for a few seconds.'),
+    'cubesLokum' => _t("Zincir Küpler'de pudra şekerli lokum küpler.", 'Powdered lokum cubes for Chain Blocks.'),
+    'cubesCini' => _t("Zincir Küpler'de İznik çinisi görünümü.", 'Iznik tile cubes for Chain Blocks.'),
+    'sceneGalata' || 'sceneSnow' || 'sceneIslands' => _t('Şeker tahtasının arkasında yeni bir İstanbul manzarası.', 'A new Istanbul scene behind the Sugar Blocks board.'),
+    'shuffle' => _t("Şeker'de takıldığında tahtayı karıştırır.", 'Shuffles the Sugar Blocks board when you are stuck.'),
+    'freeze' => _t("Zincir'de yükselişi birkaç saniye durdurur.", 'Holds the Chain Blocks stack for a few seconds.'),
     _ => _t("Lokum'un dolabında yeni bir kostüm.", "A new outfit in Lokum's wardrobe."),
   };
   String get collectionTitle => _t('Koleksiyon', 'Collection');
-  String get cubeLook => _t('Zincir küpleri', 'Zincir cubes');
-  String get sugarSceneLabel => _t('Şeker manzarası', 'Şeker scene');
+  String get cubeLook => _t('Zincir küpleri', 'Chain Blocks cubes');
+  String get sugarSceneLabel => _t('Şeker manzarası', 'Sugar Blocks scene');
   String cubeStyleName(String s) => switch (s) {
     'lokum' => _t('Lokum', 'Lokum'),
     'cini' => _t('Çini', 'Tile'),
     _ => _t('Canlı', 'Vivid'),
   };
   String get sceneDefault => _t('Bölüme göre', 'By chapter');
-  String get postcardsTitle => _t('İstanbul kartpostalları', 'İstanbul postcards');
+  String get postcardsTitle => _t('İstanbul kartpostalları', 'Istanbul postcards');
   String postcardsCount(int got, int all) => '$got / $all';
   String get postcardLocked => _t('Sandıklardan çıkar', 'Found in chests');
   String get freezeLabel => _t('Durdur', 'Stop');
@@ -332,7 +336,7 @@ class AppStrings {
     4 => (title: _t('Rumeli Hisarı', 'Rumeli Fortress'), when: '1452', fact: _t("II. Mehmed, Boğaz'ı denetlemek için hisarı yaklaşık dört ayda yaptırdı.", 'Mehmed II had the fortress built in about four months to command the Bosphorus.')),
     5 => (title: _t('Karadan yürüyen gemiler', 'Ships over the hills'), when: '1453', fact: _t("Haliç'in ağzı zincirle kapatılınca Osmanlı gemileri bir gecede karadan yürütülerek Haliç'e indirildi.", 'With the Golden Horn chained shut, Ottoman ships were hauled overland in a night and launched into it.')),
     6 => (title: _t('Cevahir Bedesteni', 'The Cevahir Bedesten'), when: '1461', fact: _t("Kapalıçarşı'nın kalbi; değerli mallar burada korunur, kapılar her akşam kilitlenirdi.", 'The heart of the Grand Bazaar: valuables were kept here and the gates were locked every evening.')),
-    7 => (title: _t('İlk kahvehaneler', 'The first coffeehouses'), when: '1554', fact: _t("İstanbul'un ilk kahvehaneleri Tahtakale'de açıldı; sohbetin, tavlanın ve şiirin buluşma yeri oldular.", "İstanbul's first coffeehouses opened in Tahtakale and became the place for talk, backgammon and poetry.")),
+    7 => (title: _t('İlk kahvehaneler', 'The first coffeehouses'), when: '1554', fact: _t("İstanbul'un ilk kahvehaneleri Tahtakale'de açıldı; sohbetin, tavlanın ve şiirin buluşma yeri oldular.", "Istanbul's first coffeehouses opened in Tahtakale and became the place for talk, backgammon and poetry.")),
     8 => (title: _t('Süleymaniye', 'The Süleymaniye'), when: '1557', fact: _t("Mimar Sinan'ın eseri; külliyesiyle birlikte 1557'de tamamlandı ve şehrin siluetinin simgesi oldu.", "Mimar Sinan's work, completed with its complex in 1557; it became the emblem of the skyline.")),
     9 => (title: _t('Simit', 'Simit'), when: '1593', fact: _t('1593 tarihli bir Üsküdar kadı sicilinde fiyatıyla birlikte kayda geçmiş; şehrin en eski sokak lezzetlerinden biri.', "Recorded with its price in an Üsküdar court register of 1593, one of the city's oldest street foods.")),
     10 => (title: _t('Donan Boğaz', 'The frozen Bosphorus'), when: '1621', fact: _t("O kış Boğaz dondu; kaynaklar, Üsküdar'dan karşıya buzun üstünde yüründüğünü yazar.", 'That winter the Bosphorus froze; chroniclers write that people walked across from Üsküdar.')),
@@ -356,7 +360,7 @@ class AppStrings {
   // Lokum's wardrobe.
   String get wardrobeTitle => _t("LOKUM'UN DOLABI", "LOKUM'S WARDROBE");
   String get wardrobeShort => _t('Dolap', 'Wardrobe');
-  String get wardrobeHint => _t("Şeker Küpler'de yıldız topla, yeni kostümler açılsın. Lokum seçtiğini her yerde giyer.", 'Collect stars in Şeker Küpler to unlock outfits. Lokum wears your pick everywhere.');
+  String get wardrobeHint => _t("Şeker Küpler'de yıldız topla, yeni kostümler açılsın. Lokum seçtiğini her yerde giyer.", 'Collect stars in Sugar Blocks to unlock outfits. Lokum wears your pick everywhere.');
   String get outfitWorn => _t('GİYİLİ', 'WEARING');
   String get close => _t('Kapat', 'Close');
   String get outfitWear => _t('Giy', 'Wear');
@@ -535,9 +539,9 @@ class AppStrings {
       when: _t('1777 · Bahçekapı', '1777 · Bahçekapı'),
       history: _t(
         "Mısır Çarşısı'nın birkaç adım ötesinde açılan bir şekerci dükkânı, lokumu İstanbul'un simgesi yaptı. Bu gece o dükkânın iki yüz yıllık tarif defteri çalındı.",
-        'A few steps from the Spice Bazaar, a confectioner opened a shop that made lokum the symbol of İstanbul. Tonight its two-hundred-year-old book of recipes was stolen.',
+        'A few steps from the Spice Bazaar, a confectioner opened a shop that made lokum the symbol of Istanbul. Tonight its two-hundred-year-old book of recipes was stolen.',
       ),
-      limon: _t("Defter artık bende. İstanbul'un tatlısını sayfa sayfa ekşiteceğim; ilk durak bu çarşı.", "The book is mine now. I'll sour İstanbul's sweets page by page, starting with this bazaar."),
+      limon: _t("Defter artık bende. İstanbul'un tatlısını sayfa sayfa ekşiteceğim; ilk durak bu çarşı.", "The book is mine now. I'll sour Istanbul's sweets page by page, starting with this bazaar."),
       lokum: _t('Bu çarşının her köşesini bilirim. Şekerleri kurtaralım, izini kaybetmeden.', 'I know every corner of this bazaar. Save the sweets and we keep on his trail.'),
     ),
     1 => (

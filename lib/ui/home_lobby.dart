@@ -774,7 +774,7 @@ class _TipButton extends StatelessWidget {
           ],
         ),
         child: Text(
-          '${label.toUpperCase()}  ›',
+          '${AppStrings.of(context).upper(label)}  ›',
           style: TextStyle(color: ink, fontSize: _fs(p, 14), fontWeight: FontWeight.w900, letterSpacing: 0.6),
         ),
       ),

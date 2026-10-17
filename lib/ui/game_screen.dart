@@ -1164,7 +1164,7 @@ class _ThemeSheet extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  CardLabel(s.themeLabel.toUpperCase()),
+                  CardLabel(s.upper(s.themeLabel)),
                   const SizedBox(height: 12),
                   ThemePicker(settings: settings),
                   const SizedBox(height: 14),
@@ -1353,7 +1353,7 @@ class _GameOverOverlay extends StatelessWidget {
             moving: happy && c.settings.effects,
           ),
         ),
-        if (c.mode.isChallenge) ...[Center(child: CardLabel(s.modeName(c.mode).toUpperCase())), const SizedBox(height: 6)],
+        if (c.mode.isChallenge) ...[Center(child: CardLabel(s.upper(s.modeName(c.mode)))), const SizedBox(height: 6)],
         Text(
           title,
           textAlign: TextAlign.center,

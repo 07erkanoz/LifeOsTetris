@@ -624,7 +624,7 @@ class _LevelSelectState extends State<_LevelSelect> {
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
                 children: [
                   for (var ch = 1; ch <= chapters; ch++) ...[
-                    Padding(padding: const EdgeInsets.fromLTRB(4, 14, 0, 8), child: CardLabel(s.chapter(ch).toUpperCase())),
+                    Padding(padding: const EdgeInsets.fromLTRB(4, 14, 0, 8), child: CardLabel(s.upper(s.chapter(ch)))),
                     GridView.count(
                       crossAxisCount: wide ? 10 : 5,
                       shrinkWrap: true,
@@ -1370,12 +1370,13 @@ class _LevelResult extends StatelessWidget {
       children: [
         Center(
           child: CardLabel(
-            (daily
-                    ? s.dailyTitle
-                    : adventure
-                    ? s.adventureLevel(chapter, step + 1)
-                    : s.levelNumber(level.number))
-                .toUpperCase(),
+            s.upper(
+              daily
+                  ? s.dailyTitle
+                  : adventure
+                  ? s.adventureLevel(chapter, step + 1)
+                  : s.levelNumber(level.number),
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -1706,7 +1707,7 @@ class _ChapterCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CardLabel(s.chapter(chapter).toUpperCase()),
+                CardLabel(s.upper(s.chapter(chapter))),
                 const SizedBox(height: 2),
                 Row(
                   children: [
@@ -1865,7 +1866,7 @@ class _EndlessOver extends StatelessWidget {
       landscapeTail: 4,
       scrim: true,
       children: [
-        if (c.isBombs) ...[Center(child: CardLabel(s.bombTitle.toUpperCase())), const SizedBox(height: 6)],
+        if (c.isBombs) ...[Center(child: CardLabel(s.upper(s.bombTitle))), const SizedBox(height: 6)],
         Text(
           game.loss == BlockLoss.bomb ? s.bombWentOffTitle : s.noRoomTitle,
           textAlign: TextAlign.center,

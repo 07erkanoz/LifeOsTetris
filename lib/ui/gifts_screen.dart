@@ -413,7 +413,7 @@ class _Event extends StatelessWidget {
       child: Column(
         key: const ValueKey('gift-event-panel'),
         children: [
-          Text(s.eventTitle.toUpperCase(), style: _style(13, _muted)),
+          Text(s.upper(s.eventTitle), style: _style(13, _muted)),
           CandyText(s.eventName(e.name), size: 26, color: const Color(0xFFD92B4A), stroke: 0),
           Text(s.eventDaysLeft(WeeklyEvent.daysLeft(settings.clock())), style: _style(14, const Color(0xFFE0247A))),
           const SizedBox(height: 8),

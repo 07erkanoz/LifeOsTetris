@@ -297,7 +297,7 @@ class _ModesPage extends StatelessWidget {
     final s = AppStrings.of(context);
     final last = _PlayMode.fromName(settings.lastPlay);
     String groupTitle(_ModeGroup g) => switch (g) {
-      _ModeGroup.classic => s.classicTitle.toUpperCase(),
+      _ModeGroup.classic => s.upper(s.classicTitle),
       _ModeGroup.superGroup => s.superGroup,
       _ModeGroup.puzzle => s.puzzleGroup,
       _ModeGroup.chain => s.chainGroup,

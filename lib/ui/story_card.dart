@@ -224,7 +224,7 @@ class _Plaque extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          when.toUpperCase(),
+          AppStrings.of(context).upper(when),
           style: TextStyle(fontFamily: 'Baloo2', fontSize: size * 0.9, fontWeight: FontWeight.w800, color: const Color(0xFFFFD36B), letterSpacing: 1.2),
         ),
         const SizedBox(height: 4),

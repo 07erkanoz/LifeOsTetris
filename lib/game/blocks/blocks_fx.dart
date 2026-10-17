@@ -454,7 +454,7 @@ class BlocksFx implements BackdropFx {
     }
     floaters.add(
       Floater(_mid, (cy - 1.5).clamp(1.6, 6.4), [
-        FloaterLine(strings.bombWentOffTitle.toUpperCase(), 1.1, _hot, glow: const Color(0xFFEF4444)),
+        FloaterLine(strings.upper(strings.bombWentOffTitle), 1.1, _hot, glow: const Color(0xFFEF4444)),
       ], duration: 1.6),
     );
     boardFlash = 1;
