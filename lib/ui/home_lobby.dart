@@ -112,6 +112,7 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
           Positioned.fill(
             child: RepaintBoundary(child: CustomPaint(painter: BackgroundBasePainter(p))),
           ),
+          Positioned.fill(child: _LobbyBackdrop(c: c)),
           SafeArea(
             child: LayoutBuilder(
               builder: (context, box) {
@@ -1146,7 +1147,7 @@ class _LobbySprites {
   }
 
   ui.Image candy(SugarColor c) => _images[c] ??= _render((canvas, r) => paintCandy(canvas, r, c));
-  ui.Image pyramid(ChainColor c) => _images[c] ??= _render((canvas, r) => paintPyramidCube(canvas, r.deflate(cell * 0.03), chainColors[c]!, halo: false));
+  ui.Image pyramid(ChainColor c) => _images[c] ??= _render((canvas, r) => paintChainCube(canvas, r.deflate(cell * 0.03), chainColors[c]!, halo: false));
 
   void draw(Canvas canvas, ui.Image image, Offset topLeft, {double scale = 1}) {
     final side = cell * (1 + 2 * pad) * scale;

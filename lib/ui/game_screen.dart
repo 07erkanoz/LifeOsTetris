@@ -17,7 +17,7 @@ import '../core/sugar/sugar_game.dart' show SugarColor;
 import '../core/sugar/sugar_levels.dart';
 import '../core/tetris_game.dart';
 import '../game/blocks/blocks_controller.dart';
-import '../game/chain/chain_sprites.dart' show chainColors, paintPyramidCube;
+import '../game/chain/chain_sprites.dart' show chainColors, paintChainCube;
 import '../game/game_controller.dart';
 import '../game/motivation.dart';
 import '../game/sugar/sugar_art.dart' show LokumPose, paintCandy, paintLokum, paintSparkle, paintSugarLabel;
@@ -43,6 +43,7 @@ import 'theme_picker.dart';
 import 'widgets.dart';
 
 part 'home_lobby.dart';
+part 'lobby_backdrop.dart';
 part 'home_menu.dart';
 
 String formatTime(double seconds) {
