@@ -1,11 +1,14 @@
-/* LifeOS Küpler web page: the game's own colours (toy HD, dark). */
+/* LifeOS Küpler web page: the game's own colours (the violet of its new
+   look, dark). */
 :root {
-  --bg: #241d31;
-  --bg-deep: #1c1626;
-  --bg-alt: #2c2440;
-  --card: #362d4c;
-  --card-hi: #41375a;
-  --line: #4a3f66;
+  --bg: #241a4a;
+  --bg-deep: #170f33;
+  --bg-alt: #2c2058;
+  --card: #34276a;
+  --card-hi: #403180;
+  --line: #4d3c8f;
+  --pink: #ff6fb5;
+  --pink-dark: #c8357c;
   --text: #fbf6ee;
   --text-dim: #cfc6e0;
   --text-muted: #9d93b5;
@@ -35,7 +38,7 @@ body::before {
   z-index: -1;
   background:
     radial-gradient(circle at 1px 1px, rgba(255, 255, 255, .06) 1.4px, transparent 1.6px) 0 0 / 28px 28px,
-    radial-gradient(ellipse at 70% -10%, #3d3254 0, transparent 60%),
+    radial-gradient(ellipse at 70% -10%, #4a2f8a 0, transparent 60%),
     var(--bg);
 }
 img { max-width: 100%; height: auto; display: block; }
@@ -79,7 +82,7 @@ h3 { font-size: 1.45rem; font-weight: 800; }
 /* ── Header ── */
 .top {
   position: sticky; top: 0; z-index: 10;
-  background: rgba(28, 22, 38, .82);
+  background: rgba(23, 15, 51, .82);
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(255, 255, 255, .06);
 }
@@ -166,6 +169,40 @@ details p { color: var(--text-dim); margin: 0 0 16px; }
 .foot p { margin: 0; }
 .foot a { color: var(--text-dim); }
 
+/* ── New: pink buttons, badges, big game cards, split sections, play ── */
+.btn-pink { background: var(--pink); color: #fff; box-shadow: 0 5px 0 var(--pink-dark); }
+.btn-pink:hover { transform: translateY(-2px); box-shadow: 0 7px 0 var(--pink-dark); }
+.btn-pink:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--pink-dark); }
+.btn-sm.btn-pink { box-shadow: 0 4px 0 var(--pink-dark); }
+.tag-pink { background: rgba(255, 111, 181, .25); }
+.new {
+  display: inline-block; margin-left: 8px; padding: 2px 9px; border-radius: 999px;
+  font: 800 .72rem Inter, sans-serif; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--ink); background: var(--yellow); vertical-align: 5px;
+}
+.modes-big { grid-template-columns: repeat(2, 1fr); margin-bottom: 20px; }
+.modes-big .mode img { aspect-ratio: 4 / 3.3; object-position: center 45%; }
+
+.split { display: grid; grid-template-columns: 1.15fr .85fr; gap: 40px; align-items: center; }
+.split-rev { grid-template-columns: .85fr 1.15fr; }
+.split-shots { display: flex; gap: 16px; justify-content: center; }
+.split-shots img { width: 46%; max-width: 230px; border-radius: 26px; border: 5px solid #0f0b16; box-shadow: 0 18px 36px rgba(0, 0, 0, .4); }
+.split-shots img:nth-child(2) { transform: translateY(34px) rotate(3deg); }
+.features { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.features li { background: var(--card); border-radius: 18px; padding: 16px 20px; box-shadow: 0 5px 0 var(--bg-deep); }
+.features b { display: block; font: 800 1.15rem 'Baloo 2', sans-serif; }
+.features span { color: var(--text-dim); font-size: .95rem; }
+
+.play {
+  display: flex; align-items: center; justify-content: space-between; gap: 28px;
+  padding: 34px 38px; border-radius: 28px;
+  background: linear-gradient(120deg, #5a26a8, #b0307e);
+  box-shadow: 0 8px 0 var(--bg-deep), 0 24px 60px rgba(0, 0, 0, .35);
+}
+.play p { margin: 10px 0 0; color: #f3e8ff; max-width: 60ch; }
+.play .note { font-size: .9rem; color: #ffd6ef; }
+.play .btn { flex: 0 0 auto; }
+
 /* ── Small screens ── */
 @media (max-width: 960px) {
   .hero-grid { grid-template-columns: 1fr; }
@@ -178,6 +215,10 @@ details p { color: var(--text-dim); margin: 0 0 16px; }
   .downloads { grid-template-columns: 1fr 1fr; }
   .powers { grid-template-columns: 1fr 1fr; }
   .stats { grid-template-columns: 1fr 1fr; }
+  .modes-big { grid-template-columns: 1fr; }
+  .split, .split-rev { grid-template-columns: 1fr; }
+  .split-rev .split-shots { order: 2; }
+  .play { flex-direction: column; align-items: flex-start; }
 }
 @media (max-width: 600px) {
   body { font-size: 16px; }
@@ -191,6 +232,9 @@ details p { color: var(--text-dim); margin: 0 0 16px; }
   .downloads, .powers { grid-template-columns: 1fr; }
   .section { padding: 54px 0; }
   .gallery img { width: 200px; }
+  .top-nav .btn-yellow { display: none; }
+  .play { padding: 26px 22px; }
+  .play .btn { width: 100%; justify-content: flex-start; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
