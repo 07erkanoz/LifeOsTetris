@@ -32,7 +32,10 @@ enum Unlock {
   outfitSimitNecklace,
 
   /// The guide's hat, for a full postcard album.
-  outfitGuide;
+  outfitGuide,
+
+  /// The golden lemon crown, for beating Ekşi Limon at his best.
+  outfitLemonCrown;
 
   static Unlock? parse(String name) {
     for (final u in values) {
@@ -169,6 +172,25 @@ abstract final class Rewards {
 
   /// The card of chapter [chapter], if it has one.
   static int? chapterCard(int chapter) => chapter < chapterCards.length ? chapterCards[chapter] : null;
+
+  // ------------------------------------------------- Zincir: the ferry line
+
+  /// What reaching pier [pier] (all five missions done) gives; the last
+  /// pier gives more.
+  static Gift pierPrize(int pier, {bool last = false}) => last
+      ? const Gift(boosters: {SugarBooster.hammer: 4, SugarBooster.rainbow: 3, SugarBooster.moves: 3}, freezes: 5)
+      : Gift(boosters: {pier.isEven ? SugarBooster.hammer : SugarBooster.rainbow: 1}, freezes: 2);
+
+  /// The first match won against each rival: the lokum cubes, the İznik
+  /// tiles, the golden lemon crown.
+  static Gift rivalPrize(int rival) => switch (rival) {
+    0 => const Gift(freezes: 2, unlock: Unlock.cubesLokum),
+    1 => const Gift(freezes: 2, unlock: Unlock.cubesCini),
+    _ => const Gift(freezes: 3, unlock: Unlock.outfitLemonCrown),
+  };
+
+  /// A whole pack of Zincir puzzles solved.
+  static Gift puzzlePackPrize(int pack) => Gift(boosters: const {SugarBooster.hammer: 2, SugarBooster.rainbow: 2}, freezes: 1 + pack);
 
   /// What completing set [i] gives; the last set to be completed also
   /// opens the guide's hat.

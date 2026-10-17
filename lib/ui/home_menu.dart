@@ -15,6 +15,9 @@ enum _PlayMode {
   bomb(_ModeGroup.puzzle, isNew: true),
   chainEndless(_ModeGroup.chain, isNew: true),
   chainTime(_ModeGroup.chain, isNew: true),
+  chainMissions(_ModeGroup.chain, isNew: true),
+  chainPuzzles(_ModeGroup.chain, isNew: true),
+  chainVersus(_ModeGroup.chain, isNew: true),
   sugar(_ModeGroup.sugar, isNew: true),
   sprint(_ModeGroup.challenges),
   ultra(_ModeGroup.challenges),
@@ -57,6 +60,9 @@ enum _PlayMode {
     _PlayMode.bomb => s.bombTitle,
     _PlayMode.chainEndless => s.chainEndlessTitle,
     _PlayMode.chainTime => s.chainTimeTitle,
+    _PlayMode.chainMissions => s.chainMissionsTitle,
+    _PlayMode.chainPuzzles => s.chainPuzzlesTitle,
+    _PlayMode.chainVersus => s.chainVersusTitle,
     _PlayMode.sugar => s.sugarTitle,
     _PlayMode.target => s.targetTitle,
     _PlayMode.chaos => s.chaosTitle,
@@ -83,6 +89,9 @@ enum _PlayMode {
     _PlayMode.bomb => s.bombSubtitle,
     _PlayMode.chainEndless => s.chainEndlessSubtitle,
     _PlayMode.chainTime => s.chainTimeSubtitle,
+    _PlayMode.chainMissions => s.chainMissionsSubtitle,
+    _PlayMode.chainPuzzles => s.chainPuzzlesSubtitle,
+    _PlayMode.chainVersus => s.chainVersusSubtitle,
     _PlayMode.sugar => s.sugarSubtitle,
     _PlayMode.target => s.targetSubtitle,
     _PlayMode.chaos => s.chaosSubtitle,
@@ -101,6 +110,9 @@ enum _PlayMode {
     _PlayMode.bomb => Icons.local_fire_department_rounded,
     _PlayMode.chainEndless => Icons.link_rounded,
     _PlayMode.chainTime => Icons.hourglass_bottom_rounded,
+    _PlayMode.chainMissions => Icons.directions_boat_rounded,
+    _PlayMode.chainPuzzles => Icons.extension_rounded,
+    _PlayMode.chainVersus => Icons.sports_kabaddi_rounded,
     _PlayMode.sugar => Icons.cake_rounded,
     _PlayMode.target => Icons.star_rounded,
     _PlayMode.chaos => Icons.casino_rounded,
@@ -119,6 +131,9 @@ enum _PlayMode {
         _PlayMode.bomb => PieceType.z,
         _PlayMode.chainEndless => PieceType.t,
         _PlayMode.chainTime => PieceType.o,
+        _PlayMode.chainMissions => PieceType.i,
+        _PlayMode.chainPuzzles => PieceType.s,
+        _PlayMode.chainVersus => PieceType.z,
         _PlayMode.sugar => PieceType.z,
         _PlayMode.adventure => PieceType.l,
         _PlayMode.target => PieceType.o,
@@ -153,6 +168,12 @@ enum _PlayMode {
         0 => null,
         final best => s.score(best),
       },
+      _PlayMode.chainMissions => settings.totalMissionStars > 0 ? s.starsLine(settings.totalMissionStars, ChainMissions.count * 3) : null,
+      _PlayMode.chainPuzzles => settings.puzzlesSolved > 0 ? '${settings.puzzlesSolved}/${ChainPuzzles.count}' : null,
+      _PlayMode.chainVersus => switch ([for (final r in ChainRival.values) settings.rivalWins(r.index)].fold(0, (a, b) => a + b)) {
+        0 => null,
+        final wins => s.rivalWins(wins),
+      },
       _ => null,
     };
   }
@@ -169,6 +190,19 @@ void _launch(BuildContext context, GameController c, _PlayMode mode) {
   if (mode == _PlayMode.sugar) {
     SugarMapScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics);
     return;
+  }
+  switch (mode) {
+    case _PlayMode.chainMissions:
+      ChainMissionsScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics);
+      return;
+    case _PlayMode.chainPuzzles:
+      ChainPuzzlesScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics);
+      return;
+    case _PlayMode.chainVersus:
+      ChainVersusScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics);
+      return;
+    default:
+      break;
   }
   final chain = mode.chainMode;
   if (chain != null) {

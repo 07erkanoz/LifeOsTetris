@@ -753,7 +753,7 @@ void _tryUnlock(Settings settings, Unlock u) {
       settings.chainCubes = ChainCubeStyle.cini.name;
     case Unlock.sceneGalata || Unlock.sceneSnow || Unlock.sceneIslands || Unlock.sceneCamlica:
       settings.sugarScene = u.name;
-    case Unlock.outfitTulipCrown || Unlock.outfitCaptain || Unlock.outfitApron || Unlock.outfitSimitNecklace || Unlock.outfitGuide:
+    case Unlock.outfitTulipCrown || Unlock.outfitCaptain || Unlock.outfitApron || Unlock.outfitSimitNecklace || Unlock.outfitGuide || Unlock.outfitLemonCrown:
       settings.lokumOutfit = LokumOutfit.values.firstWhere((o) => o.gift == u.name).name;
     case Unlock.shuffle || Unlock.freeze:
       break;

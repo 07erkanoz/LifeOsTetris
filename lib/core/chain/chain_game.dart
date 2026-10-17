@@ -2,7 +2,9 @@ import 'dart:math';
 
 /// Zincir Küpler: swap two neighbouring cubes so three or more of a colour
 /// line up; the cleared cubes let the ones above fall, and a fall that makes
-/// a new match is a chain. The stack keeps rising from below.
+/// a new match is a chain. The stack keeps rising from below. Puzzles hold
+/// the stack still and count the swaps; missions set a goal and a clock;
+/// in a match against the computer, big clears send garbage across.
 ///
 /// Pure game logic: no Flutter, time advances only through [ChainGame.update].
 /// The board is [ChainGame.height] rows of [ChainGame.width] columns, row 0 at
@@ -10,7 +12,45 @@ import 'dart:math';
 
 enum ChainColor { yellow, magenta, blue, green, orange, gray }
 
-enum ChainMode { endless, timeAttack }
+enum ChainMode { endless, timeAttack, puzzle, mission, versus }
+
+/// What a mission asks for.
+enum MissionKind {
+  /// Reach a chain of [ChainMission.target] [ChainMission.count] times.
+  chain,
+
+  /// Break [ChainMission.target] cells of garbage.
+  garbage,
+
+  /// Score [ChainMission.target] points.
+  score,
+
+  /// Keep off the top until the clock runs out.
+  survive,
+
+  /// Solve a puzzle ([ChainMission.target] is its number).
+  puzzle,
+
+  /// Beat a rival ([ChainMission.target] is the rival's index).
+  versus,
+}
+
+/// One mission of the ferry line: what to do, against which clock, at
+/// which speed.
+class ChainMission {
+  const ChainMission({required this.number, required this.kind, required this.target, this.count = 1, this.seconds = 90, this.difficulty = ChainDifficulty.normal});
+
+  /// 1-based, in the order of the piers.
+  final int number;
+  final MissionKind kind;
+  final int target;
+  final int count;
+  final double seconds;
+  final ChainDifficulty difficulty;
+
+  /// Played on the rising board (not a puzzle or a match).
+  bool get onBoard => kind != MissionKind.puzzle && kind != MissionKind.versus;
+}
 
 /// How forgiving a game is: colours in play, rise speed, the time allowed
 /// at the top and how often garbage drops.
@@ -162,8 +202,24 @@ class ChainDanger extends ChainEvent {
 }
 
 class ChainGameOver extends ChainEvent {
-  const ChainGameOver({required this.timeUp});
+  const ChainGameOver({required this.timeUp, this.won = false});
   final bool timeUp;
+
+  /// A puzzle solved, a mission done, a match won.
+  final bool won;
+}
+
+/// A mission goal moved on: [progress] of [target].
+class ChainMissionProgress extends ChainEvent {
+  const ChainMissionProgress(this.progress, this.target);
+  final int progress, target;
+}
+
+/// Garbage for the other side of a match, [widths] one slab each.
+class ChainAttack extends ChainEvent {
+  const ChainAttack(this.widths, {required this.chain});
+  final List<int> widths;
+  final bool chain;
 }
 
 class _ClearGroup {
@@ -230,6 +286,23 @@ class ChainGame {
   int cursorX = 2;
   int cursorY = 8;
 
+  /// A puzzle: swaps left, and the boards before each swap (for undo).
+  int movesLeft = 0;
+  final List<List<String>> _history = [];
+  List<String> _puzzle = const [];
+
+  /// A mission: its goal and how far along it is.
+  ChainMission? mission;
+  int missionProgress = 0;
+
+  /// The game ended with its goal met (a puzzle solved, a mission done,
+  /// a match won).
+  bool won = false;
+
+  /// A match: garbage waiting to drop on this board.
+  final List<int> pendingGarbage = [];
+  double _dropIn = 0;
+
   int _nextId = 0;
   double _garbageIn = 0;
 
@@ -246,6 +319,15 @@ class ChainGame {
   double secondsPerRow(int level) => difficulty.secondsPerRow(level);
 
   bool get busy => _groups.isNotEmpty || slabs.any((s) => s.breaking);
+
+  bool get isPuzzle => mode == ChainMode.puzzle;
+
+  /// Nothing moving: no clears, no falls, no swaps under way.
+  bool get settled =>
+      _groups.isEmpty && slabs.every((s) => !s.breaking && !s.falling) && board.every((row) => row.every((b) => b == null || (b.state == BlockState.idle && !b.chain)));
+
+  /// Seconds left on a mission's clock.
+  double get missionLeft => mission == null ? 0 : max(0, mission!.seconds - time);
 
   List<ChainEvent> drainEvents() {
     final out = List<ChainEvent>.of(_events);
@@ -269,9 +351,15 @@ class ChainGame {
     level = 1;
     maxChain = chainCount = 1;
     time = stopTime = grace = 0;
-    danger = raising = timeUp = false;
+    danger = raising = timeUp = won = false;
     cursorX = 2;
     cursorY = 8;
+    movesLeft = 0;
+    _history.clear();
+    mission = null;
+    missionProgress = 0;
+    pendingGarbage.clear();
+    _dropIn = 0;
     _garbageIn = difficulty.firstGarbage;
     // Uneven starting stack, 4 to 6 high, without ready-made matches.
     final heights = [for (var x = 0; x < width; x++) 4 + _random.nextInt(3)];
@@ -282,6 +370,66 @@ class ChainGame {
     }
     incoming = _newRow();
     status = ChainStatus.playing;
+  }
+
+  /// A puzzle: [rows] (as [debugSetBoard] takes them) to clear in [moves]
+  /// swaps; the stack does not rise.
+  void startPuzzle(List<String> rows, int moves) {
+    start(ChainMode.puzzle, difficulty: ChainDifficulty.easy);
+    _puzzle = rows;
+    debugSetBoard(rows);
+    incoming = [];
+    movesLeft = moves;
+    cursorY = height - 2;
+  }
+
+  /// Starts [m] on the rising board: garbage missions begin with slabs to
+  /// break.
+  void startMission(ChainMission m) {
+    start(ChainMode.mission, difficulty: m.difficulty);
+    mission = m;
+    if (m.kind == MissionKind.garbage) {
+      // Slabs over the stack, enough to reach the target with a little
+      // spare; more drop as they go.
+      for (var i = 0; i < 2; i++) {
+        _dropSlab(width, 0);
+        _updateGravityNow();
+      }
+      _garbageIn = 8;
+    }
+  }
+
+  /// A match against the computer: no garbage of its own, only what the
+  /// other side sends.
+  void startVersus({ChainDifficulty difficulty = ChainDifficulty.easy}) => start(ChainMode.versus, difficulty: difficulty);
+
+  /// Garbage the other side sent.
+  void receive(List<int> widths) {
+    if (status != ChainStatus.playing) return;
+    pendingGarbage.addAll(widths);
+    if (_dropIn <= 0) _dropIn = 1.0;
+  }
+
+  /// Lets dropped slabs land right away (for the start of a mission).
+  void _updateGravityNow() {
+    for (var i = 0; i < height * 2; i++) {
+      _updateGravity(1 / fallSpeed);
+    }
+  }
+
+  /// Back one swap in a puzzle.
+  bool undo() {
+    if (!isPuzzle || _history.isEmpty || !settled || isOver) return false;
+    debugSetBoard(_history.removeLast());
+    movesLeft++;
+    return true;
+  }
+
+  /// The puzzle as it began.
+  void restartPuzzle() {
+    if (!isPuzzle) return;
+    final moves = movesLeft + _history.length;
+    startPuzzle(_puzzle, moves);
   }
 
   /// A colour that does not complete three in a row with what is already
@@ -333,6 +481,12 @@ class ChainGame {
     final a = board[y][x], b = board[y][x + 1];
     if (a == null && b == null) return false;
     if (!_swappable(a) || !_swappable(b)) return false;
+    // A puzzle takes one swap at a time, each from a still board.
+    if (isPuzzle) {
+      if (movesLeft <= 0 || !settled || (a != null && b != null && a.color == b.color)) return false;
+      _history.add(debugRows());
+      movesLeft--;
+    }
     // A cube cannot slide in right under one that is about to fall.
     if (y > 0) {
       for (final (cell, arriving) in [(x, b), (x + 1, a)]) {
@@ -365,20 +519,90 @@ class ChainGame {
       _end(timeUp: true);
       return;
     }
-    final newLevel = min(maxLevel, 1 + time ~/ (isTimeAttack ? difficulty.levelEvery / 2 : difficulty.levelEvery));
-    if (newLevel != level) {
-      level = newLevel;
-      _events.add(ChainLevelUp(level));
+    final m = mission;
+    if (m != null && time >= m.seconds) {
+      // Out of time: surviving was the goal, anything else is missed.
+      timeUp = true;
+      _end(timeUp: true, won: m.kind == MissionKind.survive);
+      return;
+    }
+    if (!isPuzzle) {
+      final newLevel = min(maxLevel, 1 + time ~/ (isTimeAttack ? difficulty.levelEvery / 2 : difficulty.levelEvery));
+      if (newLevel != level) {
+        level = newLevel;
+        _events.add(ChainLevelUp(level));
+      }
     }
     _updateSwaps(dt);
     _updateClears(dt);
     _updateGravity(dt);
     _findMatches();
     _settleChains();
+    if (isPuzzle) {
+      _checkPuzzle();
+      return;
+    }
     _updateRise(dt);
     if (status != ChainStatus.playing) return;
-    if (!isTimeAttack && difficulty.garbage) _updateGarbage(dt);
+    if (mode == ChainMode.versus) {
+      _dropPending(dt);
+    } else if (!isTimeAttack && (difficulty.garbage || m?.kind == MissionKind.garbage) && m?.kind != MissionKind.chain) {
+      _updateGarbage(dt);
+    }
     _updateDanger();
+    if (m != null && m.kind == MissionKind.score) _progress(score);
+  }
+
+  /// A puzzle ends once the board is still: cleared, or out of swaps.
+  void _checkPuzzle() {
+    if (!settled) return;
+    if (board.every((row) => row.every((b) => b == null))) {
+      _end(timeUp: false, won: true);
+    } else if (movesLeft <= 0) {
+      _end(timeUp: false);
+    }
+  }
+
+  /// A mission's goal moved to [value].
+  void _progress(int value) {
+    final m = mission!;
+    final target = switch (m.kind) {
+      MissionKind.chain => m.count,
+      _ => m.target,
+    };
+    if (value == missionProgress) return;
+    missionProgress = min(value, target);
+    _events.add(ChainMissionProgress(missionProgress, target));
+    if (missionProgress >= target) _end(timeUp: false, won: true);
+  }
+
+  /// Drops the next slab the other side sent, when there is room.
+  void _dropPending(double dt) {
+    if (pendingGarbage.isEmpty) return;
+    _dropIn -= dt;
+    if (_dropIn > 0) return;
+    final w = pendingGarbage.first;
+    final x = w >= width ? 0 : (_nextId.isEven ? 0 : width - w);
+    if (_dropSlab(w, x)) {
+      pendingGarbage.removeAt(0);
+      _dropIn = 0.6;
+    } else {
+      _dropIn = 0.4;
+    }
+  }
+
+  /// A slab [w] wide at column [x] on the top row, if it is free.
+  bool _dropSlab(int w, int x) {
+    for (var i = 0; i < w; i++) {
+      if (board[0][x + i] != null || board[1][x + i] != null) return false;
+    }
+    final slab = GarbageSlab(_nextId++, x, 0, w);
+    slabs.add(slab);
+    for (var i = 0; i < w; i++) {
+      board[0][x + i] = ChainBlock(_nextId++, ChainColor.gray, slab: slab);
+    }
+    _events.add(ChainGarbageDropped(slab));
+    return true;
   }
 
   void _updateSwaps(double dt) {
@@ -453,6 +677,7 @@ class ChainGame {
     }
     score += slab.width * 5;
     _events.add(ChainGarbageBroken(slab.x, slab.y, slab.width));
+    if (mission?.kind == MissionKind.garbage) _progress(missionProgress + slab.width);
   }
 
   bool _emptyBelow(int x, int y) => y + 1 < height && board[y + 1][x] == null;
@@ -635,6 +860,10 @@ class ChainGame {
     if (chain >= 2) stopTime += (1.2 + 0.4 * (chain - 2)) * difficulty.stopScale;
     stopTime = min(stopTime, 6 * difficulty.stopScale);
     _groups.add(_ClearGroup(blocks, chain, broken));
+    final m = mission;
+    if (m != null && m.kind == MissionKind.chain && chain == m.target) _progress(missionProgress + 1);
+    // A big combo sends a slab across: four cubes a 3-wide one, up to six.
+    if (mode == ChainMode.versus && blocks.length >= 4) _events.add(ChainAttack([min(width, blocks.length - 1)], chain: false));
     _events.add(ChainMatched(
       cells: [for (var i = 0; i < cells.length; i++) (cells[i].$1, cells[i].$2, blocks[i].color)],
       chain: chain,
@@ -661,6 +890,8 @@ class ChainGame {
     }
     if (!flagged && _groups.isEmpty && chainCount > 1) {
       _events.add(ChainEnded(chainCount));
+      // A chain sends whole rows: one for ×2, two for ×3, up to four.
+      if (mode == ChainMode.versus) _events.add(ChainAttack(List.filled(min(4, chainCount - 1), width), chain: true));
       chainCount = 1;
     }
   }
@@ -719,7 +950,9 @@ class ChainGame {
       board[0][x + i] = ChainBlock(_nextId++, ChainColor.gray, slab: slab);
     }
     _events.add(ChainGarbageDropped(slab));
-    _garbageIn = max(difficulty.garbageEvery * 0.45, difficulty.garbageEvery - level * 2);
+    // A garbage mission keeps slabs coming at its own pace.
+    final every = mission?.kind == MissionKind.garbage ? 9.0 : difficulty.garbageEvery;
+    _garbageIn = max(every * 0.45, every - level * 2);
   }
 
   void _updateDanger() {
@@ -730,10 +963,17 @@ class ChainGame {
     }
   }
 
-  void _end({required bool timeUp}) {
+  void _end({required bool timeUp, bool won = false}) {
     status = ChainStatus.over;
     raising = false;
-    _events.add(ChainGameOver(timeUp: timeUp));
+    this.won = won;
+    _events.add(ChainGameOver(timeUp: timeUp, won: won));
+  }
+
+  /// The other side topped out (a match), or the player gave up.
+  void endMatch({required bool won}) {
+    if (status != ChainStatus.playing) return;
+    _end(timeUp: false, won: won);
   }
 
   // ---------------------------------------------------------------- tests --

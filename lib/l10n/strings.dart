@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../core/chain/chain_game.dart';
 import '../core/game_events.dart';
 import '../core/scoring.dart';
 import '../theme/palette.dart';
@@ -305,6 +306,7 @@ class AppStrings {
     'outfitCaptain' => _t('Vapur kaptanı şapkası', "Ferry captain's cap"),
     'outfitApron' => _t('Kahveci önlüğü', "Coffee maker's apron"),
     'outfitGuide' => _t('Rehber şapkası', "Guide's hat"),
+    'outfitLemonCrown' => _t('Altın Limon tacı', 'Golden lemon crown'),
     _ => _t('Simit kolye', 'Simit necklace'),
   };
   String unlockText(String u) => switch (u) {
@@ -387,6 +389,7 @@ class AppStrings {
     'apron' => _t('Kahveci önlüğü', "Coffee apron"),
     'simitNecklace' => _t('Simit kolye', 'Simit necklace'),
     'guide' => _t('Rehber şapkası', "Guide's hat"),
+    'lemonCrown' => _t('Altın Limon tacı', 'Golden lemon crown'),
     _ => _t('Kostümsüz', 'No outfit'),
   };
   String outfitUnlocked(String name) => _t('Yeni kostüm: ${outfitName(name)}!', 'New outfit: ${outfitName(name)}!');
@@ -482,6 +485,95 @@ class AppStrings {
   String get chainRaise => _t('Yükselt', 'Raise');
   String chainLongest(int n) => _t('En uzun zincir ×$n', 'Longest chain ×$n');
   String chainCubes(int n) => _t('$n küp patlattın', '$n cubes cleared');
+
+  // Zincir: the ferry line, puzzles, the match against Ekşi Limon.
+  String get chainMissionsTitle => _t('Vapur Hattı', 'Ferry Line');
+  String get chainMissionsSubtitle => _t('Boğaz iskelelerinde görevler', 'Missions along the Bosphorus piers');
+  String get chainPuzzlesTitle => _t('Bulmacalar', 'Puzzles');
+  String get chainPuzzlesSubtitle => _t('Hazır tahtayı az hamlede temizle', 'Clear a set board in a few swaps');
+  String get chainVersusTitle => _t("Limon'a Karşı", 'Versus Lemon');
+  String get chainVersusSubtitle => _t('Bilgisayara karşı maç', 'A match against the computer');
+  String missionLabel(int n) => _t('GÖREV $n', 'MISSION $n');
+  String pierMissions(int first) => _t('Görev $first–${first + 4}', 'Missions $first–${first + 4}');
+  String missionText(ChainMission m) {
+    final secs = m.seconds.round();
+    return switch (m.kind) {
+      MissionKind.chain => m.count == 1
+          ? _t('$secs saniyede ×${m.target} zincir yap', 'Make a ×${m.target} chain in $secs s')
+          : _t('$secs saniyede ${m.count} kez ×${m.target} zincir yap', 'Make ${m.count} ×${m.target} chains in $secs s'),
+      MissionKind.score => _t('$secs saniyede ${score(m.target)} puan yap', 'Score ${score(m.target)} in $secs s'),
+      MissionKind.garbage => _t('$secs saniyede ${m.target} kare çöp kır', 'Break ${m.target} garbage cells in $secs s'),
+      MissionKind.survive => _t('$secs saniye tavana değmeden dayan', 'Keep off the top for $secs s'),
+      MissionKind.puzzle => _t('Bulmaca ${m.target}: tahtayı temizle', 'Puzzle ${m.target}: clear the board'),
+      MissionKind.versus => _t('${rivalName(m.target)} rakibini yen', 'Beat ${rivalName(m.target)}'),
+    };
+  }
+
+  String missionProgress(int p, int t) => '$p / $t';
+  String get missionGoal => _t('HEDEF', 'GOAL');
+  String get missionDone => _t('GÖREV TAMAM!', 'MISSION DONE!');
+  String get missionMissed => _t('OLMADI', 'NOT THIS TIME');
+  String get missionPlay => _t('OYNA', 'PLAY');
+  String pierDone(String pier) => _t('$pier iskelesi tamam!', '$pier pier done!');
+  String get missionsAllDone => _t('Bütün iskeleler tamam! Yıldızları topla.', 'Every pier done! Go for the stars.');
+  String prizeLine(String items) => _t('Ödül: $items', 'Prize: $items');
+  String freezesCount(int n) => _t('Zamanı Durdur ×$n', 'Stop the Clock ×$n');
+  String get europe => _t('AVRUPA', 'EUROPE');
+  String get asia => _t('ASYA', 'ASIA');
+  String puzzleLabel(int n) => _t('BULMACA $n', 'PUZZLE $n');
+  String puzzleGoal(int moves) => moves == 1 ? _t('Tahtayı tek hamlede temizle', 'Clear the board in one swap') : _t('Tahtayı $moves hamlede temizle', 'Clear the board in $moves swaps');
+  String get puzzleSolved => _t('ÇÖZÜLDÜ!', 'SOLVED!');
+  String get puzzleFailed => _t('HAMLE BİTTİ', 'OUT OF SWAPS');
+  String get puzzleHow => _t('Küpler yükselmez, süre işlemez; her kaydırma bir hamle.', 'Nothing rises and no clock runs; every swap is one move.');
+  String get puzzleSwaps => _t('HAMLE', 'SWAPS');
+  String get undo => _t('Geri al', 'Undo');
+  String get hint => _t('İpucu', 'Hint');
+  String get restartShort => _t('Baştan', 'Restart');
+  String get nextOne => _t('Sonraki', 'Next');
+  String get puzzlesHow => _t('Süre yok, yükselme yok; sadece düşün', 'No clock, no rising; just think');
+  String packName(int i) => switch (i) {
+    0 => 'Eminönü',
+    1 => _t('Haliç', 'Golden Horn'),
+    2 => 'Galata',
+    _ => _t('Boğaziçi', 'Bosphorus'),
+  };
+  String packLevel(int i) => switch (i) {
+    0 => _t('Çırak', 'Apprentice'),
+    1 => _t('Kalfa', 'Journeyman'),
+    2 => _t('Usta', 'Master'),
+    _ => _t('Zincir ustası', 'Chain master'),
+  };
+  String get packLocked => _t('Önceki paketi bitir, açılsın', 'Finish the pack before to open it');
+  String get packBebek => _t("Vapur Hattı'nda Bebek'e varınca açılır", 'Opens when the ferry line reaches Bebek');
+  String rivalName(int i) => switch (i) {
+    0 => _t('Limon Çırak', 'Lemon Apprentice'),
+    1 => _t('Limon Kalfa', 'Lemon Journeyman'),
+    _ => _t('Ekşi Limon', 'Sour Lemon'),
+  };
+  String rivalText(int i) => switch (i) {
+    0 => _t('Kolay · yavaş düşünür, zincir kurmaz', 'Easy · slow, never builds chains'),
+    1 => _t('Orta · ×2 zincirler kurar', 'Medium · builds ×2 chains'),
+    _ => _t('Usta · hızlıdır, zincirle saldırır', 'Master · fast, attacks with chains'),
+  };
+  String rivalPrize(int i) => switch (i) {
+    0 => _t('İlk galibiyet: Lokum küpler', 'First win: lokum cubes'),
+    1 => _t('İlk galibiyet: Çini küpler', 'First win: İznik tile cubes'),
+    _ => _t('İlk galibiyet: Altın Limon tacı', 'First win: the golden lemon crown'),
+  };
+  String rivalWins(int n) => n == 0 ? _t('henüz galibiyet yok', 'no wins yet') : _t('$n galibiyet', n == 1 ? '1 win' : '$n wins');
+  String get versusPick => _t('Rakibini seç', 'Pick your rival');
+  String get versusHow => _t('Zincirler ve kombolar rakibe çöp bloğu yollar. Tavana ilk değen seti kaybeder; 3 setin 2\'sini alan kazanır.', 'Chains and combos send garbage across. The first to stay at the top loses the set; best of three.');
+  String get versusYou => _t('SEN', 'YOU');
+  String get setLabel => _t('SET', 'SETS');
+  String versusIncoming(int n) => _t('geliyor: $n kare', 'incoming: $n cells');
+  String get setWon => _t('SETİ ALDIN!', 'SET TO YOU!');
+  String get setLost => _t("SET LİMON'UN", 'SET TO LEMON');
+  String get matchWon => _t('MAÇI KAZANDIN!', 'YOU WON THE MATCH!');
+  String get matchLost => _t('LİMON KAZANDI', 'LEMON WON');
+  String get nextSet => _t('Sonraki set', 'Next set');
+  String get rematch => _t('Rövanş', 'Rematch');
+  String get startMatch => _t('MAÇA BAŞLA', 'START THE MATCH');
+  String get otherRival => _t('Başka rakip', 'Another rival');
 
   // Şeker Küpler
   String get sugarGroup => _t('ŞEKER', 'SWEETS');
@@ -705,6 +797,8 @@ class AppStrings {
       'over' => [_t('Bir daha?', 'Again?'), _t('Az kaldı, tekrar!', 'So close, once more!')],
       'record' => [_t('Yeni rekor!', 'New best!'), _t('Sen bir şampiyonsun!', "You're a champ!")],
       'pause' => [_t('Mola! Bir çay içelim mi?', 'A break! Tea, anyone?'), _t('Dinlen biraz.', 'Have a rest.')],
+      'puzzleStuck' => [_t('Baştan alalım, yol orada!', "Let's restart, the way is there!"), _t('Bir geri al, tekrar bak.', 'Undo one and look again.')],
+      'attack' => [_t('Al sana çöp!', 'Garbage coming your way!'), _t('Limon şaşırdı!', 'That got Lemon!')],
       'choco' => [_t('Çikolata yayılıyor!', 'The chocolate is spreading!'), _t('Çikolatayı durdur!', 'Stop the chocolate!')],
       'fruit' => [_t('Bir nar daha!', 'Another pomegranate!'), _t('Nar bizde!', 'Got the pomegranate!')],
       'cake' => [_t('Pasta bitti!', 'Cake gone!'), _t('Afiyet olsun!', 'Enjoy!')],

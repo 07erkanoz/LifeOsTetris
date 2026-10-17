@@ -510,7 +510,10 @@ enum LokumOutfit {
   simitNecklace(0, 'outfitSimitNecklace'),
 
   /// A tour guide's hat with a little flag, for a full postcard album.
-  guide(0, 'outfitGuide');
+  guide(0, 'outfitGuide'),
+
+  /// A golden crown with a lemon jewel, for beating Ekşi Limon.
+  lemonCrown(0, 'outfitLemonCrown');
 
   const LokumOutfit(this.stars, [this.gift]);
 
@@ -536,7 +539,7 @@ enum LokumOutfit {
 }
 
 /// Outfits that cover the top of the head (no cherry under them).
-bool _hatOn(LokumOutfit o) => const {LokumOutfit.fez, LokumOutfit.kalpak, LokumOutfit.sultan, LokumOutfit.janissary, LokumOutfit.simit, LokumOutfit.captain, LokumOutfit.guide}.contains(o);
+bool _hatOn(LokumOutfit o) => const {LokumOutfit.fez, LokumOutfit.kalpak, LokumOutfit.sultan, LokumOutfit.janissary, LokumOutfit.simit, LokumOutfit.captain, LokumOutfit.guide, LokumOutfit.lemonCrown}.contains(o);
 
 /// Lokum, the mascot: a pink jelly sweet with a cherry on top, [size] tall
 /// around [c]; [hop] 0..1 lifts and squashes it a little, [beat] (0..1,
@@ -991,6 +994,28 @@ void _paintOutfitShape(Canvas canvas, double s, LokumOutfit outfit) {
               ..style = PaintingStyle.stroke
               ..strokeWidth = s * 0.012
               ..color = const Color(0xFFB8A8A0));
+      }
+    case LokumOutfit.lemonCrown:
+      // Ekşi Limon's crown in gold, with a lemon for its jewel.
+      final crown = Path()
+        ..moveTo(-s * 0.28, -s * 0.42)
+        ..lineTo(-s * 0.32, -s * 0.7)
+        ..lineTo(-s * 0.14, -s * 0.56)
+        ..lineTo(0, -s * 0.78)
+        ..lineTo(s * 0.14, -s * 0.56)
+        ..lineTo(s * 0.32, -s * 0.7)
+        ..lineTo(s * 0.28, -s * 0.42)
+        ..close();
+      canvas.drawPath(crown.shift(Offset(0, s * 0.02)), Paint()..color = const Color(0xFF7A4A00));
+      canvas.drawPath(crown, Paint()..shader = ui.Gradient.linear(Offset(0, -s * 0.78), Offset(0, -s * 0.42), const [Color(0xFFFFF4A0), Color(0xFFE2B33C), Color(0xFFB07A1E)], const [0, 0.5, 1]));
+      canvas.drawRect(Rect.fromLTRB(-s * 0.28, -s * 0.47, s * 0.28, -s * 0.42), Paint()..color = const Color(0xFFB07A1E));
+      final lemon = Rect.fromCenter(center: Offset(0, -s * 0.52), width: s * 0.16, height: s * 0.11);
+      canvas.drawOval(lemon, Paint()..shader = ui.Gradient.radial(lemon.center - Offset(s * 0.02, s * 0.02), s * 0.1, const [Color(0xFFFFF7A0), Color(0xFFFFD82A)]));
+      for (final dx in [-0.2, 0.2]) {
+        canvas.drawCircle(Offset(dx * s, -s * 0.49), s * 0.025, Paint()..color = const Color(0xFF2EA8FF));
+      }
+      for (final (x, y) in [(-0.32, -0.7), (0.0, -0.78), (0.32, -0.7)]) {
+        canvas.drawCircle(Offset(x * s, y * s), s * 0.028, Paint()..color = const Color(0xFFFFF4A0));
       }
     case LokumOutfit.guide:
       // A sand-coloured bucket hat with a red band and a little flag.

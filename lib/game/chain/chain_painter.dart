@@ -31,17 +31,24 @@ class ChainGeometry {
 }
 
 class ChainBoardPainter extends CustomPainter {
-  ChainBoardPainter({required this.c, required this.palette, required this.geometry, required this.dpr}) : super(repaint: c.frame);
+  /// Paints [c]'s board, or another one it runs ([game] with its [fx]: the
+  /// computer's side of a match).
+  ChainBoardPainter({required this.c, required this.palette, required this.geometry, required this.dpr, ChainGame? game, ChainFx? fx})
+    : game = game ?? c.game,
+      fx = fx ?? c.fx,
+      super(repaint: c.frame);
 
   final ChainController c;
+  final ChainGame game;
+  final ChainFx fx;
   final GamePalette palette;
   final ChainGeometry geometry;
   final double dpr;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final g = c.game;
-    final fx = c.fx;
+    final g = game;
+    final fx = this.fx;
     final cell = geometry.cell;
     final sprites = ChainSprites.of(cell, dpr, c.cubes);
     final shake = fx.shake * cell;
@@ -113,6 +120,17 @@ class ChainBoardPainter extends CustomPainter {
     }
     canvas.restore();
 
+    // A puzzle hint: the two cells of the swap glow.
+    final hint = identical(g, c.game) ? c.hint : null;
+    if (hint != null && !g.isOver) {
+      final r = Rect.fromLTWH(origin.dx + hint.$1 * cell, origin.dy + (hint.$2 - g.rise) * cell, cell * 2, cell).inflate(cell * 0.08);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(r, Radius.circular(cell * 0.25)),
+        Paint()
+          ..color = const Color(0xFFFFE066).withValues(alpha: 0.35 + 0.25 * sin(fx.time * 8))
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * 0.2),
+      );
+    }
     if (!g.isOver) _cursor(canvas, origin, cell, g);
     _sparks(canvas, origin, cell, fx);
     _floaters(canvas, origin, cell, fx);
@@ -212,5 +230,5 @@ class ChainBoardPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(ChainBoardPainter old) => old.geometry.cell != geometry.cell || old.palette != palette || old.dpr != dpr;
+  bool shouldRepaint(ChainBoardPainter old) => old.geometry.cell != geometry.cell || old.palette != palette || old.dpr != dpr || !identical(old.game, game);
 }

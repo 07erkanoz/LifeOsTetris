@@ -56,6 +56,9 @@ class Settings extends ChangeNotifier {
   int _blocksBest = 0;
   int _bombBest = 0;
   final Map<String, int> _chainBest = {};
+  final Map<int, int> _missionStars = {};
+  final Map<int, int> _puzzleStars = {};
+  final Map<int, int> _rivalWins = {};
   ChainDifficulty _chainDifficulty = ChainDifficulty.easy;
   final Map<int, int> _blockStars = {};
   final Map<int, int> _adventureStars = {};
@@ -137,6 +140,9 @@ class Settings extends ChangeNotifier {
         }
       }
       s._chainDifficulty = ChainDifficulty.parse(prefs.getString('chainDifficulty'));
+      _readStars(prefs.getString('missionStars'), s._missionStars);
+      _readStars(prefs.getString('puzzleStars'), s._puzzleStars);
+      _readStars(prefs.getString('rivalWins'), s._rivalWins);
       _readStars(prefs.getString('blockStars'), s._blockStars);
       _readStars(prefs.getString('adventureStars'), s._adventureStars);
       _readStars(prefs.getString('sugarStars'), s._sugarStars);
@@ -632,6 +638,44 @@ class Settings extends ChangeNotifier {
       },
     );
     return record;
+  }
+
+  // ------------------------------------------- zincir: missions, puzzles
+
+  /// Stars on Vapur Hattı mission [n] (0 = not done yet).
+  int missionStars(int n) => _missionStars[n] ?? 0;
+
+  int get totalMissionStars => _missionStars.values.fold(0, (a, b) => a + b);
+
+  /// The next mission to play: one past the highest done.
+  int get nextMission => _missionStars.keys.fold(0, max) + 1;
+
+  /// Keeps the best stars of mission [n]; true the first time it is done.
+  bool recordMission(int n, int stars) {
+    final first = missionStars(n) == 0;
+    if (stars <= missionStars(n)) return false;
+    _set(() => _missionStars[n] = stars, () => _prefs?.setString('missionStars', _writeStars(_missionStars)));
+    return first;
+  }
+
+  /// Stars on Zincir puzzle [n] (0 = not solved yet).
+  int puzzleStars(int n) => _puzzleStars[n] ?? 0;
+
+  int get puzzlesSolved => _puzzleStars.length;
+
+  void recordPuzzle(int n, int stars) {
+    if (stars <= puzzleStars(n)) return;
+    _set(() => _puzzleStars[n] = stars, () => _prefs?.setString('puzzleStars', _writeStars(_puzzleStars)));
+  }
+
+  /// Matches won against rival [rival] (its index).
+  int rivalWins(int rival) => _rivalWins[rival] ?? 0;
+
+  /// Counts a match won against [rival]; true for the first.
+  bool recordRivalWin(int rival) {
+    final first = rivalWins(rival) == 0;
+    _set(() => _rivalWins[rival] = rivalWins(rival) + 1, () => _prefs?.setString('rivalWins', _writeStars(_rivalWins)));
+    return first;
   }
 
   /// Highest score across all modes.

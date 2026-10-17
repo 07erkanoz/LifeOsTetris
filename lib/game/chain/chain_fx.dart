@@ -68,6 +68,19 @@ class ChainFx {
     _trauma = scorePulse = chainPulse = danger = 0;
   }
 
+  /// A big line of text over the middle of the board.
+  void callout(String text) => floaters.add(ChainFloater(text, ChainGame.width / 2, 4.5, 0.75, const [Color(0xFFFFF3A0), Color(0xFFFF9A1A)], duration: 1.5));
+
+  /// A burst of coloured cubes over the board, for a goal met.
+  void confetti() {
+    if (!particlesEnabled) return;
+    for (var i = 0; i < 60; i++) {
+      final c = chainColors.values.elementAt(i % chainColors.length);
+      sparks.add(ChainSpark(_random.nextDouble() * ChainGame.width, 1 + _random.nextDouble() * 3, (_random.nextDouble() - 0.5) * 4, -2 - _random.nextDouble() * 4,
+          0.12 + _random.nextDouble() * 0.1, c, 1.2 + _random.nextDouble() * 0.8, shard: true));
+    }
+  }
+
   void update(double dt) {
     time += dt;
     _trauma = max(0, _trauma - dt * 1.6);
@@ -130,7 +143,7 @@ class ChainFx {
       case ChainLevelUp():
         floaters.add(ChainFloater(strings.chainLevel(e.level), ChainGame.width / 2, 3, 0.8, const [Color(0xFFDDE3FF), Color(0xFF7B83FF)], duration: 1.6));
       case ChainGameOver():
-        _trauma = e.timeUp ? 0 : 0.6;
+        _trauma = e.timeUp || e.won ? 0 : 0.6;
       default:
         break;
     }
