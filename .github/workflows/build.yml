@@ -143,9 +143,31 @@ jobs:
           name: LifeOS-Kupler-linux
           path: LifeOS-Kupler-Linux-x64.tar.gz
 
+  # The browser version at lifeos.com.tr/kupler/oyna/. The server unpacks
+  # the zip into a folder of its own for every build (see
+  # tool/server/kupler_sync_downloads.py).
+  web:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter build web --release --base-href /kupler/oyna/ --build-number=${{ github.run_number }}
+      - name: Zip the web build
+        run: cd build/web && zip -qr ../../LifeOS-Kupler-Web.zip . -x '.*'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LifeOS-Kupler-web
+          path: LifeOS-Kupler-Web.zip
+
   release:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [android, windows, linux]
+    needs: [android, windows, linux, web]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -169,13 +191,14 @@ jobs:
           NOTES="Android: LifeOS-Kupler-arm64.apk (küçük, modern telefonlar) ya da LifeOS-Kupler.apk (tüm telefonlar) dosyasını telefonun tarayıcısından indirip kurun; bilinmeyen kaynaklara izin vermeniz gerekebilir.
           Windows: LifeOS-Kupler-Windows.zip dosyasını bir klasöre çıkarın ve lifeos_kupler.exe dosyasını çalıştırın. SmartScreen uyarırsa 'Ek bilgi' > 'Yine de çalıştır' deyin.
           Linux: LifeOS-Kupler-Linux-x64.tar.gz dosyasını açıp LifeOS-Kupler/lifeos_kupler dosyasını çalıştırın (gtk3 ve GStreamer gerekir). Arch Linux için depodaki packaging/arch/PKGBUILD ile: makepkg -si
+          Tarayıcı: https://lifeos.com.tr/kupler/oyna/ adresinde kurulumsuz oynanır; LifeOS-Kupler-Web.zip o sayfanın dosyalarıdır.
           Bu derlemeler test içindir; mağazaya yüklenemez. Sürüm: $VERSION (${GITHUB_SHA::7})"
           # Update the existing release in place instead of deleting and
           # recreating it (recreating moves the tag, which GitHub can refuse).
           if gh release view test-build >/dev/null 2>&1; then
-            gh release upload test-build LifeOS-Kupler.apk LifeOS-Kupler-arm64.apk LifeOS-Kupler-Windows.zip LifeOS-Kupler-Linux-x64.tar.gz --clobber
+            gh release upload test-build LifeOS-Kupler.apk LifeOS-Kupler-arm64.apk LifeOS-Kupler-Windows.zip LifeOS-Kupler-Linux-x64.tar.gz LifeOS-Kupler-Web.zip --clobber
             gh release edit test-build --title "Test sürümü $VERSION (${GITHUB_SHA::7})" --notes "$NOTES" --prerelease
           else
-            gh release create test-build LifeOS-Kupler.apk LifeOS-Kupler-arm64.apk LifeOS-Kupler-Windows.zip LifeOS-Kupler-Linux-x64.tar.gz \
+            gh release create test-build LifeOS-Kupler.apk LifeOS-Kupler-arm64.apk LifeOS-Kupler-Windows.zip LifeOS-Kupler-Linux-x64.tar.gz LifeOS-Kupler-Web.zip \
               --target "$GITHUB_SHA" --prerelease --title "Test sürümü $VERSION (${GITHUB_SHA::7})" --notes "$NOTES"
           fi

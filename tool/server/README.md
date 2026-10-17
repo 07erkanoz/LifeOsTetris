@@ -1,7 +1,9 @@
-# lifeos.com.tr download mirror
+# lifeos.com.tr download mirror and browser version
 
 `kupler_sync_downloads.py` copies the GitHub `test-build` release to
-`https://lifeos.com.tr/kupler/indir/` so visitors download from lifeos.com.tr.
+`https://lifeos.com.tr/kupler/indir/` so visitors download from lifeos.com.tr,
+and puts the browser version from the same release
+(`LifeOS-Kupler-Web.zip`) online at `https://lifeos.com.tr/kupler/oyna/`.
 It runs as the site user `lifeos` from cron every 10 minutes and logs only
 when something changed.
 
@@ -14,10 +16,43 @@ install -o lifeos -g psaserv -m 644 /dev/null /var/log/kupler-sync.log
 echo '*/10 * * * * lifeos /usr/bin/python3 /opt/kupler-sync/kupler_sync_downloads.py >> /var/log/kupler-sync.log 2>&1' > /etc/cron.d/kupler-sync
 sudo -u lifeos /usr/bin/python3 /opt/kupler-sync/kupler_sync_downloads.py   # first copy
 install -o lifeos -g psaserv -m 644 indir.htaccess /var/www/vhosts/lifeos.com.tr/httpdocs/kupler/indir/.htaccess
+install -o lifeos -g psaserv -m 644 oyna.htaccess /var/www/vhosts/lifeos.com.tr/httpdocs/kupler/oyna/.htaccess
 ```
 
 `indir.htaccess` keeps the script's lock and half-downloaded files private
 and stops browsers from caching `latest.json`.
+
+## Browser version (`oyna/`)
+
+CI builds it with `flutter build web --release --base-href /kupler/oyna/`.
+Flutter's files (`main.dart.js`, `flutter_bootstrap.js`, `assets/`...) keep
+their names from build to build, and Cloudflare keeps static files for four
+hours, so overwriting them in place would hand some visitors an old
+`main.dart.js` with new assets. Instead every build gets a folder of its own:
+
+```
+oyna/
+  .htaccess                  oyna.htaccess: index.html is never cached
+  index.html                 <base href="/kupler/oyna/v1.0.0-45-1a2b3c4d/">
+  v1.0.0-45-1a2b3c4d/        the live build (version and zip checksum)
+  v1.0.0-44-9f8e7d6c/        up to three earlier builds, for pages opened
+  ...                        before the switch
+```
+
+The script unpacks the zip into a hidden staging folder in `oyna/`, renames
+it to its final name and only then replaces `oyna/index.html`, which points
+the page's `<base href>` at that folder. That replace is the switch: a
+browser gets either the old page with the old build or the new page with
+the new build. Files in a build folder never change, so Cloudflare and
+browsers may cache them as long as they like.
+
+On the server nginx serves `.js`, `.html` and other static files itself, so
+the `Cache-Control` rules of the `.htaccess` files only reach the files
+Apache serves (`oyna/` and `latest.json`). The folder per build does not
+depend on them; a browser that keeps an old `index.html` for a while still
+finds that build's folder.
+
+`latest.json` in `indir/` records the live build under `web`.
 
 If the repository becomes private, create a fine-grained GitHub token with
 read-only *Contents* access to this repository and save it as

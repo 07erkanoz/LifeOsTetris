@@ -1,0 +1,10 @@
+# The sync script's staging folders and downloaded zip stay private.
+RedirectMatch 404 "/\."
+# index.html is the only file that keeps its name from build to build; it
+# points at that build's own folder (v1.0.0-45-1a2b3c4d/), whose files never
+# change, so browsers must ask for it again but may keep the rest.
+<Files "index.html">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "no-cache"
+  </IfModule>
+</Files>
