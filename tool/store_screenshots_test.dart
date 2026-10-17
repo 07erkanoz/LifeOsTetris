@@ -1,11 +1,11 @@
 // Renders the App Store screenshots with the real game screens.
 //   flutter test tool/store_screenshots_test.dart
-// Writes ios/metadata/screenshots/<locale>/<device>-<n>-<scene>.png at the
-// exact pixel sizes App Store Connect asks for (iPhone 6.9", iPad 13").
+// Writes ios/metadata/screenshots/<locale>/<device>-<nn>-<scene>.png at the
+// exact pixel sizes App Store Connect asks for (iPhone 6.9", iPad 13"); the
+// two-digit number keeps them in order (App Store Connect takes ten).
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -13,16 +13,21 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lifeos_kupler/app.dart';
 import 'package:lifeos_kupler/audio/audio_service.dart';
 import 'package:lifeos_kupler/core/chain/chain_game.dart';
+import 'package:lifeos_kupler/core/chain/chain_versus.dart';
+import 'package:lifeos_kupler/core/sugar/sugar_game.dart';
+import 'package:lifeos_kupler/core/sugar/sugar_levels.dart';
+import 'package:lifeos_kupler/core/sugar/sugar_solver.dart';
 import 'package:lifeos_kupler/core/tetris_game.dart';
 import 'package:lifeos_kupler/game/blocks/blocks_controller.dart';
 import 'package:lifeos_kupler/game/chain/chain_controller.dart';
 import 'package:lifeos_kupler/game/game_controller.dart';
+import 'package:lifeos_kupler/game/sugar/sugar_controller.dart';
 import 'package:lifeos_kupler/l10n/strings.dart';
 import 'package:lifeos_kupler/settings/settings.dart';
-import 'package:lifeos_kupler/theme/palette.dart';
 import 'package:lifeos_kupler/ui/blocks_screen.dart';
 import 'package:lifeos_kupler/ui/chain_screen.dart';
 import 'package:lifeos_kupler/ui/game_screen.dart';
+import 'package:lifeos_kupler/ui/sugar_screen.dart';
 
 /// Output folder (`SHOTS_OUT`).
 final String _out = Platform.environment['SHOTS_OUT'] ?? 'ios/metadata/screenshots/';
@@ -102,86 +107,71 @@ void _stack(TetrisGame game) {
 
 typedef _Scene = Future<void> Function(WidgetTester tester, Settings settings);
 
-final Map<String, _Scene> _scenes = {
-  'menu': (tester, settings) async {},
-  // A four-line clear caught mid-explosion.
-  'tetris': (tester, settings) async {
-    await _startMode(tester, 'normal');
-    final game = _game(tester).game;
-    _stack(game);
-    game.lines = 0;
-    game.debugSetActive(const Piece(PieceType.i, Rotation.right, 7, 2));
-    await _pump(tester, 3);
-    await tester.sendKeyEvent(LogicalKeyboardKey.space);
-    await _pump(tester, 7);
-  },
-  // The bomb power aiming at the stack (its 3×3 area is shown).
-  'bomb': (tester, settings) async {
-    await _startMode(tester, 'superMode');
-    final game = _game(tester).game;
-    _stack(game);
-    game.debugGivePowers([PowerType.bomb, PowerType.bomb, PowerType.drill, PowerType.single, PowerType.gravity]);
-    await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
-    await _pump(tester, 2);
-    for (var i = 0; i < 2; i++) {
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+/// Şeker Küpler with levels 1..[done] passed and the stories read (but
+/// [unseen]'s), up to the start panel of the next level.
+Future<SugarController?> _sugar(WidgetTester tester, Settings settings, int done, {int? unseen, bool play = true}) async {
+  for (var n = 1; n <= done; n++) {
+    settings.recordSugarLevel(n, stars: const [3, 2, 3, 3, 2][n % 5], score: 15000, seconds: 60);
+  }
+  for (var ch = 0; ch < SugarLevels.chapters; ch++) {
+    if (ch != unseen) settings.markStorySeen(ch);
+  }
+  await _startMode(tester, 'sugar');
+  await tester.tap(find.byKey(const ValueKey('sugar-continue')));
+  await _pump(tester, 20, 40);
+  if (!play) return null;
+  await tester.ensureVisible(find.byKey(const ValueKey('sugar-play')));
+  await tester.tap(find.byKey(const ValueKey('sugar-play')));
+  await _pump(tester, 40);
+  return (tester.state(find.byType(SugarScreen)) as dynamic).c as SugarController;
+}
+
+/// Plays [moves] good swaps on a Şeker board.
+Future<void> _sugarMoves(WidgetTester tester, SugarController c, int moves) async {
+  for (var i = 0; i < moves && !c.game.isOver; i++) {
+    final m = SugarSolver.best(c.game);
+    if (m == null) break;
+    c.trySwap(m.$1, m.$2);
+    for (var k = 0; k < 300 && (c.busy || !c.game.isOver && c.game.status != SugarStatus.idle); k++) {
       await tester.pump(const Duration(milliseconds: 33));
     }
-    await _pump(tester, 12);
+  }
+}
+
+final Map<String, _Scene> _scenes = {
+  'menu': (tester, settings) async {},
+  // Şeker Küpler mid-level: specials on the board, the rush meter filling.
+  'sugar': (tester, settings) async {
+    final c = (await _sugar(tester, settings, 51))!;
+    await _sugarMoves(tester, c, 1);
+    SugarPiece? at(int x, int y) => c.game.board[y][x];
+    at(0, 1)?.special = Special.lineV;
+    at(5, 6)?.special = Special.lineH;
+    at(7, 3)?.special = Special.bomb;
+    at(1, 6)?.special = Special.prism;
+    c.game.rushMeter = 0.7;
+    await _pump(tester, 50);
   },
-  // Block puzzle: a piece dragged over the board, the lines it clears glow.
+  // The final on Çamlıca: Ekşi Limon throwing lemon slices.
+  'limon': (tester, settings) async {
+    final c = (await _sugar(tester, settings, 119))!;
+    await _sugarMoves(tester, c, 4);
+    await _pump(tester, 40);
+  },
+  // A chapter's İstanbul story card.
+  'story': (tester, settings) async {
+    await _sugar(tester, settings, 80, unseen: 8, play: false);
+    await _pump(tester, 30);
+  },
+  // Bulmaca: two lines blasting at once in the jewel colours, a streak on.
   'puzzle': (tester, settings) async {
     await _startMode(tester, 'blocksEndless');
     final c = _blocks(tester);
-    c.game.debugSetBoard([
-      'JJ...SS.',
-      'J..TTT..',
-      'LL.OO.II',
-      'L..OO.I.',
-      'ZZZZZZ..',
-      'TT.TTTTT',
-      'SSSSSS..',
-      'IIIIII..',
-    ]);
-    c.game.debugSetTray(['o2', 'l4', 't1']);
-    await _pump(tester, 3);
-    final board = c.boardRect!();
-    final cell = board.width / 8;
-    final gesture = await tester.startGesture(tester.getCenter(find.byKey(const ValueKey('tray-0'))), kind: PointerDeviceKind.mouse);
-    // With a mouse the piece is centred on the pointer: aim at cells 6-7.
-    await gesture.moveTo(board.topLeft + Offset(7 * cell, 7 * cell) - const Offset(0, 40));
-    await tester.pump(const Duration(milliseconds: 33));
-    await gesture.moveTo(board.topLeft + Offset(7 * cell, 7 * cell));
-    await _pump(tester, 12);
-    addTearDown(gesture.up);
-  },
-  // Puzzle bombs: numbered bombs count down with every move.
-  'bombs': (tester, settings) async {
-    await _startMode(tester, 'bomb');
-    final c = _blocks(tester);
-    c.game.debugSetBoard([
-      '........',
-      '..3.....',
-      'OO....JJ',
-      'OOLL..J.',
-      '.SL5..ZZ',
-      'SS.TTTIZ',
-      'IIII2TIZ',
-      'LLL.ZZI.',
-    ]);
-    c.game.debugSetTray(['i3h', 'c4', 'o2']);
-    await _pump(tester, 20);
-  },
-  // Another look: the pixel theme mid-game, powers in the bar.
-  'pixel': (tester, settings) async {
-    settings.visualTheme = VisualTheme.pixel;
-    await _pump(tester, 5);
-    await _startMode(tester, 'superMode');
-    final game = _game(tester).game;
-    _stack(game);
-    game.debugGivePowers([PowerType.ghostLine, PowerType.drill, PowerType.slowMotion, PowerType.single]);
-    game.debugSetActive(const Piece(PieceType.t, Rotation.spawn, 4, 3));
-    await _pump(tester, 20);
+    c.game.debugSetBoard(['.TTTTTTT', '.LLLLLLL', 'SS..ZZ..', 'J..IIII.', 'JJ.O..OO', '.....TT.', 'ZZ..SS..', '.JJ...L.']);
+    c.game.debugSetTray(['dot', 'i2v', 'o2']);
+    c.game.streak = 3;
+    c.place(1, 0, 0);
+    await _pump(tester, 9);
   },
   // Zincir Küpler: a chain bursting, garbage on the stack.
   'chain': (tester, settings) async {
@@ -210,6 +200,54 @@ final Map<String, _Scene> _scenes = {
     c.game.setCursor(3, 7);
     await _pump(tester, 36);
   },
+  // A match against Ekşi Limon: garbage crossing between the boards.
+  'versus': (tester, settings) async {
+    await _startMode(tester, 'chainVersus');
+    await tester.tap(find.byKey(const ValueKey('versus-start')));
+    await _pump(tester, 10);
+    final c = (tester.state(find.byType(ChainVersusScreen)) as dynamic).c as ChainVersusController;
+    for (var i = 0; i < 420; i++) {
+      await tester.pump(const Duration(milliseconds: 33));
+      if (i % 25 == 0 && c.game.settled) {
+        final move = ChainCpu(ChainRival.master).pick(c.game);
+        if (move != null) c.game.swap(move.$1, move.$2);
+      }
+      if (c.game.isOver) break;
+    }
+  },
+  // Vapur Hattı: the missions along the Bosphorus piers.
+  'ferry': (tester, settings) async {
+    for (var n = 1; n <= 23; n++) {
+      settings.recordMission(n, const [3, 2, 3, 3, 2][n % 5]);
+    }
+    await _startMode(tester, 'chainMissions');
+    await _pump(tester, 10);
+  },
+  // A four-line clear caught mid-explosion.
+  'tetris': (tester, settings) async {
+    await _startMode(tester, 'normal');
+    final game = _game(tester).game;
+    _stack(game);
+    game.lines = 0;
+    game.debugSetActive(const Piece(PieceType.i, Rotation.right, 7, 2));
+    await _pump(tester, 3);
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await _pump(tester, 7);
+  },
+  // The bomb power aiming at the stack (its 3×3 area is shown).
+  'bomb': (tester, settings) async {
+    await _startMode(tester, 'superMode');
+    final game = _game(tester).game;
+    _stack(game);
+    game.debugGivePowers([PowerType.bomb, PowerType.bomb, PowerType.drill, PowerType.single, PowerType.gravity]);
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+    await _pump(tester, 2);
+    for (var i = 0; i < 2; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await tester.pump(const Duration(milliseconds: 33));
+    }
+    await _pump(tester, 12);
+  },
 };
 
 void main() {
@@ -228,7 +266,7 @@ void main() {
           await tester.pumpWidget(RepaintBoundary(key: _root, child: KuplerApp(settings: settings, audio: AudioService(enabled: false))));
           await _pump(tester, 30);
           await scene(tester, settings);
-          await _shot(tester, '$_out$locale/$device-$index-$name.png', dpr);
+          await _shot(tester, '$_out$locale/$device-${index.toString().padLeft(2, '0')}-$name.png', dpr);
         });
       }
     }
