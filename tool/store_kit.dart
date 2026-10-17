@@ -38,7 +38,10 @@ Future<void> loadStoreFonts() async {
   await family('Baloo2', [for (final w in ['SemiBold', 'Bold', 'ExtraBold']) 'assets/fonts/Baloo2-$w.ttf']);
   await family('Jersey10', ['assets/fonts/Jersey10-Regular.ttf']);
   final sdk = Platform.environment['FLUTTER_ROOT'] ?? File(Platform.resolvedExecutable).parent.parent.parent.parent.parent.parent.path;
-  await family('MaterialIcons', ['$sdk/bin/cache/artifacts/material_fonts/materialicons-regular.otf']);
+  // MaterialIcons-Regular.otf; the name's case matters on Linux.
+  final fonts = Directory('$sdk/bin/cache/artifacts/material_fonts');
+  final icons = fonts.listSync().whereType<File>().firstWhere((f) => f.path.toLowerCase().endsWith('materialicons-regular.otf'));
+  await family('MaterialIcons', [icons.path]);
 }
 
 Future<void> pumpFrames(WidgetTester tester, int frames, [int ms = 33]) async {
