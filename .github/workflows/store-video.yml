@@ -2,7 +2,7 @@ name: Store video
 
 # The store video (App Store app preview, the YouTube video for Google Play):
 # tool/store_video_test.dart renders the frames from the real game, ffmpeg
-# (already on the runner) makes them an MP4 with the game's own music.
+# (from Ubuntu's packages) makes them an MP4 with the game's own music.
 # Run it by hand (Actions → Store video → Run workflow); the videos land in
 # the run's artifacts.
 on:
@@ -29,6 +29,8 @@ jobs:
       - run: flutter pub get
       # The icon font the frames use comes with Flutter's shared artifacts.
       - run: flutter precache --universal
+      - name: Install ffmpeg
+        run: sudo apt-get update -q && sudo apt-get install -y -q ffmpeg
 
       # App Store app previews: H.264 at 30 fps, stereo AAC, 15 to 30 s;
       # 886×1920 for iPhones, 1200×1600 for iPads.
