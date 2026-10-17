@@ -527,7 +527,7 @@ class _ModesPageState extends State<_ModesPage> with SingleTickerProviderStateMi
               );
               // Games in one column on a phone, larger cards side by side on a
               // tablet or a desktop.
-              final gameColumns = width >= 1100 ? 3 : (width >= 600 ? 2 : 1);
+              final gameColumns = width >= 1100 ? 3 : (width >= 760 ? 2 : 1);
               final gameExtent = gameColumns == 1 ? 112 * k : max(112 * k, min(300.0, (width - 32 - 12 * (gameColumns - 1)) / gameColumns * 0.58));
               Widget label(String text) => Padding(padding: const EdgeInsets.fromLTRB(4, 20, 0, 8), child: CardLabel(text));
               return Center(

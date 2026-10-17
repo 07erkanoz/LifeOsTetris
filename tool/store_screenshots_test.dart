@@ -1,8 +1,11 @@
-// Renders the App Store screenshots with the real game screens.
+// Renders the store screenshots with the real game screens.
 //   flutter test tool/store_screenshots_test.dart
 // Writes ios/metadata/screenshots/<locale>/<device>-<nn>-<scene>.png at the
 // exact pixel sizes App Store Connect asks for (iPhone 6.9", iPad 13"); the
 // two-digit number keeps them in order (App Store Connect takes ten).
+//   flutter test tool/store_screenshots_test.dart --dart-define=STORE=play
+// writes the same scenes for Google Play to android/metadata/screenshots/:
+// a 9:16 phone (Play takes at most 2:1) and 7" and 10" tablets.
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
@@ -32,11 +35,16 @@ import 'package:lifeos_kupler/ui/game_screen.dart';
 import 'package:lifeos_kupler/ui/sugar_screen.dart';
 import 'package:lifeos_kupler/ui/tower_screen.dart';
 
-/// Output folder (`SHOTS_OUT`).
-final String _out = Platform.environment['SHOTS_OUT'] ?? 'ios/metadata/screenshots/';
+const _play = String.fromEnvironment('STORE') == 'play';
 
-/// App Store sizes: iPhone 6.9" (1320×2868 @3x) and iPad 13" (2064×2752 @2x).
-const _devices = [('iphone', Size(1320, 2868), 3.0), ('ipad', Size(2064, 2752), 2.0)];
+/// Output folder (`SHOTS_OUT`).
+final String _out = Platform.environment['SHOTS_OUT'] ?? (_play ? 'android/metadata/screenshots/' : 'ios/metadata/screenshots/');
+
+/// App Store sizes: iPhone 6.9" (1320×2868 @3x) and iPad 13" (2064×2752 @2x);
+/// Google Play: a 1080×1920 phone, a 7" and a 10" tablet.
+const _devices = _play
+    ? [('phone', Size(1080, 1920), 2.625), ('tablet7', Size(1200, 1920), 2.0), ('tablet10', Size(1600, 2560), 2.0)]
+    : [('iphone', Size(1320, 2868), 3.0), ('ipad', Size(2064, 2752), 2.0)];
 
 const _locales = [('tr', AppLanguage.tr), ('en-US', AppLanguage.en)];
 

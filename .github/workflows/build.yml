@@ -88,6 +88,17 @@ jobs:
           path: |
             LifeOS-Kupler.apk
             LifeOS-Kupler-arm64.apk
+      # Google Play takes an app bundle, signed with the same key (Play App
+      # Signing uses it too). Its version code stays above the APKs' (the
+      # arm64 APK adds 2000), so a phone that has the APK from lifeos.com.tr
+      # can update from Play. It goes to the run's artifacts, not the release.
+      - run: flutter build appbundle --release --build-number=$(( 3000 + ${{ github.run_number }} ))
+      - name: Rename app bundle
+        run: cp build/app/outputs/bundle/release/app-release.aab Lokum-Google-Play.aab
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lokum-Google-Play
+          path: Lokum-Google-Play.aab
 
   windows:
     needs: test
