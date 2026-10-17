@@ -32,7 +32,11 @@ Future<Settings> pumpApp(WidgetTester tester, {Size size = const Size(390, 844),
 void main() {
   test('outfits open with Şeker stars and stay off until then', () {
     expect(LokumOutfit.values.first, LokumOutfit.none);
-    expect([for (final o in LokumOutfit.values) o.stars], orderedEquals([...LokumOutfit.values.map((o) => o.stars)]..sort()));
+    final byStars = [for (final o in LokumOutfit.values) if (o.gift == null) o.stars];
+    expect(byStars, orderedEquals([...byStars]..sort()));
+    // Event outfits come with their prize, not with stars.
+    expect(LokumOutfit.worn('captain', 180), LokumOutfit.none);
+    expect(LokumOutfit.worn('captain', 0, {'outfitCaptain'}), LokumOutfit.captain);
     expect(LokumOutfit.worn('fez', 0), LokumOutfit.none);
     expect(LokumOutfit.worn('fez', 3), LokumOutfit.fez);
     expect(LokumOutfit.worn('sultan', 109), LokumOutfit.none);

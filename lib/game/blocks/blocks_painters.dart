@@ -31,7 +31,7 @@ class BlocksGeometry {
   static double fit(double side) => side / (_n + 0.6);
 }
 
-BlockSprite _sprite(BlockSprites sprites, BlockCell cell, [int variant = 0]) => sprites.block(cell.gem ? PieceType.gem : cell.color, variant);
+BlockSprite _sprite(BlockSprites sprites, BlockCell cell, [int variant = 0]) => cell.gem ? sprites.jewel(cell.gemKind) : sprites.block(cell.color, variant);
 
 typedef BlockSprite = ui.Image;
 
@@ -65,6 +65,7 @@ class BlocksBoardPainter extends CustomPainter {
 
     _paintPulse(canvas, grid);
     _paintCells(canvas);
+    _paintHint(canvas);
     _paintPreview(canvas, grid);
     _paintFuses(canvas);
     _paintPlacePulses(canvas);
@@ -73,6 +74,7 @@ class BlocksBoardPainter extends CustomPainter {
     _paintFlash(canvas, grid);
     paintShockwaves(canvas, fx.shockwaves, c);
     paintParticles(canvas, fx.particles, sprites, c);
+    _paintGemFlights(canvas);
     _paintOverShade(canvas, grid);
     canvas.restore();
   }
@@ -81,7 +83,7 @@ class BlocksBoardPainter extends CustomPainter {
 
   ui.Image _chrome() {
     final dpr = min(sprites.dpr, 2.0);
-    final key = '${geometry.cell}/${palette.skin.name}/${palette.isDark}/$dpr';
+    final key = '${geometry.cell}/${palette.vividBlocks ? 'vivid' : palette.skin.name}/${palette.isDark}/$dpr';
     final hit = _chromeCache[key];
     if (hit != null) return hit;
     if (_chromeCache.length >= 4) _chromeCache.remove(_chromeCache.keys.first)?.dispose();
@@ -98,6 +100,10 @@ class BlocksBoardPainter extends CustomPainter {
     final c = geometry.cell;
     final o = geometry.gridOrigin;
     final grid = Rect.fromLTWH(o.dx, o.dy, geometry.grid, geometry.grid);
+    if (palette.vividBlocks) {
+      _paintVividFrame(canvas, grid);
+      return;
+    }
     if (palette.skin == GameSkin.toy) {
       _paintToyFrame(canvas, grid);
       return;
@@ -138,6 +144,60 @@ class BlocksBoardPainter extends CustomPainter {
           slot,
         );
       }
+    }
+  }
+
+  /// Bulmaca's own tray: a blue-violet frame lit from the top, a deep well
+  /// and soft sockets.
+  void _paintVividFrame(Canvas canvas, Rect grid) {
+    final c = geometry.cell;
+    final frame = RRect.fromRectAndRadius(grid.inflate(geometry.pad), Radius.circular(c * 0.6));
+    canvas.drawRRect(frame.shift(Offset(0, c * 0.2)), Paint()..color = const Color(0xFF140A3A).withValues(alpha: 0.6));
+    canvas.drawRRect(frame, Paint()..shader = ui.Gradient.linear(frame.outerRect.topCenter, frame.outerRect.bottomCenter, const [Color(0xFF4A4AB8), Color(0xFF2E2478)]));
+    canvas.drawRRect(
+      frame,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(2, c * 0.06)
+        ..color = const Color(0xFF8A9AF8).withValues(alpha: 0.8),
+    );
+    canvas.drawRRect(RRect.fromRectAndRadius(grid, Radius.circular(c * 0.35)), Paint()..shader = ui.Gradient.linear(grid.topCenter, grid.bottomCenter, const [Color(0xFF241A66), Color(0xFF1A1248)]));
+    final slot = Paint()..color = const Color(0xFF2E2680).withValues(alpha: 0.85);
+    final inset = c * 0.06;
+    for (var y = 0; y < _n; y++) {
+      for (var x = 0; x < _n; x++) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(Rect.fromLTWH(grid.left + x * c + inset, grid.top + y * c + inset, c - 2 * inset, c - 2 * inset), Radius.circular(c * 0.2)),
+          slot,
+        );
+      }
+    }
+  }
+
+  /// Lokum's suggestion: the piece, faint and pulsing, where it would go.
+  void _paintHint(Canvas canvas) {
+    final hint = controller.hint;
+    if (hint == null || controller.dragSlot != null) return;
+    final shape = game.tray[hint.$1];
+    if (shape == null) return;
+    final c = geometry.cell;
+    final pulse = 0.5 + 0.5 * sin(fx.time * 5);
+    final image = sprites.block(shape.color);
+    for (final cell in shape.cells) {
+      sprites.draw(canvas, image, (hint.$2 + cell.x) * c, (hint.$3 + cell.y) * c, opacity: 0.25 + 0.3 * pulse);
+    }
+  }
+
+  /// Collected jewels fly up off the board towards their goal.
+  void _paintGemFlights(Canvas canvas) {
+    final c = geometry.cell;
+    for (final g in fx.gemFlights) {
+      if (g.delay > 0) continue;
+      final t = Curves.easeIn.transform(g.t);
+      final from = Offset(g.from.x.toDouble(), g.from.y.toDouble());
+      final to = Offset(3.5, -1.6);
+      final p = Offset.lerp(from, to, t)! + Offset(sin(t * pi) * (g.from.x < 4 ? -1.2 : 1.2), 0);
+      sprites.draw(canvas, sprites.jewel(g.kind), p.dx * c, p.dy * c, scale: 1.1 - 0.5 * t, opacity: 1 - t * t * 0.6);
     }
   }
 
@@ -304,7 +364,7 @@ class BlocksBoardPainter extends CustomPainter {
         if (!seen.add(Cell(x, y))) return;
         final cell = game.board[y][x];
         if (cell == null) return;
-        sprites.draw(canvas, recolor, x * c, y * c, opacity: cell.gem ? 0.35 : 0.75);
+        sprites.draw(canvas, cell.gem ? sprites.jewel(cell.gemKind) : recolor, x * c, y * c, opacity: cell.gem ? 1 : 0.75);
         if (cell.gem) sprites.draw(canvas, sprites.white, x * c, y * c, opacity: 0.35 * pulse);
       }
 

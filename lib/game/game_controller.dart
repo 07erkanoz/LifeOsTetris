@@ -68,7 +68,7 @@ class GameController extends ChangeNotifier {
   final LokumMood lokum = LokumMood();
 
   /// What Lokum wears.
-  LokumOutfit get outfit => LokumOutfit.worn(settings.lokumOutfit, settings.totalSugarStars);
+  LokumOutfit get outfit => LokumOutfit.worn(settings.lokumOutfit, settings.totalSugarStars, settings.unlocks);
 
   /// Seconds of active play in the current game.
   double playTime = 0;

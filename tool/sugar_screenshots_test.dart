@@ -1,6 +1,6 @@
 // Screenshots of the real Şeker Küpler screens, for review.
 //   flutter test tool/sugar_screenshots_test.dart
-// Writes SHOTS_OUT (default build/sugar-shots/): harita.png, baslangic.png,
+// Writes SHOTS_OUT (default build/sugar-shots/): harita.png, baslangic.png, manzara-*.png,
 // oyun.png, sov.png, final.png, kazandin.png.
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifeos_kupler/app.dart';
 import 'package:lifeos_kupler/audio/audio_service.dart';
+import 'package:lifeos_kupler/core/rewards.dart';
 import 'package:lifeos_kupler/core/sugar/sugar_game.dart';
 import 'package:lifeos_kupler/core/sugar/sugar_solver.dart';
 import 'package:lifeos_kupler/game/sugar/sugar_controller.dart';
@@ -95,7 +96,15 @@ void main() {
   }
 
   testWidgets('map', (tester) async {
-    await _openMap(tester, 33);
+    final settings = await _openMap(tester, 33);
+    // The first three chapters' postcards, earned.
+    for (final card in [11, 10, 4]) {
+      settings.applyGift(Gift(card: card));
+    }
+    await _pump(tester, 6);
+    // Down to the third chapter's end and its postcard.
+    Scrollable.ensureVisible(tester.element(find.byKey(const ValueKey('map-card-2'), skipOffstage: false)), alignment: 0.5);
+    await _pump(tester, 10);
     await _shot(tester, 'harita.png');
   });
 
@@ -124,6 +133,17 @@ void main() {
     await _pump(tester, 50);
     await _shot(tester, 'oyun.png');
   });
+
+  for (final scene in [Unlock.sceneGalata, Unlock.sceneSnow, Unlock.sceneIslands]) {
+    testWidgets('playing over the ${scene.name} scene', (tester) async {
+      final settings = await _openMap(tester, 43);
+      settings.applyGift(Gift(unlock: scene));
+      settings.sugarScene = scene.name;
+      await _play(tester);
+      await _pump(tester, 30);
+      await _shot(tester, 'manzara-${scene.name}.png');
+    });
+  }
 
   testWidgets('sugar rush show', (tester) async {
     await _openMap(tester, 43);

@@ -8,7 +8,7 @@ import 'sugar_widgets.dart';
 /// What Lokum wears, read from the settings: the chosen outfit while it is
 /// still unlocked, else none.
 extension LokumWardrobe on Settings {
-  LokumOutfit get outfit => LokumOutfit.worn(lokumOutfit, totalSugarStars);
+  LokumOutfit get outfit => LokumOutfit.worn(lokumOutfit, totalSugarStars, unlocks);
 }
 
 /// Lokum on his own, [size] tall, wearing [outfit].
@@ -103,7 +103,7 @@ class _Wardrobe extends StatelessWidget {
                     for (final o in LokumOutfit.values)
                       SizedBox(
                         width: w,
-                        child: _OutfitTile(outfit: o, worn: o == worn, locked: stars < o.stars, onTap: () => settings.lokumOutfit = o == LokumOutfit.none ? null : o.name),
+                        child: _OutfitTile(outfit: o, worn: o == worn, locked: !o.open(stars, settings.unlocks), onTap: () => settings.lokumOutfit = o == LokumOutfit.none ? null : o.name),
                       ),
                   ],
                 );
@@ -170,7 +170,14 @@ class _OutfitTile extends StatelessWidget {
               ),
               SizedBox(
                 height: 20,
-                child: locked
+                child: locked && outfit.gift != null
+                    ? Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(s.outfitEvent, style: const TextStyle(fontFamily: 'Baloo2', fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF9A8AB0))),
+                        ),
+                      )
+                    : locked
                     ? FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Row(

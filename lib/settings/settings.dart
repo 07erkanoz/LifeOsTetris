@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/chain/chain_game.dart';
+import '../core/rewards.dart';
+import '../core/sugar/sugar_game.dart' show SugarColor;
 import '../core/sugar/sugar_levels.dart';
 import '../core/scoring.dart';
 import '../game/play_history.dart';
@@ -63,6 +65,21 @@ class Settings extends ChangeNotifier {
   String? _savedSugar;
   String? _lokumOutfit;
   final Set<int> _storiesSeen = {};
+  int _giftDay = 0;
+  int _giftWeeks = 0;
+  String? _giftLast;
+  int _jarCount = 0;
+  int _jarFills = 0;
+  int _chestsOpened = 0;
+  int _eventWeek = -1;
+  int _eventCount = 0;
+  int _eventClaimed = 0;
+  final Set<String> _unlocks = {};
+  final Set<int> _cards = {};
+  int _setsClaimed = 0;
+  int _chainFreezes = 0;
+  String? _chainCubes;
+  String? _sugarScene;
   PlayHistory _history = PlayHistory();
   LineMemory _lineMemory = LineMemory();
 
@@ -130,6 +147,21 @@ class Settings extends ChangeNotifier {
       s._savedSugar = prefs.getString('savedSugar');
       s._lokumOutfit = prefs.getString('lokumOutfit');
       s._storiesSeen.addAll((prefs.getString('storiesSeen') ?? '').split(',').map(int.tryParse).whereType<int>());
+      s._giftDay = prefs.getInt('giftDay') ?? 0;
+      s._giftWeeks = prefs.getInt('giftWeeks') ?? 0;
+      s._giftLast = prefs.getString('giftLast');
+      s._jarCount = prefs.getInt('jarCount') ?? 0;
+      s._jarFills = prefs.getInt('jarFills') ?? 0;
+      s._chestsOpened = prefs.getInt('chestsOpened') ?? 0;
+      s._eventWeek = prefs.getInt('eventWeek') ?? -1;
+      s._eventCount = prefs.getInt('eventCount') ?? 0;
+      s._eventClaimed = prefs.getInt('eventClaimed') ?? 0;
+      s._unlocks.addAll(prefs.getStringList('unlocks') ?? const []);
+      s._cards.addAll((prefs.getStringList('cards') ?? const []).map(int.tryParse).whereType<int>());
+      s._setsClaimed = prefs.getInt('setsClaimed') ?? 0;
+      s._chainFreezes = prefs.getInt('chainFreezes') ?? 0;
+      s._chainCubes = prefs.getString('chainCubes');
+      s._sugarScene = prefs.getString('sugarScene');
       s._gamesPlayed = prefs.getInt('gamesPlayed') ?? 0;
       s._totalLines = prefs.getInt('totalLines') ?? 0;
       s._totalSeconds = prefs.getInt('totalSeconds') ?? 0;
@@ -202,6 +234,173 @@ class Settings extends ChangeNotifier {
     if (!_storiesSeen.add(chapter)) return;
     _prefs?.setString('storiesSeen', (_storiesSeen.toList()..sort()).join(','));
   }
+
+  // ------------------------------------------------------------- gifts --
+
+  /// Whether gift [u] has been unlocked.
+  bool unlocked(Unlock u) => _unlocks.contains(u.name);
+  Set<String> get unlocks => Set.unmodifiable(_unlocks);
+
+  /// Postcards collected for the İstanbul album.
+  int get postcards => _cards.length;
+  bool hasCard(int i) => _cards.contains(i);
+  Set<int> get cards => Set.unmodifiable(_cards);
+
+  /// Sets of the album complete (and so their prizes waiting), in order.
+  bool setComplete(int set) => [for (var i = 0; i < Rewards.setSize; i++) set * Rewards.setSize + i].every(_cards.contains);
+  bool setClaimed(int set) => _setsClaimed & (1 << set) != 0;
+  int get setPrizesReady => [for (var i = 0; i < Rewards.sets; i++) i].where((i) => setComplete(i) && !setClaimed(i)).length;
+
+  /// Takes the prize of the completed set [set].
+  Gift? claimSetPrize(int set) {
+    if (!setComplete(set) || setClaimed(set)) return null;
+    _setsClaimed |= 1 << set;
+    _prefs?.setInt('setsClaimed', _setsClaimed);
+    final all = [for (var i = 0; i < Rewards.sets; i++) i].every(setClaimed);
+    final gift = Rewards.setPrize(set, all: all);
+    applyGift(gift);
+    return gift;
+  }
+
+  /// The card handed over by the last gift (to show it), if any.
+  int? lastCard;
+
+  /// Zincir Küpler's stop-the-clock boosters.
+  int get chainFreezes => _chainFreezes;
+  bool useChainFreeze() {
+    if (_chainFreezes <= 0) return false;
+    _set(() => _chainFreezes--, () => _prefs?.setInt('chainFreezes', _chainFreezes));
+    return true;
+  }
+
+  /// Zincir Küpler's cube look (a ChainCubeStyle name), or null.
+  String? get chainCubes => _chainCubes;
+  set chainCubes(String? v) => _set(() => _chainCubes = v, () => v == null ? _prefs?.remove('chainCubes') : _prefs?.setString('chainCubes', v));
+
+  /// The İstanbul scene behind the Şeker board (an Unlock name), or null.
+  String? get sugarScene => _sugarScene;
+  set sugarScene(String? v) => _set(() => _sugarScene = v, () => v == null ? _prefs?.remove('sugarScene') : _prefs?.setString('sugarScene', v));
+
+  /// Hands over [g]: its boosters, freezes, unlock and postcard.
+  void applyGift(Gift g) {
+    _set(() {
+      g.boosters.forEach((b, n) => _sugarBoosters[b] = sugarBoosters(b) + n);
+      _chainFreezes += g.freezes;
+      final u = g.unlock;
+      if (u != null) _unlocks.add(u.name);
+      lastCard = null;
+      final card = g.card ?? (g.postcard ? Rewards.chestCards.where((c) => !_cards.contains(c)).firstOrNull : null);
+      if (card != null && _cards.add(card)) lastCard = card;
+    }, () {
+      for (final b in g.boosters.keys) {
+        _prefs?.setInt('sugarBooster_${b.name}', sugarBoosters(b));
+      }
+      _prefs?.setInt('chainFreezes', _chainFreezes);
+      _prefs?.setStringList('unlocks', _unlocks.toList());
+      _prefs?.setStringList('cards', [for (final c in _cards) '$c']);
+    });
+  }
+
+  String get _today => PlayHistory.dayKey(clock());
+
+  /// The day of the week's calendar the next daily gift is (0-based).
+  int get giftDay => _giftDay;
+
+  /// Today's gift is waiting.
+  bool get dailyGiftReady => _giftLast != _today;
+
+  /// Today's gift, once a day. A missed day is not lost: the calendar
+  /// goes on from where it was.
+  Gift? claimDailyGift() {
+    if (!dailyGiftReady) return null;
+    final gift = Rewards.daily(_giftDay, firstWeek: _giftWeeks == 0);
+    applyGift(gift);
+    _giftLast = _today;
+    _giftDay++;
+    if (_giftDay >= Rewards.dailyDays) {
+      _giftDay = 0;
+      _giftWeeks++;
+    }
+    _prefs?.setString('giftLast', _giftLast!);
+    _prefs?.setInt('giftDay', _giftDay);
+    _prefs?.setInt('giftWeeks', _giftWeeks);
+    notifyListeners();
+    return gift;
+  }
+
+  /// Sweets in the jar, out of [jarCapacity].
+  int get jarCount => _jarCount;
+  int get jarCapacity => Rewards.jarCapacity(_jarFills);
+  bool get jarFull => _jarCount >= jarCapacity;
+
+  /// Empties a full jar for its gift.
+  Gift? openJar() {
+    if (!jarFull) return null;
+    final gift = Rewards.jar(_jarFills);
+    _jarCount -= jarCapacity;
+    _jarFills++;
+    _prefs?.setInt('jarCount', _jarCount);
+    _prefs?.setInt('jarFills', _jarFills);
+    applyGift(gift);
+    return gift;
+  }
+
+  /// Star chests reached but not opened yet.
+  int get starChestsReady => max(0, Rewards.chestsFor(totalSugarStars) - _chestsOpened);
+
+  /// Chests opened so far.
+  int get starChestsOpened => _chestsOpened;
+
+  Gift? openStarChest() {
+    if (starChestsReady <= 0) return null;
+    _chestsOpened++;
+    _prefs?.setInt('chestsOpened', _chestsOpened);
+    final gift = Rewards.chest(_chestsOpened);
+    applyGift(gift);
+    return gift;
+  }
+
+  /// This week's event and the sweets popped for it.
+  WeeklyEvent get event => WeeklyEvent.of(clock());
+  int get eventCount => _eventWeek == WeeklyEvent.weekOf(clock()) ? _eventCount : 0;
+  int get eventClaimed => _eventWeek == WeeklyEvent.weekOf(clock()) ? _eventClaimed : 0;
+
+  /// Prizes earned but not taken.
+  int get eventPrizesReady => WeeklyEvent.tiers.where((t) => eventCount >= t).length - eventClaimed;
+
+  Gift? claimEventPrize() {
+    if (eventPrizesReady <= 0) return null;
+    final gift = event.prize(eventClaimed);
+    _eventClaimed = eventClaimed + 1;
+    _prefs?.setInt('eventClaimed', _eventClaimed);
+    applyGift(gift);
+    return gift;
+  }
+
+  /// Sweets popped in a Şeker level: into the jar, and this week's colour
+  /// into the event.
+  void addSugarCandies(Map<SugarColor, int> popped) {
+    final total = popped.values.fold(0, (a, b) => a + b);
+    if (total == 0) return;
+    final week = WeeklyEvent.weekOf(clock());
+    if (_eventWeek != week) {
+      _eventWeek = week;
+      _eventCount = 0;
+      _eventClaimed = 0;
+    }
+    _set(() {
+      _jarCount += total;
+      _eventCount += popped[event.color] ?? 0;
+    }, () {
+      _prefs?.setInt('jarCount', _jarCount);
+      _prefs?.setInt('eventWeek', _eventWeek);
+      _prefs?.setInt('eventCount', _eventCount);
+      _prefs?.setInt('eventClaimed', _eventClaimed);
+    });
+  }
+
+  /// Gifts waiting to be opened (for the badge on the gift button).
+  int get giftsReady => (dailyGiftReady ? 1 : 0) + (jarFull ? 1 : 0) + starChestsReady + eventPrizesReady + setPrizesReady;
 
   /// A Zincir Küpler game left half way (JSON), to continue later.
   String? get savedChain => _savedChain;

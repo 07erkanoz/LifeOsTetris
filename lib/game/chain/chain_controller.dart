@@ -6,11 +6,13 @@ import 'package:flutter/widgets.dart';
 import '../../audio/audio_service.dart';
 import '../../audio/haptics.dart';
 import '../../core/chain/chain_game.dart';
+import '../../core/rewards.dart';
 import '../../l10n/strings.dart';
 import '../../settings/settings.dart';
 import '../lokum_mood.dart';
 import '../sugar/sugar_art.dart';
 import 'chain_fx.dart';
+import 'chain_sprites.dart';
 
 /// Runs a Zincir Küpler game: time, input, sound, haptics and records.
 class ChainController extends ChangeNotifier {
@@ -45,8 +47,31 @@ class ChainController extends ChangeNotifier {
   double clock = 0;
   bool _warnedDanger = false;
 
+  /// How the cubes look: the chosen look if it is unlocked.
+  ChainCubeStyle get cubes {
+    final style = ChainCubeStyle.parse(settings.chainCubes);
+    return switch (style) {
+      ChainCubeStyle.lokum when !settings.unlocked(Unlock.cubesLokum) => ChainCubeStyle.vivid,
+      ChainCubeStyle.cini when !settings.unlocked(Unlock.cubesCini) => ChainCubeStyle.vivid,
+      _ => style,
+    };
+  }
+
+  /// Seconds a stop-the-clock booster holds the stack.
+  static const double freezeSeconds = 5;
+
+  /// Holds the rising stack with a stop-the-clock booster.
+  void useFreeze() {
+    if (!playing || paused || !settings.unlocked(Unlock.freeze)) return;
+    if (!settings.useChainFreeze()) return;
+    game.stopTime = max(game.stopTime, freezeSeconds);
+    audio.play(Sfx.slowmo);
+    lokum.say(_strings, null, LokumPose.wow, clock);
+    notifyListeners();
+  }
+
   /// What Lokum wears.
-  LokumOutfit get outfit => LokumOutfit.worn(settings.lokumOutfit, settings.totalSugarStars);
+  LokumOutfit get outfit => LokumOutfit.worn(settings.lokumOutfit, settings.totalSugarStars, settings.unlocks);
 
   bool get started => game.status != ChainStatus.ready;
   bool get playing => game.status == ChainStatus.playing;

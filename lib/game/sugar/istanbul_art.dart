@@ -316,6 +316,59 @@ void paintStoryScene(Canvas canvas, Size size, int chapter, {double t = 0}) {
   }
 }
 
+/// An İstanbul scene behind a whole game screen (the board covers the
+/// middle): the skyline just above where the board starts, the water
+/// below, a ferry crossing at the very bottom. [scene] is a story chapter.
+void paintBackdropScene(Canvas canvas, Size size, int scene, {double t = 0}) {
+  final w = size.width, h = size.height;
+  final horizon = h * 0.36;
+  final sky = Rect.fromLTWH(0, 0, w, horizon);
+  final (skyColors, line, water) = switch (scene % 6) {
+    1 => (const [Color(0xFF6A8ACF), Color(0xFFB8D8F2), Color(0xFFE6F2FF)], const Color(0xFF5A6A9A), const [Color(0xFF7A9ACF), Color(0xFF2A4A8A)]),
+    4 => (const [Color(0xFF0E0A2A), Color(0xFF2A1A5A), Color(0xFF5A2A6A)], const Color(0xFF1A0E3A), const [Color(0xFF2A1A5A), Color(0xFF0E0A2A)]),
+    5 => (const [Color(0xFF3A9AF2), Color(0xFF8ACCF8), Color(0xFFB8E6FF)], const Color(0xFF3A5A8A), const [Color(0xFF2EA8E6), Color(0xFF14468A)]),
+    _ => (const [Color(0xFF6A3AB0), Color(0xFFE0608A), Color(0xFFFFB070)], const Color(0xFF3A1F5A), const [Color(0xFF6A4AA0), Color(0xFF2A1A5A)]),
+  };
+  canvas.drawRect(sky, Paint()..shader = ui.Gradient.linear(sky.topCenter, sky.bottomCenter, skyColors, const [0, 0.6, 1]));
+  final r = Random(8 + scene);
+  switch (scene % 6) {
+    case 4:
+      for (var i = 0; i < 50; i++) {
+        canvas.drawCircle(Offset(r.nextDouble() * w, r.nextDouble() * horizon * 0.9), 0.8 + r.nextDouble(), Paint()..color = Colors.white.withValues(alpha: 0.35 + 0.4 * (0.5 + 0.5 * sin(t * 2 + i))));
+      }
+      canvas.drawCircle(Offset(w * 0.2, h * 0.1), h * 0.035, Paint()..color = const Color(0xFFFFF4D0));
+    case 5:
+      final c = Offset(w * 0.5, horizon + h * 0.02);
+      const bands = [Color(0xFFFF4A52), Color(0xFFFF9A2A), Color(0xFFFFE04A), Color(0xFF4ACF5A), Color(0xFF2EA8FF), Color(0xFF8A5AE6)];
+      for (var i = 0; i < bands.length; i++) {
+        canvas.drawArc(Rect.fromCircle(center: c, radius: w * (0.5 - i * 0.03)), pi, pi, false, Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = w * 0.03
+          ..color = bands[i].withValues(alpha: 0.6));
+      }
+    case 1:
+      break;
+    default:
+      final sun = Offset(w * 0.3, horizon - h * 0.02);
+      canvas.drawCircle(sun, h * 0.09, Paint()..shader = ui.Gradient.radial(sun, h * 0.09, [const Color(0xFFFFE8A0).withValues(alpha: 0.9), const Color(0xFFFFB070).withValues(alpha: 0)]));
+      canvas.drawCircle(sun, h * 0.035, Paint()..color = const Color(0xFFFFF0B0));
+  }
+  paintSkyline(canvas, w, horizon, h * 0.17, line);
+  if (scene % 6 == 4) _galata(canvas, Offset(w * 0.86, horizon), h * 0.3);
+  // The water, all the way down, with a ferry and glints at the bottom.
+  final sea = Rect.fromLTWH(0, horizon, w, h - horizon);
+  canvas.drawRect(sea, Paint()..shader = ui.Gradient.linear(sea.topCenter, sea.bottomCenter, water));
+  final glint = Paint()..color = (scene % 6 == 4 ? const Color(0xFFFFD27A) : Colors.white).withValues(alpha: 0.35);
+  for (var i = 0; i < 40; i++) {
+    final x = r.nextDouble() * w, y = horizon + 6 + r.nextDouble() * (h - horizon - 12);
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(x, y), width: 10 + r.nextDouble() * 22, height: 2.2), const Radius.circular(2)), glint);
+  }
+  final bottom = Rect.fromLTWH(0, h * 0.86, w, h * 0.14);
+  paintBosphorus(canvas, bottom, ferryAt: 0.3 + 0.05 * sin(t * 0.3), colors: [Color.lerp(water[0], water[1], 0.86)!, water[1]], tower: 0);
+  if (scene % 6 == 5) _island(canvas, Offset(w * 0.8, horizon + h * 0.01), w * 0.36);
+  if (scene % 6 == 1) _snow(canvas, size, t);
+}
+
 void _quay(Canvas canvas, Rect quay) {
   canvas.drawRect(quay, Paint()..shader = ui.Gradient.linear(quay.topCenter, quay.bottomCenter, const [Color(0xFF8A6A7A), Color(0xFF3A2440)]));
   for (var x = 0.0; x < quay.width; x += 46) {

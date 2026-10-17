@@ -55,8 +55,12 @@ void main() {
     }
   }
 
-  testWidgets('Lokum suggests the daily puzzle, then a mode never played; tapping him changes the idea', (tester) async {
+  testWidgets('Lokum offers today\'s gift, the daily puzzle, then a mode never played; tapping him changes the idea', (tester) async {
     await pumpLobby(tester);
+    expect(find.byKey(const ValueKey('tip-gift')), findsOneWidget, reason: 'today\'s gift is waiting');
+    expect(find.byKey(const ValueKey('gifts-badge')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('lokum')));
+    await pumpFor(tester, 10);
     expect(find.byKey(const ValueKey('tip-daily')), findsOneWidget, reason: 'today\'s puzzle is not solved');
     await tester.tap(find.byKey(const ValueKey('lokum')));
     await pumpFor(tester, 10);

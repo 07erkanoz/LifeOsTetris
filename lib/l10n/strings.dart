@@ -50,7 +50,7 @@ class AppStrings {
   String get lines => _t('Satır', 'Lines');
   String get time => _t('Süre', 'Time');
   String get best => _t('En iyi', 'Best');
-  String get mode => _t('Mod', 'Mode');
+  String get mode => _t('Oyun', 'Game');
 
   // ------------------------------------------------------------ modes
 
@@ -115,7 +115,7 @@ class AppStrings {
   String get restart => _t('Baştan', 'Restart');
   String get menu => _t('Menü', 'Menu');
   String get gameOver => _t('Oyun Bitti', 'Game Over');
-  String get newRecord => _t('★ YENİ REKOR! ★', '★ NEW RECORD! ★');
+  String get newRecord => _t('YENİ REKOR!', 'NEW RECORD!');
   String get playAgain => _t('Tekrar oyna', 'Play again');
   String get mainMenu => _t('Ana menü', 'Main menu');
   String get quitGame => _t('Çıkış', 'Quit');
@@ -222,6 +222,137 @@ class AppStrings {
   String get tipBeatBest => _t('Rekorunu geçebilir misin?', 'Can you beat your best?');
   String get tipPlay => _t('Oyna', 'Play');
   String get tipTapMe => _t('Bana dokun, bir fikrim daha var!', 'Tap me for another idea!');
+  // Gifts: the daily calendar, the sugar jar, star chests, the weekly event.
+  String get giftsTitle => _t('HEDİYELER', 'GIFTS');
+  String get giftsShort => _t('Hediyeler', 'Gifts');
+  String get dailyGiftTitle => _t('Günlük hediye', 'Daily gift');
+  String get dailyGiftHint => _t('Her gün bir hediye. Bir gün kaçırırsan kaldığın yerden devam.', 'A gift every day. Miss a day and you carry on where you were.');
+  String giftDayLabel(int day) => _t('${day + 1}. gün', 'Day ${day + 1}');
+  String get giftToday => _t('BUGÜN', 'TODAY');
+  String get giftTaken => _t('ALINDI', 'TAKEN');
+  String get giftTake => _t('AL', 'TAKE');
+  String get giftTomorrow => _t('Yarın yeni hediye', 'A new gift tomorrow');
+  String get giftBigChest => _t('Büyük sandık', 'Big chest');
+  String get tipGift => _t('Bugünkü hediyen hazır!', "Today's gift is ready!");
+  String get tipOpen => _t('Aç', 'Open');
+  String tipGiftsWaiting(int n) => _t('Açılmayı bekleyen $n hediyen var!', '$n gifts are waiting for you!');
+  String get tipSee => _t('Gör', 'See');
+  String get jarTitle => _t('Şeker kavanozu', 'Sugar jar');
+  String get jarHint => _t('Patlattığın her şeker kavanoza düşer.', 'Every sweet you pop drops into the jar.');
+  String get jarFull => _t('Kavanoz doldu!', 'The jar is full!');
+  String get jarOpen => _t('AÇ', 'OPEN');
+  String get chestsTitle => _t('Yıldız sandıkları', 'Star chests');
+  String chestsHint(int every) => _t("Şeker Küpler'de her $every yıldızda bir sandık.", 'A chest for every $every Şeker stars.');
+  String chestNext(int stars) => _t('Sonraki sandık: $stars yıldız', 'Next chest: $stars stars');
+  String chestName(int tier) => switch (tier) {
+    2 => _t('ALTIN SANDIK!', 'GOLD CHEST!'),
+    1 => _t('GÜMÜŞ SANDIK!', 'SILVER CHEST!'),
+    _ => _t('BRONZ SANDIK!', 'BRONZE CHEST!'),
+  };
+  String get chestOpen => _t('SANDIĞI AÇ', 'OPEN THE CHEST');
+  String get eventTitle => _t('Haftanın etkinliği', "This week's event");
+  String eventDaysLeft(int n) => n <= 1 ? _t('Bu gece biter', 'Ends tonight') : _t('$n gün kaldı', '$n days left');
+  String get eventClaim => _t('ÖDÜLÜ AL', 'TAKE THE PRIZE');
+  String eventProgress(int got, int of) => '$got / $of';
+  String eventName(String e) => switch (e) {
+    'tulip' => _t('Lale Festivali', 'Tulip Festival'),
+    'ferry' => _t('Vapur Haftası', 'Ferry Week'),
+    'coffee' => _t('Kahve Haftası', 'Coffee Week'),
+    _ => _t('Simit Haftası', 'Simit Week'),
+  };
+  String eventGoal(String e) => switch (e) {
+    'tulip' => _t('Herhangi bir seviyede kırmızı kalp patlat', 'Pop red hearts in any level'),
+    'ferry' => _t('Herhangi bir seviyede mavi damla patlat', 'Pop blue drops in any level'),
+    'coffee' => _t('Herhangi bir seviyede turuncu girdap patlat', 'Pop orange swirls in any level'),
+    _ => _t('Herhangi bir seviyede sarı yıldız patlat', 'Pop yellow stars in any level'),
+  };
+  ({String when, String fact}) eventFact(String e) => switch (e) {
+    'tulip' => (
+      when: _t('LALE DEVRİ · 1718–1730', 'THE TULIP ERA · 1718–1730'),
+      fact: _t("İstanbul'da lale bahçeleri, Sadabad köşkleri ve helva sohbetleri moda oldu; nadir lale soğanları servet değerinde alınıp satıldı.", 'Tulip gardens, the Sadabad pavilions and halva gatherings were the fashion in İstanbul; rare bulbs sold for fortunes.'),
+    ),
+    'ferry' => (
+      when: _t('ŞİRKET-İ HAYRİYE · 1851', 'ŞİRKET-İ HAYRİYE · 1851'),
+      fact: _t("Boğaz'da düzenli vapur seferlerini başlatan şirket kuruldu; vapurlar kıyıdaki köyleri şehre bağladı.", 'The company that began regular ferries on the Bosphorus was founded; its boats tied the shore villages to the city.'),
+    ),
+    'coffee' => (
+      when: _t('TAHTAKALE · 1554', 'TAHTAKALE · 1554'),
+      fact: _t("İstanbul'un ilk kahvehaneleri Tahtakale'de açıldı; kısa sürede sohbetin, tavlanın ve şiirin buluşma yeri oldular.", "İstanbul's first coffeehouses opened in Tahtakale and soon became the place for talk, backgammon and poetry."),
+    ),
+    _ => (
+      when: _t('ÜSKÜDAR · 1593', 'ÜSKÜDAR · 1593'),
+      fact: _t('Simit, 1593 tarihli bir Üsküdar kadı sicilinde fiyatıyla birlikte kayda geçmiş; şehrin en eski sokak lezzetlerinden biri.', "Simit appears with its price in an Üsküdar court register of 1593, one of the city's oldest street foods."),
+    ),
+  };
+  String get newUnlock => _t('YENİ ÖZELLİK AÇILDI!', 'SOMETHING NEW!');
+  String get tryNow => _t('HEMEN DENE', 'TRY IT NOW');
+  String get giftGot => _t('Hediyen', 'Your gift');
+  String get giftCollect => _t('TOPLA', 'COLLECT');
+  String unlockName(String u) => switch (u) {
+    'cubesLokum' => _t('Lokum küpler', 'Lokum cubes'),
+    'cubesCini' => _t('Çini küpler', 'Tile cubes'),
+    'sceneGalata' => _t('Galata gecesi', 'Galata by night'),
+    'sceneSnow' => _t('Karlı Kız Kulesi', "Snowy Maiden's Tower"),
+    'sceneIslands' => _t('Adalar baharı', 'Spring on the islands'),
+    'shuffle' => _t('Karıştır', 'Shuffle'),
+    'freeze' => _t('Zamanı Durdur', 'Stop the Clock'),
+    'outfitTulipCrown' => _t('Lale tacı', 'Tulip crown'),
+    'outfitCaptain' => _t('Vapur kaptanı şapkası', "Ferry captain's cap"),
+    'outfitApron' => _t('Kahveci önlüğü', "Coffee maker's apron"),
+    'outfitGuide' => _t('Rehber şapkası', "Guide's hat"),
+    _ => _t('Simit kolye', 'Simit necklace'),
+  };
+  String unlockText(String u) => switch (u) {
+    'cubesLokum' => _t("Zincir Küpler'de pudra şekerli lokum küpler.", 'Powdered lokum cubes for Zincir Küpler.'),
+    'cubesCini' => _t("Zincir Küpler'de İznik çinisi görünümü.", 'İznik tile cubes for Zincir Küpler.'),
+    'sceneGalata' || 'sceneSnow' || 'sceneIslands' => _t('Şeker tahtasının arkasında yeni bir İstanbul manzarası.', 'A new İstanbul scene behind the Şeker board.'),
+    'shuffle' => _t("Şeker'de takıldığında tahtayı karıştırır.", 'Shuffles the Şeker board when you are stuck.'),
+    'freeze' => _t("Zincir'de yükselişi birkaç saniye durdurur.", 'Holds the Zincir stack for a few seconds.'),
+    _ => _t("Lokum'un dolabında yeni bir kostüm.", "A new outfit in Lokum's wardrobe."),
+  };
+  String get collectionTitle => _t('Koleksiyon', 'Collection');
+  String get cubeLook => _t('Zincir küpleri', 'Zincir cubes');
+  String get sugarSceneLabel => _t('Şeker manzarası', 'Şeker scene');
+  String cubeStyleName(String s) => switch (s) {
+    'lokum' => _t('Lokum', 'Lokum'),
+    'cini' => _t('Çini', 'Tile'),
+    _ => _t('Canlı', 'Vivid'),
+  };
+  String get sceneDefault => _t('Bölüme göre', 'By chapter');
+  String get postcardsTitle => _t('İstanbul kartpostalları', 'İstanbul postcards');
+  String postcardsCount(int got, int all) => '$got / $all';
+  String get postcardLocked => _t('Sandıklardan çıkar', 'Found in chests');
+  String get freezeLabel => _t('Durdur', 'Stop');
+  /// The İstanbul postcards, oldest first.
+  ({String title, String when, String fact}) postcard(int i) => switch (i) {
+    0 => (title: _t('Yerebatan Sarnıcı', 'The Basilica Cistern'), when: '532', fact: _t('I. Justinianus döneminde yapıldı; tavanını 336 sütun taşır.', 'Built under Justinian I; 336 columns hold up its roof.')),
+    1 => (title: _t('Ayasofya', 'Hagia Sophia'), when: '537', fact: _t('I. Justinianus döneminde tamamlandı; dev kubbesiyle yüzyıllarca dünyanın en büyük kapalı mekânlarından biri oldu.', 'Completed under Justinian I; its great dome made it one of the largest interiors in the world for centuries.')),
+    2 => (title: _t('Kınalıada', 'Kınalıada'), when: '1072', fact: _t("Tahttan indirilen IV. Romanos Diogenes buraya sürgün edildi; adalara Prens Adaları denmesi bu sürgünlerden gelir.", "Deposed Romanos IV Diogenes was exiled here; such exiles gave the Princes' Islands their name.")),
+    3 => (title: _t('Galata Kulesi', 'Galata Tower'), when: '1348', fact: _t('Cenevizliler yaptı; Osmanlı döneminde yangın gözcülerinin kulesi oldu.', "Built by the Genoese; in Ottoman times it was the fire watchmen's tower.")),
+    4 => (title: _t('Rumeli Hisarı', 'Rumeli Fortress'), when: '1452', fact: _t("II. Mehmed, Boğaz'ı denetlemek için hisarı yaklaşık dört ayda yaptırdı.", 'Mehmed II had the fortress built in about four months to command the Bosphorus.')),
+    5 => (title: _t('Karadan yürüyen gemiler', 'Ships over the hills'), when: '1453', fact: _t("Haliç'in ağzı zincirle kapatılınca Osmanlı gemileri bir gecede karadan yürütülerek Haliç'e indirildi.", 'With the Golden Horn chained shut, Ottoman ships were hauled overland in a night and launched into it.')),
+    6 => (title: _t('Cevahir Bedesteni', 'The Cevahir Bedesten'), when: '1461', fact: _t("Kapalıçarşı'nın kalbi; değerli mallar burada korunur, kapılar her akşam kilitlenirdi.", 'The heart of the Grand Bazaar: valuables were kept here and the gates were locked every evening.')),
+    7 => (title: _t('İlk kahvehaneler', 'The first coffeehouses'), when: '1554', fact: _t("İstanbul'un ilk kahvehaneleri Tahtakale'de açıldı; sohbetin, tavlanın ve şiirin buluşma yeri oldular.", "İstanbul's first coffeehouses opened in Tahtakale and became the place for talk, backgammon and poetry.")),
+    8 => (title: _t('Süleymaniye', 'The Süleymaniye'), when: '1557', fact: _t("Mimar Sinan'ın eseri; külliyesiyle birlikte 1557'de tamamlandı ve şehrin siluetinin simgesi oldu.", "Mimar Sinan's work, completed with its complex in 1557; it became the emblem of the skyline.")),
+    9 => (title: _t('Simit', 'Simit'), when: '1593', fact: _t('1593 tarihli bir Üsküdar kadı sicilinde fiyatıyla birlikte kayda geçmiş; şehrin en eski sokak lezzetlerinden biri.', "Recorded with its price in an Üsküdar court register of 1593, one of the city's oldest street foods.")),
+    10 => (title: _t('Donan Boğaz', 'The frozen Bosphorus'), when: '1621', fact: _t("O kış Boğaz dondu; kaynaklar, Üsküdar'dan karşıya buzun üstünde yüründüğünü yazar.", 'That winter the Bosphorus froze; chroniclers write that people walked across from Üsküdar.')),
+    11 => (title: _t('Mısır Çarşısı', 'The Spice Bazaar'), when: '1660–1664', fact: _t('Yeni Cami külliyesinin parçası olarak tamamlandı; adını yapımına ayrılan Mısır gelirlerinden alır.', 'Completed as part of the New Mosque complex; named for the Egyptian revenues set aside to build it.')),
+    12 => (title: _t('Lale Devri', 'The Tulip Era'), when: '1718–1730', fact: _t("Lale bahçeleri ve helva sohbetleri İstanbul'un modası oldu; nadir lale soğanları servet değerindeydi.", 'Tulip gardens and halva gatherings were the fashion; rare bulbs were worth fortunes.')),
+    13 => (title: _t('Galata Köprüsü', 'The Galata Bridge'), when: '1845', fact: _t("Haliç'in iki yakasını bağlayan ilk Galata Köprüsü açıldı; köprü o günden beri birkaç kez yenilendi.", 'The first Galata Bridge joined the two shores of the Golden Horn; it has been rebuilt several times since.')),
+    _ => (title: _t('Şirket-i Hayriye', 'Şirket-i Hayriye'), when: '1851', fact: _t("Boğaz'da düzenli vapur seferlerini başlatan şirket kuruldu; vapurlar kıyı köylerini şehre bağladı.", 'The company that began regular Bosphorus ferries was founded; its boats tied the shore villages to the city.')),
+  };
+  String postcardSet(int i) => switch (i) {
+    0 => _t('Fetihten önce', 'Before the conquest'),
+    1 => _t('Fetih ve çarşılar', 'Conquest and bazaars'),
+    _ => _t("Boğaz'ın yüzyılları", 'Centuries of the Bosphorus'),
+  };
+  String get setClaim => _t('SET ÖDÜLÜ', 'SET PRIZE');
+  String get setDone => _t('Tamamlandı', 'Complete');
+  String get albumHint => _t('Bölüm sonları, etkinlikler ve sandıklar kart verir. Üç seti tamamla, rehber şapkası senin olsun.', 'Chapter ends, events and chests give cards. Complete all three sets for the guide\'s hat.');
+  String newPostcard(String title) => _t('Yeni kartpostal: $title', 'New postcard: $title');
+  String get tipDidYouKnow => _t('Biliyor muydun?', 'Did you know?');
+  String get tipSeeCard => _t('Kartı gör', 'See the card');
+  String chapterCardHint(int chapter) => _t('Bölümü bitir, kartını al', 'Finish the chapter for its card');
   // Lokum's wardrobe.
   String get wardrobeTitle => _t("LOKUM'UN DOLABI", "LOKUM'S WARDROBE");
   String get wardrobeShort => _t('Dolap', 'Wardrobe');
@@ -229,6 +360,7 @@ class AppStrings {
   String get outfitWorn => _t('GİYİLİ', 'WEARING');
   String get close => _t('Kapat', 'Close');
   String get outfitWear => _t('Giy', 'Wear');
+  String get outfitEvent => _t('Etkinlik ödülü', 'Event prize');
   String starsCount(int n) => _t('$n yıldız', '$n stars');
   String outfitName(String name) => switch (name) {
     'fez' => _t('Fes', 'Fez'),
@@ -239,6 +371,11 @@ class AppStrings {
     'kalpak' => _t('Kalpak', 'Kalpak'),
     'janissary' => _t('Yeniçeri börkü', 'Janissary börk'),
     'sultan' => _t('Padişah kavuğu', "Sultan's turban"),
+    'tulipCrown' => _t('Lale tacı', 'Tulip crown'),
+    'captain' => _t('Kaptan şapkası', "Captain's cap"),
+    'apron' => _t('Kahveci önlüğü', "Coffee apron"),
+    'simitNecklace' => _t('Simit kolye', 'Simit necklace'),
+    'guide' => _t('Rehber şapkası', "Guide's hat"),
     _ => _t('Kostümsüz', 'No outfit'),
   };
   String outfitUnlocked(String name) => _t('Yeni kostüm: ${outfitName(name)}!', 'New outfit: ${outfitName(name)}!');
@@ -292,8 +429,8 @@ class AppStrings {
   // ------------------------------------------------------------ home and modes
 
   String get play => _t('OYNA', 'PLAY');
-  String get changeMode => _t('Modu değiştir', 'Change mode');
-  String get modesTitle => _t('Modlar', 'Modes');
+  String get changeMode => _t('Oyun değiştir', 'Change game');
+  String get modesTitle => _t('Oyunlar', 'Games');
   String get settingsTitle => _t('Ayarlar', 'Settings');
   String get superGroup => _t('SÜPER', 'SUPER');
   String get puzzleGroup => _t('BULMACA', 'PUZZLE');
@@ -354,6 +491,9 @@ class AppStrings {
   String get sugarShuffled => _t('KARIŞTIRILDI', 'SHUFFLED');
   String get sugarHammer => _t('Çekiç', 'Hammer');
   String get sugarShuffle => _t('Karıştır', 'Shuffle');
+  String lokumSurprise(String what) => _t("Lokum'un sürprizi: $what", "Lokum's surprise: $what");
+  String jarGained(int n) => _t('Kavanoza +$n şeker', '+$n sweets in the jar');
+  String eventGained(String event, int n) => '$event +$n';
   String sugarExtraMoves(int n) => _t('+$n Hamle', '+$n Moves');
   String get sugarHammerHint => _t('Kırmak istediğin şekere dokun', 'Tap the sweet to smash');
   String get sugarPlay => _t('OYNA', 'PLAY');
@@ -526,8 +666,8 @@ class AppStrings {
     ChaosEvent.gift => _t('Sıradaki parça bomba', 'Your next piece is a bomb'),
   };
   String get targetHowTo => _t(
-    'Gri satırlardaki ★ blokları temizle: her ★ ${GameMode.targetBonus.round()} saniye kazandırır.',
-    'Clear the ★ blocks in the grey rows: each ★ adds ${GameMode.targetBonus.round()} seconds.',
+    'Gri satırlardaki yıldızlı blokları temizle: her biri ${GameMode.targetBonus.round()} saniye kazandırır.',
+    'Clear the star blocks in the grey rows: each adds ${GameMode.targetBonus.round()} seconds.',
   );
   String get bombsLabel => _t('BOMBA', 'BOMBS');
   String get bombWentOffTitle => _t('Bomba patladı!', 'A bomb went off!');
@@ -590,7 +730,7 @@ class AppStrings {
 
   String get blocksSubtitle => _t('Sürükle, yerleştir, patlat!', 'Drag, drop, blast!');
   String get levelsMode => _t('Seviyeler', 'Levels');
-  String get levelsModeSubtitle => _t('100 seviye: ★ blokları topla', '100 levels: collect the ★ blocks');
+  String get levelsModeSubtitle => _t('100 seviye: mücevherleri topla', '100 levels: collect the jewels');
   String get endlessMode => _t('Sonsuz', 'Endless');
   String get endlessModeSubtitle => _t('Rekor için oyna', 'Play for a record');
   String continueLevel(int n) => _t('Devam et: Seviye $n', 'Continue: Level $n');
@@ -602,34 +742,50 @@ class AppStrings {
   String resumeBlocksEndless(String endless, int score) =>
       _t('$endless · ${this.score(score)} puan', '$endless · ${this.score(score)} points');
   String levelNumber(int n) => _t('Seviye $n', 'Level $n');
-  String get gemsLeft => _t('KALAN ★', '★ LEFT');
+  String get gemsLeft => _t('MÜCEVHER', 'JEWELS');
   String get movesLeft => _t('HAMLE', 'MOVES');
-  String get blocksGoal => _t('Satır ve sütunları doldur, tüm ★ blokları patlat!', 'Fill rows and columns to blast every ★ block!');
+  String get blocksGoal => _t('Satır ve sütunları doldur, bütün mücevherleri topla!', 'Fill rows and columns to collect every jewel!');
   String get blocksHowTo => _t(
     'Parçaları tahtaya sürükle. Dolan satır ve sütunlar patlar. Hiçbir parça sığmazsa oyun biter.',
     'Drag the pieces onto the board. Full rows and columns blast away. When nothing fits, the game is over.',
   );
-  String threeStars(int moves) => _t('★★★ için en fazla $moves hamle', '★★★ in $moves moves or fewer');
+  String threeStars(int moves) => _t('3 yıldız için en fazla $moves hamle', '3 stars in $moves moves or fewer');
   String get levelDone => _t('TAMAMLANDI!', 'COMPLETE!');
   String get levelCompleteTitle => _t('Seviye tamamlandı!', 'Level complete!');
   String get outOfMovesTitle => _t('Hamlen bitti', 'Out of moves');
   String get noRoomTitle => _t('Yer kalmadı', 'No room left');
   String get levelFailedHint => _t(
-    'Biraz daha planla: ★ blokların olduğu satır ve sütunlara odaklan.',
-    'Plan a little more: focus on the rows and columns with ★ blocks.',
+    'Biraz daha planla: mücevherli blokların olduğu satır ve sütunlara odaklan.',
+    'Plan a little more: focus on the rows and columns with jewels.',
   );
   String movesUsed(int n) => _t('$n hamlede', 'in $n moves');
   String get sameBoard => _t('Aynı tahta', 'Same board');
   String get nextLevel => _t('Sonraki seviye', 'Next level');
   String get allLevelsDone => _t('Tüm seviyeleri bitirdin!', 'You finished every level!');
   String get bestLabel => _t('EN İYİ', 'BEST');
-  String? blastWord(int lines) => switch (lines) {
-    < 2 => null,
+  /// Praise for a clear: it grows with the lines and with the combo.
+  String? blastWord(int lines, [int streak = 1]) => switch ((lines + (streak >= 5 ? 3 : (streak >= 3 ? 1 : 0))).clamp(1, 5)) {
+    1 => _t('GÜZEL!', 'NICE!'),
     2 => _t('HARİKA!', 'GREAT!'),
     3 => _t('MUHTEŞEM!', 'AMAZING!'),
-    4 => _t('EFSANE!', 'LEGENDARY!'),
-    _ => _t('İNANILMAZ!', 'INCREDIBLE!'),
+    4 => _t('İNANILMAZ!', 'INCREDIBLE!'),
+    _ => _t('EFSANE!', 'LEGENDARY!'),
   };
+  String get luckyPiece => _t('ŞANSLI PARÇA!', 'LUCKY PIECE!');
+  String get rescueTitle => _t('Yer kalmadı!', 'Out of room!');
+  String get rescueMovesTitle => _t('Hamle bitti!', 'Out of moves!');
+  String get rescueHint => _t('Bir güçlendiriciyle devam et:', 'Carry on with a booster:');
+  String get rescueShuffle => _t('Yeni parçalar', 'New pieces');
+  String get rescueHammer => _t('Çekiçle 3×3 kır', 'Smash a 3×3');
+  String get rescueMoves => _t('+3 hamle', '+3 moves');
+  String get rescueGiveUp => _t('Bitir', 'End game');
+  String jewelName(int kind) => switch (kind) {
+    1 => _t('Zümrüt', 'Emerald'),
+    2 => _t('Safir', 'Sapphire'),
+    3 => _t('Kehribar', 'Amber'),
+    _ => _t('Yakut', 'Ruby'),
+  };
+  String get jewelStory => _t("KAPALIÇARŞI'NIN KAYIP MÜCEVHERLERİ", 'THE LOST JEWELS OF THE GRAND BAZAAR');
 
   String powerName(PowerType type) => switch (type) {
     PowerType.bomb => _t('BOMBA', 'BOMB'),

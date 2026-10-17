@@ -427,7 +427,7 @@ void _modeArt(Canvas canvas, Rect r, String mode, Look look, double t) {
             final k = Curves.easeInOut.transform(min(1, t * 2));
             pos += Offset((x == 1 ? 1 : -1) * s * k, 0);
           }
-          paintChainCube(canvas, Rect.fromLTWH(pos.dx + 1, pos.dy + 1, s - 2, s - 2), c, halo: false);
+          paintChainCube(canvas, Rect.fromLTWH(pos.dx + 1, pos.dy + 1, s - 2, s - 2), c);
         }
       }
       if (t > 0.5) {

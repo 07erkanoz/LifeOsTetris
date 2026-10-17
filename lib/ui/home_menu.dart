@@ -144,11 +144,11 @@ enum _PlayMode {
       return best > 0 ? s.score(best) : null;
     }
     return switch (this) {
-      _PlayMode.blocksLevels => settings.totalBlockStars > 0 ? '★ ${settings.totalBlockStars}/${BlockLevels.count * 3}' : null,
+      _PlayMode.blocksLevels => settings.totalBlockStars > 0 ? s.starsLine(settings.totalBlockStars, BlockLevels.count * 3) : null,
       _PlayMode.blocksEndless => settings.blocksBest > 0 ? s.score(settings.blocksBest) : null,
-      _PlayMode.adventure => settings.adventureSolved > 0 ? '★ ${settings.totalAdventureStars}/${Adventure.count * 3}' : null,
+      _PlayMode.adventure => settings.adventureSolved > 0 ? s.starsLine(settings.totalAdventureStars, Adventure.count * 3) : null,
       _PlayMode.bomb => settings.bombBest > 0 ? s.score(settings.bombBest) : null,
-      _PlayMode.sugar => settings.totalSugarStars > 0 ? '★ ${settings.totalSugarStars}/${SugarLevels.count * 3}' : null,
+      _PlayMode.sugar => settings.totalSugarStars > 0 ? s.starsLine(settings.totalSugarStars, SugarLevels.count * 3) : null,
       _PlayMode.chainEndless || _PlayMode.chainTime => switch (settings.chainBest(chainMode!, settings.chainDifficulty)) {
         0 => null,
         final best => s.score(best),

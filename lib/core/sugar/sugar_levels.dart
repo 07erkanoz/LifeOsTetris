@@ -178,7 +178,10 @@ class SugarLevels {
 enum SugarBooster {
   hammer,
   rainbow,
-  moves;
+  moves,
+
+  /// Shuffles the board (opened by the first full sugar jar).
+  shuffle;
 
   static const int extraMoves = 3;
 
@@ -187,6 +190,7 @@ enum SugarBooster {
     hammer => 3,
     rainbow => 1,
     moves => 2,
+    shuffle => 0,
   };
 
   /// What the chest on [level] holds (every fifth level).

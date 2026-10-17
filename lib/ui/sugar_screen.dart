@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../audio/audio_service.dart';
 import '../audio/haptics.dart';
+import '../core/rewards.dart';
 import '../core/sugar/sugar_game.dart';
 import '../core/sugar/sugar_levels.dart';
 import '../game/sugar/sugar_art.dart';
@@ -160,7 +161,7 @@ class _SugarScreenState extends State<SugarScreen> with SingleTickerProviderStat
           backgroundColor: const Color(0xFF3A1470),
           body: Stack(
             children: [
-              Positioned.fill(child: SugarBackdrop(chapter: SugarLevels.chapterOf(c.level.number))),
+              Positioned.fill(child: SugarBackdrop(chapter: SugarLevels.chapterOf(c.level.number), scene: sugarSceneIndex(c.settings.sugarScene))),
               SafeArea(
                 child: ListenableBuilder(
                   listenable: c,
@@ -348,6 +349,15 @@ class _Boosters extends StatelessWidget {
           label: s.sugarExtraMoves(SugarBooster.extraMoves),
           onTap: running ? c.useExtraMoves : null,
         ),
+        // Opened by the first full sugar jar.
+        if (settings.unlocked(Unlock.shuffle))
+          SugarBoosterButton(
+            key: const ValueKey('sugar-shuffle'),
+            kind: SugarBooster.shuffle,
+            count: settings.sugarBoosters(SugarBooster.shuffle),
+            label: s.sugarShuffle,
+            onTap: running ? c.useShuffle : null,
+          ),
       ],
     );
   }
@@ -805,6 +815,7 @@ class _WonPanel extends StatelessWidget {
             const SizedBox(height: 6),
             CandyText(_thousands(c.game.score), size: 30, outline: const Color(0xFF8A1550)),
             if (c.newBest) CandyText(s.sugarNewBest, size: 18, color: const Color(0xFF1FB85A), stroke: 0),
+            _RewardLines(c: c),
             if (c.chest.isNotEmpty) ...[
               const SizedBox(height: 10),
               Container(
@@ -823,11 +834,7 @@ class _WonPanel extends StatelessWidget {
                       children: [
                         for (final e in c.chest.entries)
                           Text(
-                            '${switch (e.key) {
-                              SugarBooster.hammer => s.sugarHammer,
-                              SugarBooster.rainbow => s.sugarRainbow,
-                              SugarBooster.moves => s.sugarExtraMoves(SugarBooster.extraMoves),
-                            }} ×${e.value}',
+                            '${sugarBoosterName(s, e.key)} ×${e.value}',
                             style: const TextStyle(fontFamily: 'Baloo2', fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF6A3A00)),
                           ),
                       ],
@@ -883,6 +890,37 @@ class _WonPanel extends StatelessWidget {
   }
 }
 
+/// What the level put away besides the score: Lokum's surprise, sweets
+/// for the jar and for this week's event.
+class _RewardLines extends StatelessWidget {
+  const _RewardLines({required this.c});
+
+  final SugarController c;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final total = c.popped.values.fold(0, (a, b) => a + b);
+    final event = c.settings.event;
+    final forEvent = c.popped[event.color] ?? 0;
+    final surprise = c.surprise;
+    const style = TextStyle(fontFamily: 'Baloo2', fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF9A5AB5), height: 1.2);
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Column(
+        key: const ValueKey('sugar-rewards'),
+        children: [
+          if (surprise != null)
+            Text(s.lokumSurprise([for (final e in surprise.boosters.entries) '${sugarBoosterName(s, e.key)} ×${e.value}'].join(', ')), textAlign: TextAlign.center, style: style.copyWith(color: const Color(0xFFE0247A))),
+          if (c.newCard case final card?) Text(s.newPostcard(s.postcard(card).title), textAlign: TextAlign.center, style: style.copyWith(color: const Color(0xFFB07A1E))),
+          if (total > 0) Text(s.jarGained(total), style: style),
+          if (forEvent > 0) Text(s.eventGained(s.eventName(event.name), forEvent), style: style),
+        ],
+      ),
+    );
+  }
+}
+
 class _LostPanel extends StatelessWidget {
   const _LostPanel({required this.c, required this.onMap});
 
@@ -900,6 +938,7 @@ class _LostPanel extends StatelessWidget {
           children: [
             SugarMascotView(pose: LokumPose.sad, size: 64, outfit: c.settings.outfit),
             CandyText(c.lostToBomb ? s.sugarBombLost : s.sugarLost, size: 32, outline: const Color(0xFF8A1550)),
+            _RewardLines(c: c),
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,

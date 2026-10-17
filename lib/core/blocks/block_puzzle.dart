@@ -7,16 +7,23 @@ export 'shapes.dart';
 
 /// One filled square of the board.
 class BlockCell {
-  const BlockCell(this.color, {this.gem = false, this.fuse});
+  const BlockCell(this.color, {this.gem = false, this.fuse, this.gemKind = 0});
 
   /// A bomb that goes off after [fuse] more placements unless its row or
   /// column is cleared first.
-  const BlockCell.bomb(int this.fuse) : color = PieceType.bomb, gem = false;
+  const BlockCell.bomb(int this.fuse) : color = PieceType.bomb, gem = false, gemKind = 0;
 
   final PieceType color;
 
-  /// A golden ★ block: the target of a level.
+  /// A jewel block: the target of a level.
   final bool gem;
+
+  /// Which jewel: ruby, emerald, sapphire or amber (see [jewelKinds]).
+  final int gemKind;
+
+  /// Jewel kinds and their board codes.
+  static const List<String> jewelCodes = ['*', 'e', 's', 'a'];
+  static const int jewelKinds = 4;
 
   /// Placements left before this bomb goes off; null for normal blocks.
   final int? fuse;
@@ -24,7 +31,7 @@ class BlockCell {
   bool get isBomb => fuse != null;
 
   /// One character of a board string (see [BlockLevel.rows]).
-  String get code => isBomb ? '$fuse' : (gem ? '*' : color.name.toUpperCase());
+  String get code => isBomb ? '$fuse' : (gem ? jewelCodes[gemKind] : color.name.toUpperCase());
 }
 
 /// A level of "Bulmaca Küpler": a starting board with ★ blocks to collect,
@@ -48,7 +55,16 @@ class BlockLevel {
   /// Moves a reference solution needed; finishing within it earns ★★★.
   final int par;
 
-  int get gemCount => rows.join().split('').where((c) => c == '*').length;
+  int get gemCount => rows.join().split('').where(BlockCell.jewelCodes.contains).length;
+
+  /// How many jewel kinds the level mixes: one at first, all four later.
+  int get jewelKinds => number < 6
+      ? 1
+      : number < 16
+      ? 2
+      : number < 31
+      ? 3
+      : 4;
 
   int get chapter => (number - 1) ~/ 10 + 1;
 
@@ -121,7 +137,16 @@ class BombWentOff extends BlockEvent {
 }
 
 class TrayRefilled extends BlockEvent {
-  const TrayRefilled();
+  const TrayRefilled({this.lucky = false});
+
+  /// The tray holds a piece dealt to finish a line.
+  final bool lucky;
+}
+
+/// A rescue broke a 3×3 patch of the board.
+class BlocksHammered extends BlockEvent {
+  const BlocksHammered(this.cells);
+  final List<(Cell, BlockCell)> cells;
 }
 
 class LevelWon extends BlockEvent {
@@ -150,6 +175,13 @@ class RandomSource implements PieceSource {
   RandomSource([Random? random]) : _random = random ?? Random();
 
   final Random _random;
+
+  /// The last tray held a lucky piece.
+  bool lucky = false;
+
+  /// On a crowded board, how often a tray brings a piece that finishes a
+  /// line somewhere.
+  static const double luckChance = 0.35;
   static final int _total = blockShapes.fold(0, (s, b) => s + b.weight);
 
   BlockShape _pick() {
@@ -167,7 +199,23 @@ class RandomSource implements PieceSource {
     for (var attempt = 0; attempt < 30 && !tray.any(game.fitsAnywhere); attempt++) {
       tray = [_pick(), _pick(), _pick()];
     }
+    lucky = false;
+    // A crowded board now and then gets a piece that finishes a line.
+    if (game.filled >= 22 && _random.nextDouble() < luckChance && !tray.any(game.clearsSomewhere)) {
+      final helpers = blockShapes.where(game.clearsSomewhere).toList();
+      if (helpers.isNotEmpty) {
+        tray[_random.nextInt(3)] = helpers[_random.nextInt(helpers.length)];
+        lucky = true;
+      }
+    }
     return tray;
+  }
+
+  /// Three pieces that each fit somewhere (for a rescue), or null.
+  List<BlockShape>? dealFitting(BlockPuzzleGame game) {
+    final fitting = blockShapes.where(game.fitsAnywhere).toList();
+    if (fitting.isEmpty) return null;
+    return [for (var i = 0; i < 3; i++) fitting[_random.nextInt(fitting.length)]];
   }
 }
 
@@ -239,7 +287,144 @@ class BlockPuzzleGame {
     return n;
   }
 
-  int get movesLeft => level == null ? 0 : max(0, level!.moveLimit - moves);
+  int get movesLeft => level == null ? 0 : max(0, level!.moveLimit + bonusMoves - moves);
+
+  /// Extra moves a rescue added to the level's limit.
+  int bonusMoves = 0;
+
+  /// Jewels of [kind] still on the board.
+  int gemsLeftOf(int kind) {
+    var n = 0;
+    for (final row in board) {
+      for (final c in row) {
+        if (c != null && c.gem && c.gemKind == kind) n++;
+      }
+    }
+    return n;
+  }
+
+  /// Jewel kinds this level has (on the board or already collected).
+  List<int> get jewelKinds => [for (var k = 0; k < (level?.jewelKinds ?? 1); k++) k];
+
+  /// Filled cells.
+  int get filled => board.fold(0, (n, row) => n + row.where((c) => c != null).length);
+
+  /// Whether [shape] finishes a row or column wherever it goes.
+  bool clearsSomewhere(BlockShape shape) {
+    for (var y = 0; y <= size - shape.height; y++) {
+      for (var x = 0; x <= size - shape.width; x++) {
+        if (!canPlace(shape, x, y)) continue;
+        final (rows, columns) = clearsFor(shape, x, y);
+        if (rows.isNotEmpty || columns.isNotEmpty) return true;
+      }
+    }
+    return false;
+  }
+
+  /// A placement that clears a line, else any that fits, for a hint:
+  /// (tray slot, x, y).
+  (int, int, int)? hintMove() {
+    (int, int, int)? any;
+    for (var slot = 0; slot < 3; slot++) {
+      final shape = tray[slot];
+      if (shape == null) continue;
+      for (var y = 0; y <= size - shape.height; y++) {
+        for (var x = 0; x <= size - shape.width; x++) {
+          if (!canPlace(shape, x, y)) continue;
+          final (rows, columns) = clearsFor(shape, x, y);
+          if (rows.isNotEmpty || columns.isNotEmpty) return (slot, x, y);
+          any ??= (slot, x, y);
+        }
+      }
+    }
+    return any;
+  }
+
+  // ------------------------------------------------------------ rescues
+
+  /// A game lost for want of room can go on.
+  bool get rescuable => status == BlockStatus.lost && (loss == BlockLoss.noRoom || loss == BlockLoss.outOfMoves);
+
+  void _resume() {
+    status = BlockStatus.playing;
+    loss = null;
+  }
+
+  /// Rescue: three new pieces that each fit.
+  bool rescueNewTray() {
+    if (!rescuable || loss != BlockLoss.noRoom) return false;
+    final source = _source is RandomSource ? _source as RandomSource : RandomSource();
+    final shapes = source.dealFitting(this);
+    if (shapes == null) return false;
+    for (var i = 0; i < 3; i++) {
+      tray[i] = shapes[i];
+    }
+    _resume();
+    _events.add(const TrayRefilled());
+    return true;
+  }
+
+  /// Rescue: breaks the fullest 3×3 patch of the board (its jewels and
+  /// bombs count as collected).
+  bool rescueHammer() {
+    if (!rescuable || loss != BlockLoss.noRoom) return false;
+    var best = (0, 0);
+    var most = -1;
+    for (var y = 0; y <= size - 3; y++) {
+      for (var x = 0; x <= size - 3; x++) {
+        var n = 0;
+        for (var dy = 0; dy < 3; dy++) {
+          for (var dx = 0; dx < 3; dx++) {
+            if (board[y + dy][x + dx] != null) n++;
+          }
+        }
+        if (n > most) {
+          most = n;
+          best = (x, y);
+        }
+      }
+    }
+    final cells = <(Cell, BlockCell)>[];
+    for (var dy = 0; dy < 3; dy++) {
+      for (var dx = 0; dx < 3; dx++) {
+        final c = Cell(best.$1 + dx, best.$2 + dy);
+        final b = board[c.y][c.x];
+        if (b == null) continue;
+        cells.add((c, b));
+        if (b.gem) gemsCollected++;
+        if (b.isBomb) bombsDefused++;
+        board[c.y][c.x] = null;
+      }
+    }
+    _resume();
+    _events.add(BlocksHammered(cells));
+    if (level != null && gemsLeft == 0) {
+      status = BlockStatus.won;
+      _events.add(LevelWon(stars: level!.starsFor(moves), movesLeft: movesLeft, bonus: 0));
+      return true;
+    }
+    // The patch is open now; if the pieces still do not fit, new ones do.
+    if (!tray.any((s) => s != null && fitsAnywhere(s))) {
+      final source = _source is RandomSource ? _source as RandomSource : RandomSource();
+      final shapes = source.dealFitting(this);
+      if (shapes != null) {
+        for (var i = 0; i < 3; i++) {
+          tray[i] = shapes[i];
+        }
+        _events.add(const TrayRefilled());
+      }
+    }
+    return true;
+  }
+
+  /// Rescue: a level out of moves gets [n] more.
+  bool rescueMoves(int n) {
+    if (!rescuable || loss != BlockLoss.outOfMoves) return false;
+    bonusMoves += n;
+    _resume();
+    if (tray.every((s) => s == null)) _refill();
+    return true;
+  }
 
   /// Bombs on the board with their fuses.
   List<(Cell, int)> get bombCells => [
@@ -283,7 +468,11 @@ class BlockPuzzleGame {
     bombs = false;
     for (var y = 0; y < size; y++) {
       for (var x = 0; x < size; x++) {
-        board[y][x] = parseCell(level.rows[y][x]);
+        final cell = parseCell(level.rows[y][x]);
+        // Plain jewels take a kind from where they sit; later levels mix more.
+        board[y][x] = cell != null && cell.gem && level.rows[y][x] == '*'
+            ? BlockCell(cell.color, gem: true, gemKind: (x * 5 + y * 3 + level.number) % level.jewelKinds)
+            : cell;
       }
     }
     _source = SequenceSource(level.pieces, random);
@@ -296,7 +485,7 @@ class BlockPuzzleGame {
       row.fillRange(0, size, null);
     }
     tray.fillRange(0, 3, null);
-    score = moves = lines = gemsCollected = streak = _sinceClear = bombsDefused = _sinceBomb = 0;
+    score = moves = lines = gemsCollected = streak = _sinceClear = bombsDefused = _sinceBomb = bonusMoves = 0;
     loss = null;
     _events.clear();
   }
@@ -304,6 +493,9 @@ class BlockPuzzleGame {
   static BlockCell? parseCell(String c) => switch (c) {
     '.' => null,
     '*' => const BlockCell(PieceType.o, gem: true),
+    'e' => const BlockCell(PieceType.o, gem: true, gemKind: 1),
+    's' => const BlockCell(PieceType.o, gem: true, gemKind: 2),
+    'a' => const BlockCell(PieceType.o, gem: true, gemKind: 3),
     'I' => const BlockCell(PieceType.i),
     'O' => const BlockCell(PieceType.o),
     'T' => const BlockCell(PieceType.t),
@@ -439,11 +631,12 @@ class BlockPuzzleGame {
   }
 
   void _refill() {
-    final shapes = _source.deal(this);
+    final source = _source;
+    final shapes = source.deal(this);
     for (var i = 0; i < 3; i++) {
       tray[i] = shapes[i];
     }
-    _events.add(const TrayRefilled());
+    _events.add(TrayRefilled(lucky: source is RandomSource && source.lucky));
   }
 
   (List<int>, List<int>) _fullLines() {
@@ -517,6 +710,7 @@ class BlockPuzzleGame {
       'gems': gemsCollected,
       'streak': streak,
       'sinceClear': _sinceClear,
+      if (bonusMoves > 0) 'bonusMoves': bonusMoves,
       if (level != null)
         'level': {
           'number': level.number,
@@ -549,6 +743,7 @@ class BlockPuzzleGame {
     gemsCollected = save['gems'] as int? ?? 0;
     streak = save['streak'] as int? ?? 0;
     _sinceClear = save['sinceClear'] as int? ?? 0;
+    bonusMoves = save['bonusMoves'] as int? ?? 0;
     bombs = save['bombs'] as bool? ?? false;
     bombsDefused = save['defused'] as int? ?? 0;
     _sinceBomb = save['sinceBomb'] as int? ?? 0;

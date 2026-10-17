@@ -150,7 +150,12 @@ class GamePalette extends ThemeExtension<GamePalette> {
     this.keyGlyph = const Color(0xFFFFFFFF),
     this.keyPrimary = const Color(0xFF3B82F6),
     this.keyPrimaryGlyph = const Color(0xFFFFFFFF),
+    this.vividBlocks = false,
   });
+
+  /// Blocks are drawn vivid and glossy whatever the skin (Bulmaca Küpler's
+  /// own look).
+  final bool vividBlocks;
 
   final bool isDark;
   final List<Color> background;
@@ -230,6 +235,32 @@ class GamePalette extends ThemeExtension<GamePalette> {
     shadeTarget: Color(0xFF080A1C),
     track: Color(0x14FFFFFF),
     icon: Color(0xFFA9B4D0),
+  );
+
+  /// Bulmaca Küpler's own look, the same in every theme: a deep violet
+  /// sky, a blue-violet tray and vivid blocks.
+  static const puzzle = GamePalette(
+    isDark: true,
+    background: [Color(0xFF3A1F9A), Color(0xFF5A26A8), Color(0xFF2A1470)],
+    glows: [Color(0x337AB8FF), Color(0x33FF8AD8), Color(0x26FFE08A)],
+    text: Color(0xFFFFFFFF),
+    muted: Color(0xFFC9B8F0),
+    label: Color(0xFFB8A8E6),
+    glass: Color(0x261E1650),
+    glassBorder: Color(0x33FFFFFF),
+    glassShadow: Color(0x66140A3A),
+    accent1: Color(0xFFFF6FB5),
+    accent2: Color(0xFFFFC414),
+    wellTop: Color(0xFF2A2070),
+    wellBottom: Color(0xFF1E1650),
+    grid: Color(0x14FFFFFF),
+    frameFill: Color(0xFF3A3A9A),
+    frameBorder: Color(0xB37A8AF0),
+    frameShadow: Color(0x99140A3A),
+    shadeTarget: Color(0xFF140A3A),
+    track: Color(0x1FFFFFFF),
+    icon: Color(0xFFE6E0FF),
+    vividBlocks: true,
   );
 
   static const glassLight = GamePalette(

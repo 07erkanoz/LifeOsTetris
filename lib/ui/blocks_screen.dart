@@ -10,10 +10,12 @@ import '../audio/haptics.dart';
 import '../core/blocks/adventure.dart';
 import '../core/blocks/block_puzzle.dart';
 import '../core/blocks/level_generator.dart';
+import '../core/sugar/sugar_levels.dart' show SugarBooster;
 import '../core/tetromino.dart';
 import '../platform/orientation_lock.dart';
 import '../game/blocks/blocks_controller.dart';
 import '../game/blocks/blocks_painters.dart';
+import '../game/blocks/jewels.dart';
 import '../game/render/background_painter.dart';
 import '../game/render/block_sprites.dart';
 import '../game/render/board_painter.dart';
@@ -22,10 +24,11 @@ import '../settings/settings.dart';
 import '../theme/palette.dart';
 import 'about_page.dart';
 import 'game_screen.dart' show SettingsPanel;
+import 'sugar_widgets.dart' show SugarBoosterIcon, SugarMascotView, sugarBoosterName;
 import 'widgets.dart';
 
 const _gold = Color(0xFFFBBF24);
-const _puzzleColors = [Color(0xFF14B8A6), Color(0xFF22C55E), Color(0xFFEAB308)];
+const _puzzleColors = [Color(0xFFFF6FB5), Color(0xFFFF8A1E), Color(0xFFFFC414)];
 
 /// "Bulmaca Küpler": drag-and-drop block puzzle with 100 levels and an
 /// endless mode. Opened from the main menu as its own screen.
@@ -185,7 +188,13 @@ class _BlocksScreenState extends State<BlocksScreen> with SingleTickerProviderSt
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => Theme(
+    // Bulmaca Küpler has its own vivid look, whatever the app's theme.
+    data: buildTheme(GamePalette.puzzle),
+    child: Builder(builder: _build),
+  );
+
+  Widget _build(BuildContext context) {
     final palette = GamePalette.of(context);
     final dpr = MediaQuery.devicePixelRatioOf(context);
     c.strings = AppStrings.of(context);
@@ -267,6 +276,7 @@ class _BlocksScreenState extends State<BlocksScreen> with SingleTickerProviderSt
 
   Widget _overlay() {
     if (c.view != BlocksView.playing) return const SizedBox.shrink(key: ValueKey('none'));
+    if (c.showRescue) return _Rescue(key: const ValueKey('rescue'), c: c);
     if (c.showResult) {
       if (c.isEndless) return _EndlessOver(key: const ValueKey('over'), c: c);
       return _LevelResult(key: ValueKey('result-${c.game.status}'), c: c);
@@ -442,7 +452,7 @@ class _Menu extends StatelessWidget {
               child: GradientButton(
                 key: const ValueKey('blocks-levels'),
                 label: s.levelsMode,
-                subtitle: '★ ${settings.totalBlockStars}/${BlockLevels.count * 3}',
+                subtitle: s.starsLine(settings.totalBlockStars, BlockLevels.count * 3),
                 icon: Icons.grid_view_rounded,
                 secondary: true,
                 onTap: c.openLevels,
@@ -728,7 +738,6 @@ class _TopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final settings = c.settings;
-    final brightness = Theme.of(context).brightness;
     return Row(
       children: [
         GlassIconButton(icon: Icons.pause_rounded, tooltip: s.pause, onTap: c.togglePause),
@@ -754,60 +763,11 @@ class _TopBar extends StatelessWidget {
         ),
         if (icons) ...[
           GlassIconButton(
-            icon: brightness == Brightness.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-            tooltip: s.theme,
-            onTap: () => settings.toggleTheme(brightness),
-          ),
-          const SizedBox(width: 8),
-          GlassIconButton(
             icon: settings.music ? Icons.music_note_rounded : Icons.music_off_rounded,
             tooltip: s.music,
             onTap: () => settings.music = !settings.music,
           ),
         ],
-      ],
-    );
-  }
-}
-
-class _HudValue extends StatelessWidget {
-  const _HudValue({required this.label, required this.value, this.icon, this.pulse = 0, this.alert = false});
-
-  final String label;
-  final String value;
-  final IconData? icon;
-  final double pulse;
-  final bool alert;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = GamePalette.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        CardLabel(label),
-        const SizedBox(height: 2),
-        Transform.scale(
-          alignment: Alignment.centerLeft,
-          scale: 1 + 0.15 * pulse,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[GameIcon(icon!, color: _gold, size: 22), const SizedBox(width: 2)],
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 24,
-                  height: 1.05,
-                  fontWeight: FontWeight.w900,
-                  color: alert ? const Color(0xFFF87171) : p.text,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -825,53 +785,161 @@ class _Hud extends StatelessWidget {
     final p = GamePalette.of(context);
     final game = c.game;
     final level = c.level;
-    final values = level == null
-        ? [
-            _HudValue(label: s.scoreLabel, value: s.score(game.score), pulse: c.fx.scorePulse),
-            _HudValue(label: s.bestLabel, value: s.score(max(c.isBombs ? c.settings.bombBest : c.settings.blocksBest, game.score))),
-          ]
-        : [
-            _HudValue(label: s.gemsLeft, value: '${game.gemsLeft}', icon: Icons.star_rounded, pulse: c.fx.gemPulse),
-            _HudValue(label: s.movesLeft, value: '${game.movesLeft}', alert: game.movesLeft <= 3),
-            _HudValue(label: s.scoreLabel, value: s.score(game.score), pulse: c.fx.scorePulse),
-          ];
-    final hint = level == null
-        ? null
-        : Text(
-            s.threeStars(level.par),
-            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: p.muted),
-          );
-    if (vertical) {
+    final best = max(c.isBombs ? c.settings.bombBest : c.settings.blocksBest, game.score);
+    final score = Transform.scale(
+      scale: 1 + 0.12 * c.fx.scorePulse,
+      child: Text(
+        s.score(game.score),
+        key: const ValueKey('blocks-score'),
+        style: TextStyle(fontSize: level == null ? 38 : 24, height: 1.05, fontWeight: FontWeight.w900, color: p.text, fontFeatures: const [FontFeature.tabularFigures()]),
+      ),
+    );
+    // The combo, while it lasts (room kept so nothing jumps).
+    final combo = SizedBox(
+      height: 30,
+      child: game.streak >= 2 ? Center(child: _ComboChip(streak: game.streak)) : null,
+    );
+    if (level == null) {
+      final body = [
+        CardLabel(s.scoreLabel),
+        score,
+        Text('${s.bestLabel} ${s.score(best)}', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: p.muted)),
+        const SizedBox(height: 4),
+        combo,
+      ];
       return GlassCard(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (final v in values) Padding(padding: const EdgeInsets.only(bottom: 14), child: v),
-            ?hint,
-          ],
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(crossAxisAlignment: vertical ? CrossAxisAlignment.start : CrossAxisAlignment.center, children: body),
         ),
       );
     }
+    // Levels: a goal per jewel kind, the moves left and the score.
+    final goals = Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      alignment: vertical ? WrapAlignment.start : WrapAlignment.center,
+      children: [
+        for (final kind in game.jewelKinds) _JewelGoal(kind: kind, left: game.gemsLeftOf(kind), pulse: c.fx.gemPulse),
+        _Pill(
+          key: const ValueKey('blocks-moves'),
+          text: '${game.movesLeft} ${s.movesLeft.toLowerCase()}',
+          alert: game.movesLeft <= 3,
+        ),
+      ],
+    );
     return GlassCard(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: vertical ? CrossAxisAlignment.start : CrossAxisAlignment.stretch,
         children: [
+          Text(s.jewelStory, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFFFFD36B), letterSpacing: 0.6)),
+          const SizedBox(height: 6),
+          goals,
+          const SizedBox(height: 6),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              for (final v in values)
-                Flexible(
-                  child: FittedBox(fit: BoxFit.scaleDown, child: v),
-                ),
-            ],
+            mainAxisSize: MainAxisSize.min,
+            children: [score, const SizedBox(width: 10), Flexible(child: Text(s.threeStars(level.par), style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: p.muted)))],
           ),
-          if (hint != null) ...[const SizedBox(height: 4), Center(child: hint)],
+          combo,
         ],
       ),
     );
   }
+}
+
+/// "KOMBO ×4" with a little flame.
+class _ComboChip extends StatelessWidget {
+  const _ComboChip({required this.streak});
+
+  final int streak;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const ValueKey('blocks-combo'),
+    padding: const EdgeInsets.fromLTRB(8, 3, 14, 3),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(15),
+      gradient: const LinearGradient(colors: [Color(0xFFFF6A00), Color(0xFFFF2A6A)]),
+      boxShadow: [BoxShadow(color: const Color(0xFFFF4A2A).withValues(alpha: 0.5), blurRadius: 10)],
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.local_fire_department_rounded, size: 18, color: Color(0xFFFFE066)),
+        const SizedBox(width: 3),
+        Text(AppStrings.of(context).combo(streak), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.white, height: 1.1)),
+      ],
+    ),
+  );
+}
+
+/// A jewel goal: the jewel and how many are left (a tick when none).
+class _JewelGoal extends StatelessWidget {
+  const _JewelGoal({required this.kind, required this.left, this.pulse = 0});
+
+  final int kind;
+  final int left;
+  final double pulse;
+
+  @override
+  Widget build(BuildContext context) {
+    final done = left == 0;
+    return Semantics(
+      label: '${AppStrings.of(context).jewelName(kind)} $left',
+      child: Container(
+        key: ValueKey('jewel-goal-$kind'),
+        padding: const EdgeInsets.fromLTRB(6, 3, 12, 3),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          color: done ? const Color(0xFF1FB85A) : const Color(0xFF1E1650).withValues(alpha: 0.85),
+          border: Border.all(color: done ? Colors.white : jewelColor(kind).withValues(alpha: 0.7), width: 1.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Transform.scale(scale: 1 + 0.2 * pulse, child: CustomPaint(size: const Size(26, 26), painter: _JewelIcon(kind))),
+            const SizedBox(width: 4),
+            done
+                ? const Icon(Icons.check_rounded, size: 20, color: Colors.white)
+                : Text('$left', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white, height: 1.1)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _JewelIcon extends CustomPainter {
+  _JewelIcon(this.kind);
+
+  final int kind;
+
+  @override
+  void paint(Canvas canvas, Size size) => paintJewel(canvas, size.center(Offset.zero), size.width * 0.42, kind);
+
+  @override
+  bool shouldRepaint(_JewelIcon old) => old.kind != kind;
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill({super.key, required this.text, this.alert = false});
+
+  final String text;
+  final bool alert;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(18),
+      color: alert ? const Color(0xFFE0243A) : const Color(0xFF1E1650).withValues(alpha: 0.85),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+    ),
+    child: Text(text, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.white, height: 1.1)),
+  );
 }
 
 class _PhoneLayout extends StatelessWidget {
@@ -886,9 +954,9 @@ class _PhoneLayout extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, box) {
           // Board as large as fits, with room for the tray below it.
-          final boardSide = min(box.maxWidth, (box.maxHeight - 170) / 1.33);
+          final boardSide = min(box.maxWidth, (box.maxHeight - 190) / 1.38);
           final cell = BlocksGeometry.fit(boardSide);
-          final trayHeight = (cell * 2.9).clamp(84.0, 150.0);
+          final trayHeight = (cell * 3.3).clamp(96.0, 170.0);
           return Column(
             children: [
               _TopBar(c: c),
@@ -921,7 +989,6 @@ class _WideLayout extends StatelessWidget {
     final p = GamePalette.of(context);
     final s = AppStrings.of(context);
     final settings = c.settings;
-    final brightness = Theme.of(context).brightness;
     final size = MediaQuery.sizeOf(context);
     // Phones held sideways: slimmer side panels so the board can use the
     // full height; theme and music move to the bottom-left corner.
@@ -949,13 +1016,6 @@ class _WideLayout extends StatelessWidget {
                           tooltip: s.music,
                           size: 36,
                           onTap: () => settings.music = !settings.music,
-                        ),
-                        const SizedBox(width: 8),
-                        GlassIconButton(
-                          icon: brightness == Brightness.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                          tooltip: s.theme,
-                          size: 36,
-                          onTap: () => settings.toggleTheme(brightness),
                         ),
                       ],
                     ),
@@ -1050,10 +1110,34 @@ class _BoardState extends State<_Board> {
               ),
             ),
           ),
+          Positioned(right: -cell * 0.3, top: -cell * 1.35, child: IgnorePointer(child: _BoardLokum(c: c, size: cell * 1.05))),
         ],
       ),
     );
   }
+}
+
+/// Lokum on the board's corner: cheers clears, frets at bombs, points at a
+/// move when the player is stuck.
+class _BoardLokum extends StatelessWidget {
+  const _BoardLokum({required this.c, required this.size});
+
+  final BlocksController c;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: c.frame,
+    builder: (context, _, _) => SugarMascotView(
+      key: const ValueKey('blocks-lokum'),
+      pose: c.lokum.pose,
+      line: c.lokum.line,
+      hop: c.lokum.hop(c.playTime),
+      beat: (c.playTime / 0.9) % 1,
+      size: size,
+      outfit: c.outfit,
+    ),
+  );
 }
 
 class _Tray extends StatelessWidget {
@@ -1117,7 +1201,7 @@ class _TraySlot extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, box) {
             // Tray pieces are shown smaller than on the board.
-            final trayCell = min(boardCell * 0.6, min(box.maxWidth, box.maxHeight) / 5.2);
+            final trayCell = min(boardCell * 0.8, min(box.maxWidth, box.maxHeight) / 4.0);
             final sprites = BlockSprites.of(trayCell, MediaQuery.devicePixelRatioOf(context), p);
             return CustomPaint(
               size: Size(box.maxWidth, box.maxHeight),
@@ -1191,6 +1275,73 @@ class _Pause extends StatelessWidget {
         ...buttons,
         const SizedBox(height: 18),
         SettingsPanel(settings: c.settings),
+      ],
+    );
+  }
+}
+
+/// Out of room (or moves), with boosters to spare: keep going?
+class _Rescue extends StatelessWidget {
+  const _Rescue({super.key, required this.c});
+
+  final BlocksController c;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = GamePalette.of(context);
+    final s = AppStrings.of(context);
+    final settings = c.settings;
+    return _Panel(
+      scrim: true,
+      children: [
+        Text(
+          c.game.loss == BlockLoss.outOfMoves ? s.rescueMovesTitle : s.rescueTitle,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: p.text),
+        ),
+        const SizedBox(height: 4),
+        Text(s.rescueHint, textAlign: TextAlign.center, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: p.muted)),
+        const SizedBox(height: 16),
+        for (final b in c.rescues) ...[
+          GestureDetector(
+            key: ValueKey('rescue-${b.name}'),
+            onTap: () => c.rescueWith(b),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                gradient: const LinearGradient(colors: [Color(0xFF6BF0A0), Color(0xFF1FB85A)]),
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                    child: Center(child: SugarBoosterIcon(b, size: 36)),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      switch (b) {
+                        SugarBooster.shuffle => s.rescueShuffle,
+                        SugarBooster.hammer => s.rescueHammer,
+                        SugarBooster.moves => s.rescueMoves,
+                        SugarBooster.rainbow => sugarBoosterName(s, b),
+                      },
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white),
+                    ),
+                  ),
+                  Text('×${settings.sugarBoosters(b)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.white)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
+        const SizedBox(height: 4),
+        GradientButton(key: const ValueKey('rescue-decline'), label: s.rescueGiveUp, icon: Icons.flag_rounded, secondary: true, onTap: c.declineRescue),
       ],
     );
   }
@@ -1656,7 +1807,7 @@ class DailyPuzzleButton extends StatelessWidget {
     final now = DateTime.now();
     final stars = settings.dailyStars(now);
     final streak = settings.dailyStreak(now);
-    final parts = [stars > 0 ? '${s.dailyDone} ${'★' * stars}' : s.dailySubtitle(now), if (streak > 0) s.streakDays(streak)];
+    final parts = [stars > 0 ? '${s.dailyDone} · ${s.starsLine(stars, 3)}' : s.dailySubtitle(now), if (streak > 0) s.streakDays(streak)];
     return GradientButton(
       key: const ValueKey('daily-puzzle'),
       label: s.dailyTitle,

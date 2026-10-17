@@ -13,6 +13,9 @@ import '../l10n/strings.dart';
 import '../platform/orientation_lock.dart';
 import '../settings/settings.dart';
 import 'game_screen.dart' show showSettingsDialog;
+import '../core/rewards.dart';
+import 'gift_art.dart';
+import 'gifts_screen.dart';
 import 'sugar_screen.dart';
 import 'sugar_widgets.dart';
 
@@ -152,6 +155,27 @@ class _SugarMapScreenState extends State<SugarMapScreen> {
                                 ),
                               ),
                             ),
+                          // Each chapter's postcard waits by its last level.
+                          for (var ch = 0; ch < SugarLevels.chapters; ch++)
+                            if (Rewards.chapterCard(ch) case final card?)
+                              Positioned(
+                                left: SugarMapScreen.node((ch + 1) * SugarLevels.perChapter, width).dx + 44,
+                                top: SugarMapScreen.node((ch + 1) * SugarLevels.perChapter, width).dy - 56,
+                                child: _Stamp(
+                                  key: ValueKey('map-card-$ch'),
+                                  card: card,
+                                  owned: settings.hasCard(card),
+                                  onTap: () {
+                                    if (settings.hasCard(card)) {
+                                      showPostcard(context, card);
+                                      return;
+                                    }
+                                    ScaffoldMessenger.of(context)
+                                      ..hideCurrentSnackBar()
+                                      ..showSnackBar(SnackBar(content: Text(s.chapterCardHint(ch)), duration: const Duration(seconds: 2)));
+                                  },
+                                ),
+                              ),
                         ],
                       ),
                     ),
@@ -167,15 +191,37 @@ class _SugarMapScreenState extends State<SugarMapScreen> {
                           const SizedBox(width: 10),
                           Expanded(child: _Ribbon(text: s.sugarChapter(_chapter), chapter: _chapter)),
                           const SizedBox(width: 10),
-                          Container(
-                            height: 40,
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            decoration: BoxDecoration(color: const Color(0xFF2A0B4F).withValues(alpha: 0.7), borderRadius: BorderRadius.circular(20)),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                          // The stars open the gifts (chests wait there).
+                          GestureDetector(
+                            key: const ValueKey('sugar-map-gifts'),
+                            onTap: () => GiftsScreen.open(context, settings: settings, audio: widget.audio),
+                            child: Stack(
+                              clipBehavior: Clip.none,
                               children: [
-                                const SugarStars(on: 1, count: 1, size: 11),
-                                CandyText('${settings.totalSugarStars}/${SugarLevels.count * 3}', size: 17, stroke: 0),
+                                Container(
+                                  height: 40,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  decoration: BoxDecoration(color: const Color(0xFF2A0B4F).withValues(alpha: 0.7), borderRadius: BorderRadius.circular(20)),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const SugarStars(on: 1, count: 1, size: 11),
+                                      CandyText('${settings.totalSugarStars}/${SugarLevels.count * 3}', size: 17, stroke: 0),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.card_giftcard_rounded, size: 18, color: Color(0xFFFFD36B)),
+                                    ],
+                                  ),
+                                ),
+                                if (settings.giftsReady > 0)
+                                  Positioned(
+                                    right: -4,
+                                    top: -4,
+                                    child: Container(
+                                      width: 14,
+                                      height: 14,
+                                      decoration: BoxDecoration(color: const Color(0xFFFF3B5C), shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)),
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
@@ -588,4 +634,46 @@ class _MapPainter extends CustomPainter {
     }
     return a.length == b.length;
   }
+}
+
+/// A chapter's postcard on the map, like a stamp: its scene once earned,
+/// a question mark until then.
+class _Stamp extends StatelessWidget {
+  const _Stamp({super.key, required this.card, required this.owned, required this.onTap});
+
+  final int card;
+  final bool owned;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Transform.rotate(
+      angle: 0.12,
+      child: SizedBox(
+        width: 58,
+        height: 48,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned.fill(child: CustomPaint(painter: _StampPainter(card, owned))),
+            if (!owned) const Text('?', style: TextStyle(fontFamily: 'Baloo2', fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _StampPainter extends CustomPainter {
+  _StampPainter(this.card, this.owned);
+
+  final int card;
+  final bool owned;
+
+  @override
+  void paint(Canvas canvas, Size size) => paintPostcard(canvas, Offset.zero & size, card, locked: !owned);
+
+  @override
+  bool shouldRepaint(_StampPainter old) => old.card != card || old.owned != owned;
 }

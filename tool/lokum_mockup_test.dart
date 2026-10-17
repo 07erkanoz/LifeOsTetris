@@ -396,7 +396,7 @@ void everywhere(Canvas canvas, Size size) {
     for (var y = 2; y < 8; y++) {
       for (var x = 0; x < 6; x++) {
         if (y == 2 && x.isOdd) continue;
-        paintChainCube(canvas, Rect.fromLTWH(o.dx + x * cell + 2, o.dy + y * cell + 2, cell - 4, cell - 4), chainColors[ChainColor.values[rnd.nextInt(5)]]!, halo: false);
+        paintChainCube(canvas, Rect.fromLTWH(o.dx + x * cell + 2, o.dy + y * cell + 2, cell - 4, cell - 4), chainColors[ChainColor.values[rnd.nextInt(5)]]!);
       }
     }
     _label(canvas, '4 ZİNCİR!', Offset(o.dx + 3 * cell, o.dy + 40), 34);

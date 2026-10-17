@@ -9,8 +9,11 @@ import '../../audio/haptics.dart';
 import '../../core/blocks/adventure.dart';
 import '../../core/blocks/block_puzzle.dart';
 import '../../core/blocks/level_generator.dart';
+import '../../core/sugar/sugar_levels.dart' show SugarBooster;
 import '../../l10n/strings.dart';
 import '../../settings/settings.dart';
+import '../lokum_mood.dart';
+import '../sugar/sugar_art.dart' show LokumOutfit, LokumPose;
 import 'blocks_fx.dart';
 
 enum BlocksView { menu, levels, adventure, playing }
@@ -58,6 +61,39 @@ class BlocksController extends ChangeNotifier {
   double playTime = 0;
   double _endAge = -1;
 
+  /// Lokum by the board: he cheers clears and helps when the player is
+  /// stuck.
+  final LokumMood lokum = LokumMood();
+
+  /// What Lokum wears.
+  LokumOutfit get outfit => LokumOutfit.worn(settings.lokumOutfit, settings.totalSugarStars, settings.unlocks);
+
+  /// A placement Lokum suggests after a while without a move: (slot, x, y).
+  (int, int, int)? hint;
+  double _still = 0;
+
+  /// Seconds without a move before Lokum shows one.
+  static const double hintAfter = 9;
+
+  /// The game ran out of room or moves and a booster can save it: the
+  /// rescue panel is up, the result waits.
+  bool rescuing = false;
+
+  /// Boosters (shared with Şeker Küpler) that can rescue this loss.
+  List<SugarBooster> get rescues {
+    if (!game.rescuable) return const [];
+    return [
+      if (game.loss == BlockLoss.noRoom) ...[
+        if (settings.sugarBoosters(SugarBooster.shuffle) > 0) SugarBooster.shuffle,
+        if (settings.sugarBoosters(SugarBooster.hammer) > 0) SugarBooster.hammer,
+      ],
+      if (game.loss == BlockLoss.outOfMoves && settings.sugarBoosters(SugarBooster.moves) > 0) SugarBooster.moves,
+    ];
+  }
+
+  /// The rescue panel shows once the last blast has played out.
+  bool get showRescue => view == BlocksView.playing && rescuing && _endAge > 0.7;
+
   AppStrings _strings = AppStrings.tr;
   AppStrings get strings => _strings;
   set strings(AppStrings value) {
@@ -77,7 +113,42 @@ class BlocksController extends ChangeNotifier {
   bool get isEndless => level == null;
 
   /// The result card waits a moment so the last blast can play out.
-  bool get showResult => view == BlocksView.playing && game.isOver && _endAge > (game.status == BlockStatus.won ? 1.6 : 1.1);
+  bool get showResult => view == BlocksView.playing && game.isOver && !rescuing && _endAge > (game.status == BlockStatus.won ? 1.6 : 1.1);
+
+  /// Uses [booster] to save a lost game.
+  void rescueWith(SugarBooster booster) {
+    if (!rescuing || !rescues.contains(booster)) return;
+    final ok = switch (booster) {
+      SugarBooster.shuffle => game.rescueNewTray(),
+      SugarBooster.hammer => game.rescueHammer(),
+      SugarBooster.moves => game.rescueMoves(SugarBooster.extraMoves),
+      SugarBooster.rainbow => false,
+    };
+    if (!ok) return;
+    settings.useSugarBooster(booster);
+    rescuing = false;
+    _endAge = -1;
+    fx.overAge = -1;
+    audio.duck = 1;
+    audio.play(Sfx.power);
+    lokum.say(_strings, 'start', LokumPose.cheer, playTime, priority: 3);
+    _process(game.drainEvents());
+    saveProgress();
+    notifyListeners();
+  }
+
+  /// No rescue: the game ends as it would have.
+  void declineRescue() {
+    if (!rescuing) return;
+    rescuing = false;
+    _recordLoss();
+    notifyListeners();
+  }
+
+  void _recordLoss() {
+    settings.savedBlocks = null;
+    newRecord = settings.recordBlocksGame(endless: isEndless, bombs: isBombs, score: game.score, lines: game.lines, seconds: playTime);
+  }
 
   // ------------------------------------------------------------ navigation
 
@@ -269,6 +340,10 @@ class BlocksController extends ChangeNotifier {
     lastStars = 0;
     playTime = 0;
     _endAge = -1;
+    rescuing = false;
+    hint = null;
+    _still = 0;
+    lokum.reset();
     cancelDrag();
     fx.reset();
     start();
@@ -305,7 +380,15 @@ class BlocksController extends ChangeNotifier {
     if (last == null) return;
     final dt = ((elapsed - last).inMicroseconds / 1e6).clamp(0.0, 0.05);
     final running = view == BlocksView.playing && !paused;
-    if (running && !game.isOver) playTime += dt;
+    if (running && !game.isOver) {
+      playTime += dt;
+      if (dragSlot == null) _still += dt;
+      if (_still > hintAfter && hint == null) {
+        hint = game.hintMove();
+        if (hint != null) lokum.say(_strings, 'hint', LokumPose.point, playTime, hold: 3);
+      }
+    }
+    lokum.settle(playTime, keep: game.isOver);
     if (_endAge >= 0) _endAge += dt;
     fx.update(running ? dt : 0);
 
@@ -339,6 +422,9 @@ class BlocksController extends ChangeNotifier {
       (fx.gemPulse * 4).round(),
       (fx.trayAge * 10).clamp(0, 6).round(),
       playTime.floor(),
+      game.streak,
+      showRescue,
+      lokum.line,
     );
     if (snapshot != _hudSnapshot) {
       _hudSnapshot = snapshot;
@@ -357,11 +443,25 @@ class BlocksController extends ChangeNotifier {
           audio.play(perfect ? Sfx.perfect : Sfx.values.byName('clear${min(lines, 4)}'));
           if (streak >= 2) audio.playCombo(streak - 1);
           if (settings.vibration) lines >= 3 || perfect ? haptics.celebrate() : haptics.medium();
-        case TrayRefilled():
+          if (perfect) {
+            lokum.say(_strings, 'great', LokumPose.dance, playTime, priority: 3);
+          } else if (lines >= 3 || streak >= 4) {
+            lokum.say(_strings, 'great', LokumPose.wow, playTime, priority: 2);
+          } else if (lines >= 2 || streak >= 2) {
+            lokum.say(_strings, 'nice', LokumPose.cheer, playTime);
+          } else {
+            lokum.say(_strings, null, LokumPose.wink, playTime, hold: 0.8);
+          }
+        case BlocksHammered():
+          audio.play(Sfx.bomb, volume: 0.8);
+          if (settings.vibration) haptics.heavy();
+        case TrayRefilled(:final lucky):
           if (game.moves > 0) audio.play(Sfx.hold, volume: 0.5);
+          if (lucky) lokum.say(_strings, 'lucky', LokumPose.wink, playTime);
         case BombPlanted():
           audio.play(Sfx.poweruse, volume: 0.7);
           if (settings.vibration) haptics.light();
+          if ((game.shortestFuse ?? 99) <= 3) lokum.say(_strings, 'bomb', LokumPose.scared, playTime, priority: 2);
         case BombWentOff():
           audio.play(Sfx.bomb);
         case LevelWon(:final stars):
@@ -371,6 +471,7 @@ class BlocksController extends ChangeNotifier {
           audio.play(Sfx.levelup);
           audio.duck = 0.5;
           if (settings.vibration) haptics.celebrate();
+          lokum.say(_strings, 'win', LokumPose.dance, playTime, priority: 5, hold: 99);
           if (isDaily) {
             settings.recordDaily(dailyDay!, stars);
           } else if (isAdventure) {
@@ -381,17 +482,17 @@ class BlocksController extends ChangeNotifier {
           settings.recordBlocksGame(endless: false, score: game.score, lines: game.lines, seconds: playTime);
         case BlocksGameOver():
           _endAge = 0;
-          settings.savedBlocks = null;
           audio.play(Sfx.gameover);
           audio.duck = 0.4;
           if (settings.vibration) haptics.heavy();
-          newRecord = settings.recordBlocksGame(
-            endless: isEndless,
-            bombs: isBombs,
-            score: game.score,
-            lines: game.lines,
-            seconds: playTime,
-          );
+          // A booster may save the game: the result waits for the choice.
+          rescuing = rescues.isNotEmpty;
+          if (rescuing) {
+            lokum.say(_strings, 'danger', LokumPose.scared, playTime, priority: 5, hold: 99);
+          } else {
+            _recordLoss();
+            lokum.say(_strings, 'lose', LokumPose.sad, playTime, priority: 5, hold: 99);
+          }
       }
     }
   }
@@ -431,6 +532,7 @@ class BlocksController extends ChangeNotifier {
     dragSlot = slot;
     dragPointer = global;
     _dragMouse = mouse;
+    _touched();
     _updateTarget();
     audio.play(Sfx.move, volume: 0.7);
     notifyListeners();
@@ -455,9 +557,19 @@ class BlocksController extends ChangeNotifier {
     }
   }
 
+  /// A move (or the start of one) puts Lokum's hint away.
+  void _touched() {
+    _still = 0;
+    if (hint != null) {
+      hint = null;
+      if (lokum.pose == LokumPose.point) lokum.reset();
+    }
+  }
+
   /// Places the piece in tray [slot] at ([x], [y]) if it fits.
   bool place(int slot, int x, int y) {
     if (view != BlocksView.playing || paused || !game.place(slot, x, y)) return false;
+    _touched();
     _process(game.drainEvents());
     saveProgress();
     notifyListeners();

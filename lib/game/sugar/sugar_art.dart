@@ -495,24 +495,48 @@ enum LokumOutfit {
   janissary(80),
 
   /// A sultan's white turban with a jewelled plume.
-  sultan(110);
+  sultan(110),
 
-  const LokumOutfit(this.stars);
+  /// Weekly event prizes: a crown of tulips (the Tulip Festival)...
+  tulipCrown(0, 'outfitTulipCrown'),
+
+  /// ...a ferry captain's cap (Ferry Week)...
+  captain(0, 'outfitCaptain'),
+
+  /// ...a coffee maker's apron (Coffee Week)...
+  apron(0, 'outfitApron'),
+
+  /// ...and a simit on a string (Simit Week).
+  simitNecklace(0, 'outfitSimitNecklace'),
+
+  /// A tour guide's hat with a little flag, for a full postcard album.
+  guide(0, 'outfitGuide');
+
+  const LokumOutfit(this.stars, [this.gift]);
 
   /// Şeker Küpler stars needed to wear it.
   final int stars;
 
+  /// The gift that unlocks it instead of stars (an Unlock name), if any.
+  final String? gift;
+
   static LokumOutfit parse(String? name) => values.firstWhere((o) => o.name == name, orElse: () => none);
 
-  /// The outfit named [name] if [stars] unlock it, else none.
-  static LokumOutfit worn(String? name, int stars) {
+  /// Whether [stars] and the gifts in [unlocks] let Lokum wear it.
+  bool open(int stars, Set<String> unlocks) {
+    final g = gift;
+    return g != null ? unlocks.contains(g) : stars >= this.stars;
+  }
+
+  /// The outfit named [name] if it is open, else none.
+  static LokumOutfit worn(String? name, int stars, [Set<String> unlocks = const {}]) {
     final o = parse(name);
-    return stars >= o.stars ? o : none;
+    return o.open(stars, unlocks) ? o : none;
   }
 }
 
 /// Outfits that cover the top of the head (no cherry under them).
-bool _hatOn(LokumOutfit o) => const {LokumOutfit.fez, LokumOutfit.kalpak, LokumOutfit.sultan, LokumOutfit.janissary, LokumOutfit.simit}.contains(o);
+bool _hatOn(LokumOutfit o) => const {LokumOutfit.fez, LokumOutfit.kalpak, LokumOutfit.sultan, LokumOutfit.janissary, LokumOutfit.simit, LokumOutfit.captain, LokumOutfit.guide}.contains(o);
 
 /// Lokum, the mascot: a pink jelly sweet with a cherry on top, [size] tall
 /// around [c]; [hop] 0..1 lifts and squashes it a little, [beat] (0..1,
@@ -887,6 +911,124 @@ void _paintOutfitShape(Canvas canvas, double s, LokumOutfit outfit) {
         canvas.drawPath(m, Paint()..color = const Color(0xFF2A1A14));
       }
       canvas.drawOval(Rect.fromCenter(center: Offset(-s * 0.08, s * 0.06), width: s * 0.1, height: s * 0.025), Paint()..color = Colors.white.withValues(alpha: 0.2));
+    case LokumOutfit.tulipCrown:
+      // A gilded band round the head with three tulips standing on it.
+      final band = Rect.fromCenter(center: Offset(0, -s * 0.36), width: s * 0.62, height: s * 0.3);
+      canvas.drawArc(band, pi * 1.08, pi * 0.84, false, Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = s * 0.06
+        ..strokeCap = StrokeCap.round
+        ..shader = ui.Gradient.linear(band.centerLeft, band.centerRight, gold, const [0, 0.5, 1]));
+      for (final (dx, h) in [(-0.2, 0.1), (0.0, 0.16), (0.2, 0.1)]) {
+        final base = Offset(dx * s, -s * 0.44 - (dx == 0 ? s * 0.06 : 0));
+        canvas.drawLine(base, base - Offset(0, s * h), Paint()
+          ..strokeWidth = s * 0.025
+          ..color = const Color(0xFF2F8F3A));
+        final c = base - Offset(0, s * (h + 0.04));
+        final cup = Path()
+          ..moveTo(c.dx - s * 0.055, c.dy - s * 0.05)
+          ..lineTo(c.dx - s * 0.025, c.dy - s * 0.015)
+          ..lineTo(c.dx, c.dy - s * 0.06)
+          ..lineTo(c.dx + s * 0.025, c.dy - s * 0.015)
+          ..lineTo(c.dx + s * 0.055, c.dy - s * 0.05)
+          ..quadraticBezierTo(c.dx + s * 0.06, c.dy + s * 0.04, c.dx, c.dy + s * 0.04)
+          ..quadraticBezierTo(c.dx - s * 0.06, c.dy + s * 0.04, c.dx - s * 0.055, c.dy - s * 0.05)
+          ..close();
+        canvas.drawPath(cup, Paint()..color = dx == 0 ? const Color(0xFFE2333C) : const Color(0xFFFF6A9A));
+      }
+      for (final dx in [-0.1, 0.1]) {
+        canvas.drawCircle(Offset(dx * s, -s * 0.5), s * 0.02, Paint()..color = const Color(0xFF2EA8FF));
+      }
+    case LokumOutfit.captain:
+      // A white cap with a black peak and a gold anchor.
+      final crown = Rect.fromCenter(center: Offset(0, -s * 0.5), width: s * 0.66, height: s * 0.24);
+      canvas.drawOval(crown, Paint()..shader = ui.Gradient.linear(crown.topCenter, crown.bottomCenter, const [Colors.white, Color(0xFFDADDE6)]));
+      final band = Rect.fromLTRB(-s * 0.26, -s * 0.47, s * 0.26, -s * 0.38);
+      canvas.drawRect(band, Paint()..color = const Color(0xFF1E2A4A));
+      canvas.drawLine(Offset(band.left, band.top), Offset(band.right, band.top), Paint()
+        ..strokeWidth = s * 0.015
+        ..color = const Color(0xFFE2B33C));
+      final peak = Path()
+        ..moveTo(-s * 0.26, -s * 0.39)
+        ..quadraticBezierTo(0, -s * 0.28, s * 0.26, -s * 0.39)
+        ..quadraticBezierTo(0, -s * 0.33, -s * 0.26, -s * 0.39)
+        ..close();
+      canvas.drawPath(peak, Paint()..color = const Color(0xFF14141E));
+      final a = Offset(0, -s * 0.54);
+      final anchor = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = s * 0.018
+        ..strokeCap = StrokeCap.round
+        ..color = const Color(0xFFD4A017);
+      canvas.drawLine(a - Offset(0, s * 0.05), a + Offset(0, s * 0.05), anchor);
+      canvas.drawLine(a - Offset(s * 0.03, s * 0.025), a + Offset(s * 0.03, -s * 0.025), anchor);
+      canvas.drawArc(Rect.fromCircle(center: a + Offset(0, s * 0.015), radius: s * 0.04), 0.3, pi - 0.6, false, anchor);
+    case LokumOutfit.apron:
+      // A white apron tied at the waist with a coffee cup on it.
+      final apron = Path()
+        ..moveTo(-s * 0.24, s * 0.2)
+        ..lineTo(s * 0.24, s * 0.2)
+        ..lineTo(s * 0.3, s * 0.5)
+        ..quadraticBezierTo(0, s * 0.56, -s * 0.3, s * 0.5)
+        ..close();
+      canvas.drawPath(apron, Paint()..shader = ui.Gradient.linear(Offset(0, s * 0.2), Offset(0, s * 0.54), const [Colors.white, Color(0xFFE6E2EE)]));
+      canvas.drawLine(Offset(-s * 0.46, s * 0.18), Offset(s * 0.46, s * 0.18), Paint()
+        ..strokeWidth = s * 0.03
+        ..strokeCap = StrokeCap.round
+        ..color = const Color(0xFF8A4A2A));
+      final cup = Rect.fromCenter(center: Offset(0, s * 0.37), width: s * 0.13, height: s * 0.1);
+      canvas.drawRRect(RRect.fromRectAndCorners(cup, bottomLeft: Radius.circular(s * 0.04), bottomRight: Radius.circular(s * 0.04)), Paint()..color = const Color(0xFF6A3418));
+      canvas.drawArc(Rect.fromCircle(center: cup.centerRight, radius: s * 0.03), -pi / 2, pi, false, Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = s * 0.015
+        ..color = const Color(0xFF6A3418));
+      for (final dx in [-0.025, 0.025]) {
+        canvas.drawPath(
+            Path()
+              ..moveTo(dx * s, s * 0.31)
+              ..quadraticBezierTo(dx * s + s * 0.02, s * 0.28, dx * s, s * 0.25),
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = s * 0.012
+              ..color = const Color(0xFFB8A8A0));
+      }
+    case LokumOutfit.guide:
+      // A sand-coloured bucket hat with a red band and a little flag.
+      final brim = Rect.fromCenter(center: Offset(0, -s * 0.42), width: s * 0.78, height: s * 0.14);
+      canvas.drawOval(brim, Paint()..color = const Color(0xFFC8A46A));
+      final crown = Path()
+        ..moveTo(-s * 0.26, -s * 0.44)
+        ..quadraticBezierTo(-s * 0.26, -s * 0.72, 0, -s * 0.72)
+        ..quadraticBezierTo(s * 0.26, -s * 0.72, s * 0.26, -s * 0.44)
+        ..close();
+      canvas.drawPath(crown, Paint()..shader = ui.Gradient.linear(Offset(0, -s * 0.72), Offset(0, -s * 0.44), const [Color(0xFFF0D8A8), Color(0xFFC8A46A)]));
+      canvas.drawRect(Rect.fromLTRB(-s * 0.26, -s * 0.52, s * 0.26, -s * 0.45), Paint()..color = const Color(0xFFE2333C));
+      canvas.drawLine(Offset(s * 0.18, -s * 0.5), Offset(s * 0.3, -s * 0.86), Paint()
+        ..strokeWidth = s * 0.018
+        ..strokeCap = StrokeCap.round
+        ..color = const Color(0xFF6A4A2A));
+      final flag = Path()..addPolygon([Offset(s * 0.3, -s * 0.86), Offset(s * 0.46, -s * 0.8), Offset(s * 0.27, -s * 0.74)], true);
+      canvas.drawPath(flag, Paint()..color = const Color(0xFFE2333C));
+      canvas.drawCircle(Offset(s * 0.34, -s * 0.8), s * 0.022, Paint()..color = Colors.white);
+    case LokumOutfit.simitNecklace:
+      canvas.drawPath(
+          Path()
+            ..moveTo(-s * 0.4, s * 0.18)
+            ..quadraticBezierTo(0, s * 0.42, s * 0.4, s * 0.18),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = s * 0.015
+            ..color = const Color(0xFF7A4A10));
+      final c = Offset(0, s * 0.36);
+      canvas.drawCircle(c, s * 0.1, Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = s * 0.07
+        ..shader = ui.Gradient.radial(c + Offset(-s * 0.03, -s * 0.03), s * 0.15, const [Color(0xFFE8A050), Color(0xFF8A4416)]));
+      final rnd = Random(3);
+      for (var i = 0; i < 12; i++) {
+        final a = rnd.nextDouble() * pi * 2;
+        canvas.drawOval(Rect.fromCenter(center: c + Offset(cos(a), sin(a)) * s * (0.08 + rnd.nextDouble() * 0.04), width: s * 0.018, height: s * 0.01), Paint()..color = const Color(0xFFFFF0C8));
+      }
     case LokumOutfit.simit:
       // A cloth pad, the round tray, and the simits piled on it.
       canvas.drawOval(Rect.fromCenter(center: Offset(0, -s * 0.47), width: s * 0.4, height: s * 0.1), Paint()..color = const Color(0xFFE8E2F0));

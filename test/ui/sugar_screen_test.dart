@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifeos_kupler/app.dart';
 import 'package:lifeos_kupler/audio/audio_service.dart';
+import 'package:lifeos_kupler/core/rewards.dart';
 import 'package:lifeos_kupler/core/sugar/sugar_game.dart';
 import 'package:lifeos_kupler/core/sugar/sugar_levels.dart';
 import 'package:lifeos_kupler/core/sugar/sugar_solver.dart';
@@ -158,6 +159,10 @@ void main() {
     expect(settings.sugarBoosters(SugarBooster.hammer), greaterThan(hammers));
     expect(settings.sugarLevel, 6);
     expect(settings.savedSugar, isNull);
+    // The sweets went into the jar, and Lokum brought a surprise.
+    expect(settings.jarCount, greaterThan(0));
+    expect(c.surprise, isNotNull);
+    expect(find.byKey(const ValueKey('sugar-rewards')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('sugar-next')));
     await pumpFor(tester, 30);
@@ -238,6 +243,20 @@ void main() {
     expect(find.byKey(const ValueKey('sugar-play')), findsOneWidget);
     expect(settings.storySeen(0), isTrue);
     expect(settings.storySeen(1), isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets("the map keeps each chapter's postcard by its last level", (tester) async {
+    final settings = await openSugar(tester);
+    expect(find.byKey(const ValueKey('map-card-0'), skipOffstage: false), findsOneWidget);
+    settings.applyGift(const Gift(card: 11));
+    await pumpFor(tester, 4);
+    // Into the middle of the screen, clear of the continue button.
+    Scrollable.ensureVisible(tester.element(find.byKey(const ValueKey('map-card-0'), skipOffstage: false)), alignment: 0.5);
+    await pumpFor(tester, 4);
+    await tester.tap(find.byKey(const ValueKey('map-card-0')));
+    await pumpFor(tester, 10);
+    expect(find.text('Mısır Çarşısı'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 

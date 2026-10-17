@@ -45,6 +45,20 @@ class PlacePulse {
   double get t => (age / duration).clamp(0.0, 1.0);
 }
 
+/// A collected jewel flying up off the board towards its goal.
+class GemFlight {
+  GemFlight(this.from, this.kind, this.delay);
+
+  final Cell from;
+  final int kind;
+  double delay;
+  double age = 0;
+  static const duration = 0.75;
+
+  double get t => (age / duration).clamp(0.0, 1.0);
+  bool get done => delay <= 0 && age >= duration;
+}
+
 const _cool = [Color(0xFFFFFFFF), Color(0xFF7DD3FC), Color(0xFF818CF8)];
 const _gold = [Color(0xFFFEF08A), Color(0xFFF59E0B)];
 const _rainbow = [Color(0xFF22D3EE), Color(0xFFA855F7), Color(0xFFF97316), Color(0xFFFACC15)];
@@ -68,6 +82,7 @@ class BlocksFx implements BackdropFx {
   final List<VanishingBlock> vanishing = [];
   final List<LineBeam> beams = [];
   final List<PlacePulse> placePulses = [];
+  final List<GemFlight> gemFlights = [];
 
   @override
   double time = 0;
@@ -98,13 +113,14 @@ class BlocksFx implements BackdropFx {
     vanishing.clear();
     beams.clear();
     placePulses.clear();
+    gemFlights.clear();
     pulse = boardFlash = _trauma = 0;
     overAge = -1;
     trayAge = 1;
     scorePulse = gemPulse = movesPulse = 0;
   }
 
-  bool get busy => particles.isNotEmpty || floaters.isNotEmpty || vanishing.isNotEmpty || shockwaves.isNotEmpty || pulse > 0;
+  bool get busy => particles.isNotEmpty || floaters.isNotEmpty || vanishing.isNotEmpty || shockwaves.isNotEmpty || gemFlights.isNotEmpty || pulse > 0;
 
   Offset get shake {
     if (!shakeEnabled || _trauma <= 0) return Offset.zero;
@@ -147,6 +163,15 @@ class BlocksFx implements BackdropFx {
       p.age += dt;
     }
     placePulses.removeWhere((p) => p.age >= PlacePulse.duration);
+    for (final g in gemFlights) {
+      if (g.delay > 0) {
+        g.delay -= dt;
+      } else {
+        g.age += dt;
+        if (g.age >= GemFlight.duration && g.age - dt < GemFlight.duration) gemPulse = 1;
+      }
+    }
+    gemFlights.removeWhere((g) => g.done);
 
     for (final p in particles) {
       if (p.delay > 0) {
@@ -181,8 +206,11 @@ class BlocksFx implements BackdropFx {
         _placed(shape, cells);
       case LinesBlasted():
         _blast(event);
-      case TrayRefilled():
+      case TrayRefilled(:final lucky):
         trayAge = 0;
+        if (lucky) floaters.add(Floater(_mid, 7.2, [FloaterLine(strings.luckyPiece, 0.75, const [Color(0xFFFFFFFF), Color(0xFF6BF0A0)], glow: const Color(0xFF1FB85A))], duration: 1.3));
+      case BlocksHammered(:final cells):
+        _hammered(cells);
       case LevelWon(:final stars, :final bonus):
         _won(stars, bonus);
       case BombPlanted(:final cell):
@@ -272,7 +300,10 @@ class BlocksFx implements BackdropFx {
           delay: burst,
         ),
       );
-      if (block.gem) _gemBurst(cell, burst);
+      if (block.gem) {
+        _gemBurst(cell, burst);
+        gemFlights.add(GemFlight(cell, block.gemKind, burst));
+      }
       if (block.isBomb) _defuseBurst(cell, burst);
     }
     for (final r in e.rows) {
@@ -294,9 +325,12 @@ class BlocksFx implements BackdropFx {
 
     final lines = <FloaterLine>[];
     if (e.perfect) lines.add(FloaterLine(strings.perfectClear, 1.25, const [Color(0xFFFDE047), Color(0xFF22D3EE), Color(0xFFA855F7)]));
-    final word = strings.blastWord(n);
+    // Praise that grows with the lines and the combo.
+    final word = strings.blastWord(n, e.streak);
     if (word != null) {
-      final (size, colors, glow) = switch (n) {
+      final level = (n + (e.streak >= 5 ? 3 : (e.streak >= 3 ? 1 : 0))).clamp(1, 5);
+      final (size, colors, glow) = switch (level) {
+        1 => (0.85, _gold, const Color(0xFFF59E0B)),
         2 => (1.0, _cool, const Color(0xFF38BDF8)),
         3 => (1.15, _hot, const Color(0xFFF97316)),
         _ => (1.3, _rainbow, const Color(0xFFA855F7)),
@@ -306,6 +340,23 @@ class BlocksFx implements BackdropFx {
     lines.add(FloaterLine('+${e.points}', 0.7, _gold, glow: const Color(0xFFF59E0B)));
     if (e.streak >= 2) lines.add(FloaterLine(strings.combo(e.streak), 0.55, _combo, glow: const Color(0xFF6366F1)));
     floaters.add(Floater(_mid, (cy - 0.6).clamp(1.6, 6.4), lines, duration: n >= 3 ? 1.6 : 1.25));
+  }
+
+  /// A rescue's hammer: the patch bursts from its middle.
+  void _hammered(List<(Cell, BlockCell)> cells) {
+    if (cells.isEmpty) return;
+    final cx = cells.map((c) => c.$1.x + 0.5).reduce((a, b) => a + b) / cells.length;
+    final cy = cells.map((c) => c.$1.y + 0.5).reduce((a, b) => a + b) / cells.length;
+    for (final (cell, block) in cells) {
+      vanishing.add(VanishingBlock(cell, block, 0.05));
+      if (block.gem) {
+        _gemBurst(cell, 0.1);
+        gemFlights.add(GemFlight(cell, block.gemKind, 0.15));
+      }
+    }
+    if (particlesEnabled) shockwaves.add(Shockwave(cx, cy, 3.5, const Color(0xFFFFE066), duration: 0.5, width: 0.3));
+    _trauma = min(1, _trauma + 0.6);
+    boardFlash = 0.5;
   }
 
   void _gemBurst(Cell cell, double delay) {
@@ -423,7 +474,7 @@ class BlocksFx implements BackdropFx {
           Color(0xFFFDE047),
           Color(0xFFF59E0B),
         ], glow: const Color(0xFFFBBF24)),
-        FloaterLine('★' * stars + '☆' * (3 - stars), 0.95, _gold, glow: const Color(0xFFF59E0B)),
+        FloaterLine(strings.starsLine(stars, 3), 0.95, _gold, glow: const Color(0xFFF59E0B)),
         if (bonus > 0) FloaterLine('+$bonus', 0.6, _gold),
       ], duration: 2.2),
     );

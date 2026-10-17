@@ -5,7 +5,17 @@ import 'package:flutter/material.dart';
 
 import '../core/sugar/sugar_game.dart';
 import '../core/sugar/sugar_levels.dart';
+import '../game/sugar/istanbul_art.dart';
 import '../game/sugar/sugar_art.dart';
+import '../l10n/strings.dart';
+
+/// A booster's name.
+String sugarBoosterName(AppStrings s, SugarBooster b) => switch (b) {
+  SugarBooster.hammer => s.sugarHammer,
+  SugarBooster.rainbow => s.sugarRainbow,
+  SugarBooster.moves => s.sugarExtraMoves(SugarBooster.extraMoves),
+  SugarBooster.shuffle => s.sugarShuffle,
+};
 
 /// Pieces of the Şeker Küpler screens: candy text, buttons and panels,
 /// goal icons, the star bar, boosters and the backdrop.
@@ -397,6 +407,17 @@ class SugarBoosterButton extends StatelessWidget {
   }
 }
 
+/// A booster's icon on its own.
+class SugarBoosterIcon extends StatelessWidget {
+  const SugarBoosterIcon(this.kind, {super.key, this.size = 40});
+
+  final SugarBooster kind;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(size: Size.square(size), painter: _BoosterIconPainter(kind));
+}
+
 class _BoosterIconPainter extends CustomPainter {
   _BoosterIconPainter(this.kind);
 
@@ -421,6 +442,17 @@ class _BoosterIconPainter extends CustomPainter {
         paintSugarLabel(canvas, '+${SugarBooster.extraMoves}', Offset.zero, 28,
             Paint()..shader = ui.Gradient.linear(const Offset(0, -14), const Offset(0, 14), const [Color(0xFFFF7AC6), Color(0xFFE0247A)]),
             outline: Colors.white, stroke: 0.18);
+      case SugarBooster.shuffle:
+        // Three sweets chasing each other round.
+        for (var i = 0; i < 3; i++) {
+          final a = -pi / 2 + i * pi * 2 / 3;
+          canvas.drawArc(Rect.fromCircle(center: Offset.zero, radius: 17), a + 0.35, 1.5, false, Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 4
+            ..strokeCap = StrokeCap.round
+            ..color = const Color(0xFFE0247A));
+          paintCandy(canvas, Rect.fromCenter(center: Offset(cos(a), sin(a)) * 17, width: 18, height: 18), SugarColor.values[i * 2]);
+        }
     }
     canvas.restore();
   }
@@ -430,19 +462,32 @@ class _BoosterIconPainter extends CustomPainter {
 }
 
 /// The sweet dusk behind the board, a little different per chapter.
+/// The story scene behind the board for an unlocked scene name, or null
+/// for the chapter's own sky.
+int? sugarSceneIndex(String? name) => switch (name) {
+  'sceneGalata' => 4,
+  'sceneSnow' => 1,
+  'sceneIslands' => 5,
+  _ => null,
+};
+
 class SugarBackdrop extends StatelessWidget {
-  const SugarBackdrop({super.key, this.chapter = 0});
+  const SugarBackdrop({super.key, this.chapter = 0, this.scene});
 
   final int chapter;
 
+  /// An İstanbul scene (a story chapter) instead of the chapter's sky.
+  final int? scene;
+
   @override
-  Widget build(BuildContext context) => CustomPaint(painter: _BackdropPainter(chapter), size: Size.infinite);
+  Widget build(BuildContext context) => CustomPaint(painter: _BackdropPainter(chapter, scene), size: Size.infinite);
 }
 
 class _BackdropPainter extends CustomPainter {
-  _BackdropPainter(this.chapter);
+  _BackdropPainter(this.chapter, this.scene);
 
   final int chapter;
+  final int? scene;
 
   static const _skies = [
     [Color(0xFF5B1FA8), Color(0xFFB0307E), Color(0xFF3A1470)],
@@ -453,6 +498,16 @@ class _BackdropPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final screen = Offset.zero & size;
+    final view = scene;
+    if (view != null) {
+      // The scene, dimmed a little so the board stays easy to read.
+      canvas.save();
+      canvas.clipRect(screen);
+      paintBackdropScene(canvas, size, view, t: 8);
+      canvas.restore();
+      canvas.drawRect(screen, Paint()..color = const Color(0xFF1E0B3A).withValues(alpha: 0.25));
+      return;
+    }
     canvas.drawRect(screen, Paint()..shader = ui.Gradient.linear(screen.topCenter, screen.bottomCenter, _skies[chapter % 3], const [0, 0.55, 1]));
     final rnd = Random(4 + chapter);
     for (var i = 0; i < 16; i++) {
@@ -464,7 +519,7 @@ class _BackdropPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BackdropPainter old) => old.chapter != chapter;
+  bool shouldRepaint(_BackdropPainter old) => old.chapter != chapter || old.scene != scene;
 }
 
 /// Round, light icon button for the top corners.

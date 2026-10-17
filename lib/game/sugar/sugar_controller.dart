@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../audio/audio_service.dart';
 import '../../audio/haptics.dart';
+import '../../core/rewards.dart';
 import '../../core/sugar/sugar_game.dart';
 import '../../core/sugar/sugar_levels.dart';
 import '../../l10n/strings.dart';
@@ -124,8 +125,17 @@ class SugarController extends ChangeNotifier {
   /// The row Lokum gobbles on his dive.
   int diveRow = 4;
 
+  /// Sweets popped this level, by colour (for the jar and the event).
+  final Map<SugarColor, int> popped = {};
+
+  /// Lokum's little pack for a level won.
+  Gift? surprise;
+
+  /// The postcard a chapter's last level gave, if it did.
+  int? newCard;
+
   /// What Lokum wears.
-  LokumOutfit get outfit => LokumOutfit.worn(settings.lokumOutfit, settings.totalSugarStars);
+  LokumOutfit get outfit => LokumOutfit.worn(settings.lokumOutfit, settings.totalSugarStars, settings.unlocks);
 
   bool get started => game.status != SugarStatus.ready;
   bool get busy => game.status == SugarStatus.resolving || now < _waitUntil;
@@ -178,6 +188,9 @@ class SugarController extends ChangeNotifier {
     chest = const {};
     selected = hint = null;
     diveStart = null;
+    popped.clear();
+    surprise = null;
+    newCard = null;
     _overAge = -1;
     _playTime = 0;
     _idle = 0;
@@ -331,7 +344,7 @@ class SugarController extends ChangeNotifier {
       final ok = switch (booster) {
         SugarBooster.hammer => game.board[y][x] != null || game.box[y][x] > 0,
         SugarBooster.rainbow => game.board[y][x] != null && !game.board[y][x]!.chained && !game.board[y][x]!.isPrism,
-        SugarBooster.moves => false,
+        SugarBooster.moves || SugarBooster.shuffle => false,
       };
       if (ok && settings.useSugarBooster(booster)) {
         booster == SugarBooster.hammer ? game.hammer(x, y) : game.rainbow(x, y);
@@ -391,6 +404,17 @@ class SugarController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Shuffles the board with a shuffle booster.
+  void useShuffle() {
+    if (!canPlay || settings.sugarBoosters(SugarBooster.shuffle) <= 0) return;
+    if (!game.shuffle()) return;
+    settings.useSugarBooster(SugarBooster.shuffle);
+    _touched();
+    audio.play(Sfx.poweruse);
+    _process(game.drainEvents());
+    notifyListeners();
+  }
+
   void useExtraMoves() {
     if (settings.sugarBoosters(SugarBooster.moves) <= 0) return;
     final lost = game.status == SugarStatus.lost;
@@ -437,6 +461,7 @@ class SugarController extends ChangeNotifier {
           final start = at;
           var sx = 0.0, sy = 0.0;
           for (final (x, y, p) in e.pieces) {
+            popped[p.color] = (popped[p.color] ?? 0) + 1;
             ghosts.add(SugarGhost(p, x.toDouble(), y.toDouble(), start));
             fx.burst(x + 0.5, y + 0.5, SugarFx.colourOf(p), delay: start - now, count: e.pieces.length > 12 ? 3 : 6);
             sx += x + 0.5;
@@ -574,11 +599,20 @@ class SugarController extends ChangeNotifier {
     if (_overAge >= 0) return;
     _overAge = 0;
     settings.savedSugar = null;
+    settings.addSugarCandies(popped);
     final won = game.status == SugarStatus.won;
     final before = settings.sugarBest(level.number);
     if (won) {
       chest = settings.recordSugarLevel(level.number, stars: game.starCount, score: game.score, seconds: _playTime);
       newBest = before > 0 && game.score > before;
+      settings.applyGift(surprise = Rewards.surprise(level.number * 7919 + game.score));
+      if (level.number % SugarLevels.perChapter == 0) {
+        final card = Rewards.chapterCard(SugarLevels.chapterOf(level.number));
+        if (card != null && !settings.hasCard(card)) {
+          settings.applyGift(Gift(card: card));
+          newCard = card;
+        }
+      }
       fx.confetti(count: 80);
       audio.play(Sfx.levelup);
       say('win', LokumPose.dance, priority: 5, hold: 99);

@@ -43,7 +43,7 @@ class ChainBoardPainter extends CustomPainter {
     final g = c.game;
     final fx = c.fx;
     final cell = geometry.cell;
-    final sprites = ChainSprites.of(cell, dpr);
+    final sprites = ChainSprites.of(cell, dpr, c.cubes);
     final shake = fx.shake * cell;
     canvas.save();
     canvas.translate(shake.dx, shake.dy);

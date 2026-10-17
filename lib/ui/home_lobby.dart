@@ -354,15 +354,40 @@ Widget _shortcutRow(BuildContext context, GameController c) {
 
 /// What Lokum suggests: a title, a second line, a button and what it does.
 class _LobbyTip {
-  const _LobbyTip({required this.title, required this.line, required this.button, required this.pose, this.mode, this.daily = false, this.keyName = 'tip'});
+  const _LobbyTip({
+    required this.title,
+    required this.line,
+    required this.button,
+    required this.pose,
+    this.mode,
+    this.daily = false,
+    this.gifts = false,
+    this.card,
+    this.keyName = 'tip',
+  });
 
   final String title, line, button;
   final LokumPose pose;
   final _PlayMode? mode;
   final bool daily;
+
+  /// Opens the gifts screen.
+  final bool gifts;
+
+  /// Shows this postcard.
+  final int? card;
   final String keyName;
 
   void run(BuildContext context, GameController c) {
+    final postcard = card;
+    if (postcard != null) {
+      showPostcard(context, postcard);
+      return;
+    }
+    if (gifts) {
+      GiftsScreen.open(context, settings: c.settings, audio: c.audio);
+      return;
+    }
     if (daily) {
       BlocksScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics, entry: BlocksEntry.daily);
       return;
@@ -419,9 +444,30 @@ List<_LobbyTip> _lobbyTips(GameController c, AppStrings s) {
       _LobbyTip(title: s.tipLeftOff(sugarLevel), line: s.sugarTitle, button: s.tipContinue, pose: LokumPose.cheer, mode: _PlayMode.sugar, keyName: 'tip-sugar'),
     );
   }
+  // Then gifts waiting to be opened.
+  final waiting = settings.giftsReady;
+  if (waiting > 0) {
+    tips.add(
+      _LobbyTip(
+        title: settings.dailyGiftReady ? s.tipGift : s.tipGiftsWaiting(waiting),
+        line: s.giftsShort,
+        button: s.tipOpen,
+        pose: LokumPose.cheer,
+        gifts: true,
+        keyName: 'tip-gift',
+      ),
+    );
+  }
   final now = DateTime.now();
   if (settings.dailyStars(now) == 0) {
     tips.add(_LobbyTip(title: s.tipDaily, line: s.dailySubtitle(now), button: s.tipSolve, pose: LokumPose.happy, daily: true, keyName: 'tip-daily'));
+  }
+  // A bit of İstanbul history from the album, a different card each day.
+  final cards = settings.cards.toList()..sort();
+  if (cards.isNotEmpty) {
+    final card = cards[DateTime(now.year, now.month, now.day).difference(DateTime(2020)).inDays % cards.length];
+    final p = s.postcard(card);
+    tips.add(_LobbyTip(title: '${s.tipDidYouKnow} ${p.title}, ${p.when}', line: p.fact, button: s.tipSeeCard, pose: LokumPose.wink, card: card, keyName: 'tip-card'));
   }
   for (final m in const [
     _PlayMode.chainEndless,
@@ -438,6 +484,17 @@ List<_LobbyTip> _lobbyTips(GameController c, AppStrings s) {
     );
     if (tips.length >= 4) break;
   }
+  final event = settings.event;
+  tips.add(
+    _LobbyTip(
+      title: s.eventName(event.name),
+      line: '${s.eventGoal(event.name)} · ${s.eventDaysLeft(WeeklyEvent.daysLeft(settings.clock()))}',
+      button: s.tipSee,
+      pose: LokumPose.wink,
+      gifts: true,
+      keyName: 'tip-event',
+    ),
+  );
   final note = c.homeNote?.text(s);
   final last = _PlayMode.fromName(settings.lastPlay);
   tips.add(_LobbyTip(title: note ?? s.tipBeatBest, line: last.fullTitle(s), button: s.tipPlay, pose: LokumPose.happy, mode: last, keyName: 'home-note'));
@@ -493,12 +550,54 @@ class _LobbyHeader extends StatelessWidget {
             child: FittedBox(fit: BoxFit.scaleDown, child: LogoTitle(fontSize: 28)),
           ),
         ),
+        _GiftsButton(c: c),
+        const SizedBox(width: 8),
         GlassIconButton(
           key: const ValueKey('lobby-settings'),
           icon: Icons.settings_rounded,
           tooltip: s.settingsTitle,
           onTap: () => _SettingsSheet.open(context, c.settings),
         ),
+      ],
+    );
+  }
+}
+
+/// The gifts, with a badge for those waiting.
+class _GiftsButton extends StatelessWidget {
+  const _GiftsButton({required this.c});
+
+  final GameController c;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final waiting = c.settings.giftsReady;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        GlassIconButton(
+          key: const ValueKey('gifts-open'),
+          icon: Icons.card_giftcard_rounded,
+          tooltip: s.giftsShort,
+          onTap: () => GiftsScreen.open(context, settings: c.settings, audio: c.audio),
+        ),
+        if (waiting > 0)
+          Positioned(
+            right: -4,
+            top: -4,
+            child: IgnorePointer(
+              child: Container(
+                key: const ValueKey('gifts-badge'),
+                constraints: const BoxConstraints(minWidth: 20),
+                height: 20,
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: const Color(0xFFFF3B5C), borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.white, width: 2)),
+                child: Text('$waiting', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900, height: 1)),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -698,7 +797,7 @@ class _LobbyPlayCard extends StatelessWidget {
     final s = AppStrings.of(context);
     final neon = isNeon(p);
     final fg = p.flat && p.accent1.computeLuminance() > 0.45 ? p.ink : Colors.white;
-    final record = mode.record(settings, s)?.replaceAll('★ ', '');
+    final record = mode.record(settings, s);
     return GestureDetector(
       key: const ValueKey('play'),
       onTap: onTap,
@@ -1210,7 +1309,7 @@ class _LobbySprites {
   }
 
   ui.Image candy(SugarColor c) => _images[c] ??= _render((canvas, r) => paintCandy(canvas, r, c));
-  ui.Image pyramid(ChainColor c) => _images[c] ??= _render((canvas, r) => paintChainCube(canvas, r.deflate(cell * 0.03), chainColors[c]!, halo: false));
+  ui.Image pyramid(ChainColor c) => _images[c] ??= _render((canvas, r) => paintChainCube(canvas, r.deflate(cell * 0.03), chainColors[c]!));
 
   void draw(Canvas canvas, ui.Image image, Offset topLeft, {double scale = 1}) {
     final side = cell * (1 + 2 * pad) * scale;

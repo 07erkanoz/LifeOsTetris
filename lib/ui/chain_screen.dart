@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../audio/audio_service.dart';
 import '../audio/haptics.dart';
 import '../core/chain/chain_game.dart';
+import '../core/rewards.dart';
 import '../game/chain/chain_controller.dart';
 import '../game/chain/chain_painter.dart';
 import '../game/render/background_painter.dart';
@@ -241,6 +242,7 @@ class _Play extends StatelessWidget {
               children: [
                 _RaiseButton(c: c),
                 if (box.maxWidth >= 340) Positioned(left: 4, bottom: -4, child: _ChainLokum(c: c)),
+                if (box.maxWidth >= 340 && c.settings.unlocked(Unlock.freeze)) Positioned(right: 0, child: _FreezeButton(c: c)),
               ],
             ),
           ),
@@ -369,6 +371,44 @@ class _ChainLokum extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Stop the clock: holds the rising stack for a few seconds.
+class _FreezeButton extends StatelessWidget {
+  const _FreezeButton({required this.c});
+
+  final ChainController c;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(context);
+    final p = GamePalette.of(context);
+    final n = c.settings.chainFreezes;
+    return Semantics(
+      button: true,
+      label: s.freezeLabel,
+      child: GestureDetector(
+        key: const ValueKey('chain-freeze'),
+        onTap: n > 0 && c.playing ? c.useFreeze : null,
+        child: Opacity(
+          opacity: n > 0 ? 1 : 0.45,
+          child: GlassCard(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            radius: 16,
+            glow: c.game.stopTime > 0 ? 1 : 0,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.hourglass_bottom_rounded, color: p.icon, size: 22),
+                const SizedBox(width: 4),
+                Text('×$n', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: p.text)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Hold to lift the stack faster (points for every row).

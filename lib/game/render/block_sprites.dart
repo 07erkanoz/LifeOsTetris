@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/tetromino.dart';
 import '../../theme/palette.dart';
+import '../blocks/jewels.dart';
+import '../chain/chain_sprites.dart' show paintChainCube;
 
 /// Paints one 2.5D "keycap" block: darker front face, gradient top face,
 /// glossy highlight and a soft drop shadow (or coloured glow in dark mode).
@@ -454,8 +456,27 @@ void paintDrill(Canvas canvas, Offset origin, double s) {
 
 /// Pre-rendered block images for one cell size. Drawing cached images is far
 /// cheaper than re-running gradients and blurs for every cell every frame.
+/// Bulmaca Küpler's vivid block colours.
+const Map<PieceType, Color> vividBlockColors = {
+  PieceType.i: Color(0xFF1FB8E0),
+  PieceType.o: Color(0xFFFFC414),
+  PieceType.t: Color(0xFFA24CF0),
+  PieceType.s: Color(0xFF1FBF5A),
+  PieceType.z: Color(0xFFF2425A),
+  PieceType.j: Color(0xFF3A6CF0),
+  PieceType.l: Color(0xFFFF8A1E),
+  PieceType.mono: Color(0xFFC3CADC),
+  PieceType.bomb: Color(0xFFF2425A),
+  PieceType.drill: Color(0xFFFFB238),
+  PieceType.gem: Color(0xFFFFC414),
+};
+
 class BlockSprites {
-  BlockSprites._(this.cell, this.dpr, this.palette) : pad = cell * 0.45, variants = isNeon(palette) ? 3 : 1 {
+  BlockSprites._(this.cell, this.dpr, this.palette) : pad = cell * 0.45, variants = palette.vividBlocks ? 1 : (isNeon(palette) ? 3 : 1) {
+    if (palette.vividBlocks) {
+      _vivid();
+      return;
+    }
     for (final type in PieceType.values) {
       _normal[type] = _render(
         (c, o) => switch (type) {
@@ -510,6 +531,34 @@ class BlockSprites {
   final GamePalette palette;
   final double pad;
 
+  /// Vivid look: glossy cubes in [vividBlockColors] and the four jewels.
+  void _vivid() {
+    Rect box(Offset o) => Rect.fromLTWH(o.dx, o.dy, cell, cell).deflate(cell * 0.04);
+    for (final type in PieceType.values) {
+      final color = vividBlockColors[type]!;
+      _normal[type] = _render(
+        (c, o) => switch (type) {
+          PieceType.bomb => paintBomb(c, o, cell),
+          PieceType.drill => paintDrill(c, o, cell),
+          PieceType.gem => paintJewelBlock(c, box(o), 0),
+          _ => paintChainCube(c, box(o), color),
+        },
+      );
+      _ghost[type] = _render((c, o) => _paintGhost(c, o, color));
+      _aura[type] = _render((c, o) => _paintAura(c, o, color));
+    }
+    for (var k = 0; k < jewelTones.length; k++) {
+      _jewels.add(_render((c, o) => paintJewelBlock(c, box(o), k)));
+    }
+    gray = _render((c, o) => paintChainCube(c, box(o), const Color(0xFF6A6490)));
+    white = _render(_paintWhite);
+  }
+
+  final List<ui.Image> _jewels = [];
+
+  /// The block with jewel [kind] in it.
+  ui.Image jewel(int kind) => _jewels.isEmpty ? _normal[PieceType.gem]! : _jewels[kind % _jewels.length];
+
   final Map<PieceType, ui.Image> _normal = {};
   final Map<PieceType, ui.Image> _shaded = {};
   final Map<PieceType, List<ui.Image>> _normalVariants = {};
@@ -543,7 +592,7 @@ class BlockSprites {
   /// Shared sprites for a cell size; a handful of sizes are kept alive.
   static BlockSprites of(double cell, double dpr, GamePalette palette) {
     final rounded = (cell * 2).roundToDouble() / 2;
-    final key = '$rounded@$dpr/${palette.skin.name}/$hdBlocks/${palette.isDark}/$neonStyle';
+    final key = '$rounded@$dpr/${palette.vividBlocks ? 'vivid' : palette.skin.name}/$hdBlocks/${palette.isDark}/$neonStyle';
     final hit = _cache.remove(key);
     if (hit != null) return _cache[key] = hit;
     if (_cache.length >= 16) {
