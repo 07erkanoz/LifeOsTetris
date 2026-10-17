@@ -1,11 +1,11 @@
 {
-    "name": "LifeOS Küpler",
-    "short_name": "Küpler",
+    "name": "Lokum: Şeker ve Blok Oyunları",
+    "short_name": "Lokum",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#2A2238",
     "theme_color": "#2A2238",
-    "description": "LifeOS Küpler - 2.5D blok bulmaca oyunu",
+    "description": "Lokum: Şeker ve Blok Oyunları",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

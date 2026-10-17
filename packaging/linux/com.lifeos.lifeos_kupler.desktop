@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
-Name=LifeOS Küpler
-GenericName=Block Puzzle
-Comment=Bol efektli blok bulmaca oyunu
-Comment[en]=A block puzzle game packed with effects
+Name=Lokum
+GenericName=Sweets & Block Games
+Comment=Şeker ve blok oyunları
+Comment[en]=Sweets and block games
 Exec=lifeos-kupler
 Icon=com.lifeos.lifeos_kupler
 Terminal=false

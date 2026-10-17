@@ -85,6 +85,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       if (!mounted) return;
       OrientationLock.portrait(context);
       EffectsWarmUp.run(GamePalette.of(context), MediaQuery.devicePixelRatioOf(context));
+      // The music starts with the home screen (a browser waits for the
+      // first touch, see build).
+      if (!kIsWeb) widget.audio.startMusic();
     });
     if (BlocksController.demo) {
       WidgetsBinding.instance.addPostFrameCallback(
@@ -190,52 +193,57 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     controller.strings = AppStrings.of(context);
     return Scaffold(
       backgroundColor: palette.background.first,
-      body: Focus(
-        focusNode: _focus,
-        autofocus: true,
-        onKeyEvent: _onKey,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: RepaintBoundary(child: CustomPaint(painter: BackgroundBasePainter(palette))),
-            ),
-            Positioned.fill(
-              child: RepaintBoundary(
-                child: ListenableBuilder(
-                  listenable: widget.settings,
-                  builder: (context, _) => CustomPaint(
-                    painter: BackgroundPainter(
-                      fx: controller.fx,
-                      palette: palette,
-                      sprites: BlockSprites.of(24, dpr, palette),
-                      effectsEnabled: widget.settings.effects,
-                      repaint: controller.backgroundFrame,
+      body: Listener(
+        // Browsers allow sound only after a gesture: the first touch on the
+        // home screen starts the music there.
+        onPointerDown: kIsWeb ? (_) => widget.audio.startMusic() : null,
+        child: Focus(
+          focusNode: _focus,
+          autofocus: true,
+          onKeyEvent: _onKey,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: RepaintBoundary(child: CustomPaint(painter: BackgroundBasePainter(palette))),
+              ),
+              Positioned.fill(
+                child: RepaintBoundary(
+                  child: ListenableBuilder(
+                    listenable: widget.settings,
+                    builder: (context, _) => CustomPaint(
+                      painter: BackgroundPainter(
+                        fx: controller.fx,
+                        palette: palette,
+                        sprites: BlockSprites.of(24, dpr, palette),
+                        effectsEnabled: widget.settings.effects,
+                        repaint: controller.backgroundFrame,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            SafeArea(
-              child: ListenableBuilder(
-                listenable: Listenable.merge([controller, widget.settings]),
-                builder: (context, _) => LayoutBuilder(
-                  builder: (context, box) {
-                    final wide = box.maxWidth >= 640 && box.maxWidth > box.maxHeight * 1.05;
-                    if (!wide) return _PhoneLayout(c: controller);
-                    // Phones held sideways are wide but short: a gamepad-style
-                    // layout with the board using the full height.
-                    return box.maxHeight < 520 ? _LandscapeLayout(c: controller) : _DesktopLayout(c: controller);
-                  },
+              SafeArea(
+                child: ListenableBuilder(
+                  listenable: Listenable.merge([controller, widget.settings]),
+                  builder: (context, _) => LayoutBuilder(
+                    builder: (context, box) {
+                      final wide = box.maxWidth >= 640 && box.maxWidth > box.maxHeight * 1.05;
+                      if (!wide) return _PhoneLayout(c: controller);
+                      // Phones held sideways are wide but short: a gamepad-style
+                      // layout with the board using the full height.
+                      return box.maxHeight < 520 ? _LandscapeLayout(c: controller) : _DesktopLayout(c: controller);
+                    },
+                  ),
                 ),
               ),
-            ),
-            Positioned.fill(
-              child: ListenableBuilder(
-                listenable: Listenable.merge([controller, widget.settings]),
-                builder: (context, _) => AnimatedSwitcher(duration: const Duration(milliseconds: 220), child: _overlay()),
+              Positioned.fill(
+                child: ListenableBuilder(
+                  listenable: Listenable.merge([controller, widget.settings]),
+                  builder: (context, _) => AnimatedSwitcher(duration: const Duration(milliseconds: 220), child: _overlay()),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

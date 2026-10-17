@@ -23,7 +23,7 @@ class KuplerApp extends StatelessWidget {
     final app = ListenableBuilder(
       listenable: settings,
       builder: (context, _) => MaterialApp(
-        title: 'LifeOS Küpler',
+        title: 'Lokum',
         debugShowCheckedModeBanner: false,
         scrollBehavior: const _AppScrollBehavior(),
         themeMode: settings.themeMode,

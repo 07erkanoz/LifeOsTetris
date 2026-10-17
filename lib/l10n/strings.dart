@@ -132,7 +132,7 @@ class AppStrings {
   List<String> get aboutStory => isTurkish
       ? const [
           'Hayat, tıpkı yukarıdan kontrolsüzce düşen bloklar gibidir: beklenmedik anlarda üst üste yığılır ve kaos yaratır. '
-              'Hukuk kuralları bu kaosu nasıl bir düzene sokmaya çalışıyorsa, LifeOS Küpler de size o karmaşanın içinde kendi '
+              'Hukuk kuralları bu kaosu nasıl bir düzene sokmaya çalışıyorsa, Lokum da size o karmaşanın içinde kendi '
               'düzeninizi inşa etme fırsatı sunar.',
           'Bir avukat ve arabulucunun analitik bakış açısıyla tasarlanan bu oyunda amacınız yalnızca blokları yerleştirmek değil; '
               'hayatın hızla üzerinize bıraktığı uyuşmazlıkları ve parçaları doğru açıyla hizalayıp çözmektir. Her satır, çözüme '
@@ -141,7 +141,7 @@ class AppStrings {
         ]
       : const [
           'Life is like blocks falling from above without control: they pile up when you least expect it and create chaos. '
-              'Just as the rules of law try to bring order to that chaos, LifeOS Küpler gives you the chance to build your own '
+              'Just as the rules of law try to bring order to that chaos, Lokum gives you the chance to build your own '
               'order within it.',
           'Designed with the analytical mind of a lawyer and mediator, this game is not only about placing blocks. It is about '
               'lining up the disputes and pieces life quickly drops on you at the right angle, and resolving them. Every line is a '
@@ -161,13 +161,13 @@ class AppStrings {
   String get featuresLabel => _t('ÖNE ÇIKANLAR', 'HIGHLIGHTS');
   List<(String, String)> get features => isTurkish
       ? const [
-          ('3 oyun modu', 'Klasik, Süper ve Bulmaca'),
+          ('Beş oyun', 'Şeker, Zincir, Bulmaca, Süper, Klasik'),
           ('Bol efekt', 'Parçacık, ışık, sarsıntı'),
           ('Koyu & açık tema', 'Göz yormayan renkler'),
           ('Türkçe & İngilizce', 'Tek dokunuşla değiştir'),
         ]
       : const [
-          ('3 game modes', 'Classic, Super and Puzzle'),
+          ('Five games', 'Sugar, Chain, Puzzle, Super, Classic'),
           ('Packed with effects', 'Particles, light, shake'),
           ('Dark & light themes', 'Easy on the eyes'),
           ('Turkish & English', 'Switch with one tap'),
@@ -457,6 +457,10 @@ class AppStrings {
   String get bombSubtitle => _t('Patlamadan önce satırını temizle', 'Clear their rows before they blow');
 
   // ------------------------------------------------------- zincir küpler
+  /// The app's name and what it is.
+  static const String lokumName = 'Lokum';
+  String get appName => lokumName;
+  String get appTagline => _t('Şeker ve Blok Oyunları', 'Sweets & Block Games');
   String get chainGroup => _t('ZİNCİR', 'CHAIN');
   String get chainTitle => _t('Zincir Küpler', 'Chain Blocks');
   String get chainEndlessTitle => _t('Sonsuz', 'Endless');

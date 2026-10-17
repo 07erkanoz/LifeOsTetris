@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.lifeos" "\0"
-            VALUE "FileDescription", "LifeOS Kupler" "\0"
+            VALUE "FileDescription", "Lokum" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "lifeos_kupler" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.lifeos. All rights reserved." "\0"
             VALUE "OriginalFilename", "lifeos_kupler.exe" "\0"
-            VALUE "ProductName", "LifeOS Kupler" "\0"
+            VALUE "ProductName", "Lokum" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

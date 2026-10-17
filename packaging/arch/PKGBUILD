@@ -1,9 +1,9 @@
-# Arch Linux package for the LifeOS Küpler test build.
+# Arch Linux package for the Lokum test build.
 #   makepkg -si
 pkgname=lifeos-kupler-bin
 pkgver=1.0.0
 pkgrel=1
-pkgdesc="LifeOS Küpler: bol efektli blok bulmaca oyunu"
+pkgdesc="Lokum: Şeker ve Blok Oyunları"
 arch=('x86_64')
 url="https://lifeos.com.tr/kupler/"
 license=('LicenseRef-LifeOS-Kupler')

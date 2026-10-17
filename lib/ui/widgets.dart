@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import '../core/tetromino.dart';
 import '../game/render/background_painter.dart';
 import '../game/render/block_sprites.dart';
+import '../game/sugar/sugar_art.dart' show paintLokum;
+import '../l10n/strings.dart';
 import '../theme/palette.dart';
 import 'game_icons.dart';
 
@@ -168,6 +170,7 @@ class PieceView extends StatelessWidget {
   }
 }
 
+/// The word mark: Lokum's face, "Lokum" and, under it, what the app is.
 class LogoTitle extends StatelessWidget {
   const LogoTitle({super.key, this.fontSize = 20});
 
@@ -176,23 +179,37 @@ class LogoTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = GamePalette.of(context);
-    if (p.flat) return _flat(p);
-    final style = TextStyle(fontSize: fontSize, fontWeight: FontWeight.w800, letterSpacing: -0.3, color: p.text);
+    final s = AppStrings.of(context);
+    final face = SizedBox(width: fontSize * 1.35, height: fontSize * 1.35, child: CustomPaint(painter: _LogoFace()));
+    final tagline = Text(s.appTagline, style: TextStyle(fontSize: fontSize * 0.42, height: 1, fontWeight: FontWeight.w800, letterSpacing: 0.2, color: p.muted));
+    if (p.flat) return _flat(p, face, tagline);
+    final style = TextStyle(fontSize: fontSize, height: 1.05, fontWeight: FontWeight.w800, letterSpacing: -0.3, color: p.text);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        PieceView(type: PieceType.t, cell: fontSize * 0.42, size: Size(fontSize * 1.4, fontSize)),
-        SizedBox(width: fontSize * 0.35),
-        Text('LifeOS ', style: style),
-        GradientText('Küpler', style: style),
+        face,
+        SizedBox(width: fontSize * 0.3),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [GradientText(s.appName, style: style), tagline],
+        ),
       ],
     );
   }
 }
 
+class _LogoFace extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) => paintLokum(canvas, Offset(size.width / 2, size.height * 0.5), size.height * 0.92);
+
+  @override
+  bool shouldRepaint(_LogoFace old) => false;
+}
+
 extension on LogoTitle {
   /// Sticker-like word mark: ink outline and a hard drop shadow.
-  Widget _flat(GamePalette p) {
+  Widget _flat(GamePalette p, Widget face, Widget tagline) {
     final pixel = p.skin == GameSkin.pixel;
     final size = pixel ? fontSize * 0.95 : fontSize * 1.05;
     Widget word(String text, Color color) {
@@ -236,10 +253,13 @@ extension on LogoTitle {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        PieceView(type: PieceType.t, cell: fontSize * 0.42, size: Size(fontSize * 1.4, fontSize)),
+        face,
         SizedBox(width: fontSize * 0.3),
-        word('LifeOS ', p.isDark ? p.text : Colors.white),
-        word('Küpler', p.accent1),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [word(AppStrings.lokumName, p.accent1), tagline],
+        ),
       ],
     );
   }
