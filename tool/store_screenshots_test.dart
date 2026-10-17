@@ -4,6 +4,7 @@
 // exact pixel sizes App Store Connect asks for (iPhone 6.9", iPad 13"); the
 // two-digit number keeps them in order (App Store Connect takes ten).
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -12,22 +13,24 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifeos_kupler/app.dart';
 import 'package:lifeos_kupler/audio/audio_service.dart';
-import 'package:lifeos_kupler/core/chain/chain_game.dart';
 import 'package:lifeos_kupler/core/chain/chain_versus.dart';
 import 'package:lifeos_kupler/core/sugar/sugar_game.dart';
 import 'package:lifeos_kupler/core/sugar/sugar_levels.dart';
 import 'package:lifeos_kupler/core/sugar/sugar_solver.dart';
 import 'package:lifeos_kupler/core/tetris_game.dart';
+import 'package:lifeos_kupler/core/tower/tower_game.dart';
 import 'package:lifeos_kupler/game/blocks/blocks_controller.dart';
 import 'package:lifeos_kupler/game/chain/chain_controller.dart';
 import 'package:lifeos_kupler/game/game_controller.dart';
 import 'package:lifeos_kupler/game/sugar/sugar_controller.dart';
+import 'package:lifeos_kupler/game/tower/tower_controller.dart';
 import 'package:lifeos_kupler/l10n/strings.dart';
 import 'package:lifeos_kupler/settings/settings.dart';
 import 'package:lifeos_kupler/ui/blocks_screen.dart';
 import 'package:lifeos_kupler/ui/chain_screen.dart';
 import 'package:lifeos_kupler/ui/game_screen.dart';
 import 'package:lifeos_kupler/ui/sugar_screen.dart';
+import 'package:lifeos_kupler/ui/tower_screen.dart';
 
 /// Output folder (`SHOTS_OUT`).
 final String _out = Platform.environment['SHOTS_OUT'] ?? 'ios/metadata/screenshots/';
@@ -74,10 +77,27 @@ Future<void> _shot(WidgetTester tester, String path, double dpr) async {
     ..writeAsBytesSync(bytes!);
 }
 
-/// Opens the modes page from the home screen and picks [name].
+/// The card on the games page that leads to [mode].
+String _gameOf(String mode) => switch (mode) {
+  'sugar' => 'sugar',
+  'superMode' => 'superGame',
+  'blocksLevels' || 'blocksEndless' || 'adventure' || 'bomb' => 'puzzle',
+  _ when mode.startsWith('chain') => 'chain',
+  _ when mode.startsWith('tower') => 'tower',
+  _ => 'classic',
+};
+
+/// Opens the games page from the home screen, then [name]'s game and [name].
 Future<void> _startMode(WidgetTester tester, String name) async {
   await tester.tap(find.byKey(const ValueKey('change-mode')));
   await _pump(tester, 10, 40);
+  final game = ValueKey('game-${_gameOf(name)}');
+  await tester.ensureVisible(find.byKey(game, skipOffstage: false));
+  await tester.pump(const Duration(milliseconds: 40));
+  await tester.tap(find.byKey(game));
+  await _pump(tester, 10, 40);
+  // A game of one mode starts at once.
+  if (name == 'sugar' || name == 'superMode') return;
   final card = find.byKey(ValueKey('mode-$name'));
   await tester.ensureVisible(find.byKey(ValueKey('mode-$name'), skipOffstage: false));
   await tester.pump(const Duration(milliseconds: 40));
@@ -106,6 +126,32 @@ void _stack(TetrisGame game) {
 }
 
 typedef _Scene = Future<void> Function(WidgetTester tester, Settings settings);
+
+/// A Kule Küpler tower [height] floors tall, built straight in (no chests on
+/// the way): a few cuts, the width grown back now and then.
+void _tower(TowerController c, int height) {
+  final g = c.game;
+  final rnd = Random(height);
+  var cu = 0.0, cv = 0.0, a = 1.0, b = 1.0;
+  for (var i = 1; i <= height; i++) {
+    final cut = rnd.nextDouble() < 0.18 ? (rnd.nextDouble() - 0.5) * 0.16 : 0.0;
+    if (i.isEven) {
+      a = max(0.6, a - cut.abs() / 2);
+      cu += cut / 2;
+    } else {
+      b = max(0.6, b - cut.abs() / 2);
+      cv += cut / 2;
+    }
+    if (i % 9 == 0) {
+      a = min(1, a + 0.1);
+      b = min(1, b + 0.1);
+    }
+    g.floors.add(TowerFloor(cu: cu, cv: cv, a: a, b: b, flavor: (i * 5 + rnd.nextInt(2)) % 6));
+  }
+  g.axis = height.isEven ? TowerAxis.v : TowerAxis.u;
+  c.dropped = true;
+  c.camera = max(0, g.height - 5.5);
+}
 
 /// Şeker Küpler with levels 1..[done] passed and the stories read (but
 /// [unseen]'s), up to the start panel of the next level.
@@ -139,7 +185,32 @@ Future<void> _sugarMoves(WidgetTester tester, SugarController c, int moves) asyn
 }
 
 final Map<String, _Scene> _scenes = {
-  'menu': (tester, settings) async {},
+  // The home screen, Kule Küpler on the play card.
+  'menu': (tester, settings) async {
+    settings.lastPlay = 'towerClimb';
+    settings.recordTowerRun(mode: TowerMode.climb, floors: 240, seconds: 600);
+    await _pump(tester, 30);
+  },
+  // Kule Küpler in the clouds: a perfect run, stars bursting off the top.
+  'tower': (tester, settings) async {
+    settings.recordTowerRun(mode: TowerMode.climb, floors: 240, seconds: 600);
+    await _startMode(tester, 'towerClimb');
+    final c = (tester.state(find.byType(TowerScreen)) as dynamic).c as TowerController;
+    _tower(c, 124);
+    for (var i = 0; i < 4; i++) {
+      c.game.position = 0;
+      c.tap();
+      await _pump(tester, i < 3 ? 14 : 4);
+    }
+    c.game.position = -0.9;
+  },
+  // İstanbul'u İnşa Et: Kız Kulesi rising.
+  'build': (tester, settings) async {
+    settings.recordTowerRun(mode: TowerMode.climb, floors: 1140, seconds: 3000);
+    settings.claimLandmarks();
+    await _startMode(tester, 'towerBuild');
+    await _pump(tester, 30);
+  },
   // Şeker Küpler mid-level: specials on the board, the rush meter filling.
   'sugar': (tester, settings) async {
     final c = (await _sugar(tester, settings, 51))!;
@@ -158,10 +229,15 @@ final Map<String, _Scene> _scenes = {
     await _sugarMoves(tester, c, 4);
     await _pump(tester, 40);
   },
-  // A chapter's İstanbul story card.
-  'story': (tester, settings) async {
-    await _sugar(tester, settings, 80, unseen: 8, play: false);
-    await _pump(tester, 30);
+  // The games page: every game with its scene, its modes, the last played.
+  'games': (tester, settings) async {
+    settings.lastPlay = 'chainMissions';
+    settings.recordTowerRun(mode: TowerMode.climb, floors: 240, seconds: 600);
+    for (var n = 1; n <= 30; n++) {
+      settings.recordSugarLevel(n, stars: 3, score: 15000, seconds: 60);
+    }
+    await tester.tap(find.byKey(const ValueKey('change-mode')));
+    await _pump(tester, 30, 40);
   },
   // Bulmaca: two lines blasting at once in the jewel colours, a streak on.
   'puzzle': (tester, settings) async {
@@ -172,33 +248,6 @@ final Map<String, _Scene> _scenes = {
     c.game.streak = 3;
     c.place(1, 0, 0);
     await _pump(tester, 9);
-  },
-  // Zincir Küpler: a chain bursting, garbage on the stack.
-  'chain': (tester, settings) async {
-    settings.chainDifficulty = ChainDifficulty.normal;
-    await _startMode(tester, 'chainEndless');
-    final c = (tester.state(find.byType(ChainScreen)) as dynamic).c as ChainController;
-    await tester.tap(find.byKey(const ValueKey('chain-start')));
-    await _pump(tester, 10);
-    c.game.debugSetBoard([
-      '......',
-      '......',
-      '###...',
-      '......',
-      '......',
-      '......',
-      'G.....',
-      'BBB.Y.',
-      'GMY.BM',
-      'GYM.GB',
-      'MBGYMY',
-      'YGBMBG',
-    ]);
-    c.game.debugSetIncoming('BMYGBY');
-    c.game.stopTime = 100;
-    c.game.score = 1480;
-    c.game.setCursor(3, 7);
-    await _pump(tester, 36);
   },
   // A match against Ekşi Limon: garbage crossing between the boards.
   'versus': (tester, settings) async {
@@ -234,29 +283,20 @@ final Map<String, _Scene> _scenes = {
     await tester.sendKeyEvent(LogicalKeyboardKey.space);
     await _pump(tester, 7);
   },
-  // The bomb power aiming at the stack (its 3×3 area is shown).
-  'bomb': (tester, settings) async {
-    await _startMode(tester, 'superMode');
-    final game = _game(tester).game;
-    _stack(game);
-    game.debugGivePowers([PowerType.bomb, PowerType.bomb, PowerType.drill, PowerType.single, PowerType.gravity]);
-    await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
-    await _pump(tester, 2);
-    for (var i = 0; i < 2; i++) {
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
-      await tester.pump(const Duration(milliseconds: 33));
-    }
-    await _pump(tester, 12);
-  },
 };
+
+/// The order on the store page.
+const _order = ['menu', 'tower', 'build', 'sugar', 'limon', 'games', 'ferry', 'versus', 'puzzle', 'tetris'];
 
 void main() {
   setUpAll(_loadFonts);
+  assert(_order.length == _scenes.length && _order.every(_scenes.containsKey));
 
   for (final (device, size, dpr) in _devices) {
     for (final (locale, language) in _locales) {
       var n = 0;
-      for (final MapEntry(key: name, value: scene) in _scenes.entries) {
+      for (final name in _order) {
+        final scene = _scenes[name]!;
         final index = ++n;
         testWidgets('$device $locale $name', (tester) async {
           tester.view.physicalSize = size;

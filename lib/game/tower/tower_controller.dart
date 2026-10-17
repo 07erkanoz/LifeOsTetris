@@ -408,6 +408,8 @@ class TowerController extends ChangeNotifier {
               flashColor = const Color(0xFF8DFFB4);
             }
             if (effects) rings.add(TowerRing(e.floor, e.height));
+            // One word at a time: the new streak replaces the last.
+            labels.removeWhere((l) => l.kind != TowerLabelKind.milestone);
             labels.add(TowerLabel(TowerLabelKind.perfect, e.streak, e.height));
             if (e.grew) labels.add(TowerLabel(TowerLabelKind.grew, 0, e.height));
             if (e.streak >= 2) {

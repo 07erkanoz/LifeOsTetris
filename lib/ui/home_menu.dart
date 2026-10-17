@@ -525,6 +525,10 @@ class _ModesPageState extends State<_ModesPage> with SingleTickerProviderStateMi
                 physics: const NeverScrollableScrollPhysics(),
                 children: children,
               );
+              // Games in one column on a phone, larger cards side by side on a
+              // tablet or a desktop.
+              final gameColumns = width >= 1100 ? 3 : (width >= 600 ? 2 : 1);
+              final gameExtent = gameColumns == 1 ? 112 * k : max(112 * k, min(300.0, (width - 32 - 12 * (gameColumns - 1)) / gameColumns * 0.58));
               Widget label(String text) => Padding(padding: const EdgeInsets.fromLTRB(4, 20, 0, 8), child: CardLabel(text));
               return Center(
                 child: ConstrainedBox(
@@ -559,7 +563,7 @@ class _ModesPageState extends State<_ModesPage> with SingleTickerProviderStateMi
                       ),
                       const SizedBox(height: 16),
                       if (game == null)
-                        grid(width >= 900 ? 3 : (width >= 600 ? 2 : 1), 112 * k, [
+                        grid(gameColumns, gameExtent, [
                           for (final g in _Game.values) _GameCard(game: g, settings: settings, clock: _clock, onTap: () => _openGame(g)),
                         ])
                       else ...[
@@ -625,68 +629,96 @@ class _GameCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(9),
           decoration: _cardBox(p, selected: selected),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AspectRatio(aspectRatio: 1.2, child: _ModeScene(mode: game.modes.first, clock: clock)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              game.title(s),
-                              maxLines: 1,
-                              style: TextStyle(fontSize: _fs(p, 18), height: 1.15, fontWeight: FontWeight.w900, color: p.text),
-                            ),
-                          ),
-                        ),
-                        if (fresh) _Tag(s.newBadge, color: _newTone, ink: Colors.white),
-                      ],
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final scene = _ModeScene(mode: game.modes.first, clock: clock);
+              final title = Row(
+                children: [
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        game.title(s),
+                        maxLines: 1,
+                        style: TextStyle(fontSize: _fs(p, 18), height: 1.15, fontWeight: FontWeight.w900, color: p.text),
+                      ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      game.blurb(s),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: _fs(p, 12.5), height: 1.2, fontWeight: FontWeight.w700, color: _second(p)),
+                  ),
+                  if (fresh) _Tag(s.newBadge, color: _newTone, ink: Colors.white),
+                ],
+              );
+              final blurb = Text(
+                game.blurb(s),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: _fs(p, 12.5), height: 1.2, fontWeight: FontWeight.w700, color: _second(p)),
+              );
+              final tags = Row(
+                children: [
+                  if (several) ...[_Tag(s.modeCount(game.modes.length)), const SizedBox(width: 8)],
+                  if (line != null) ...[
+                    GameIcon(lineIcon, size: 14, color: selected && several ? p.accent1 : const Color(0xFFFACC15)),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        line,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: _fs(p, 12), fontWeight: FontWeight.w800, color: p.text),
+                      ),
                     ),
+                  ] else
                     const Spacer(),
-                    Row(
-                      children: [
-                        if (several) ...[_Tag(s.modeCount(game.modes.length)), const SizedBox(width: 8)],
-                        if (line != null) ...[
-                          GameIcon(lineIcon, size: 14, color: selected && several ? p.accent1 : const Color(0xFFFACC15)),
-                          const SizedBox(width: 4),
+                ],
+              );
+              final go = GameIcon(
+                several ? Icons.chevron_right_rounded : Icons.play_arrow_rounded,
+                size: 28,
+                color: several ? _second(p) : const Color(0xFFFACC15),
+              );
+              // A tall card (tablets, desktops): the scene on top.
+              if (box.maxHeight >= 180) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: scene),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Row(
+                        children: [
                           Expanded(
-                            child: Text(
-                              line,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: _fs(p, 12), fontWeight: FontWeight.w800, color: p.text),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [title, const SizedBox(height: 2), blurb, const SizedBox(height: 6), tags],
                             ),
                           ),
+                          const SizedBox(width: 4),
+                          go,
                         ],
-                      ],
+                      ),
                     ),
                   ],
-                ),
-              ),
-              const SizedBox(width: 4),
-              Center(
-                child: GameIcon(
-                  several ? Icons.chevron_right_rounded : Icons.play_arrow_rounded,
-                  size: 28,
-                  color: several ? _second(p) : const Color(0xFFFACC15),
-                ),
-              ),
-            ],
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AspectRatio(aspectRatio: 1.2, child: scene),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [title, const SizedBox(height: 2), blurb, const Spacer(), tags],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Center(child: go),
+                ],
+              );
+            },
           ),
         ),
       ),
