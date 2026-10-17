@@ -35,6 +35,7 @@ class Settings extends ChangeNotifier {
   String? _lastPlay;
   String? _savedGame;
   String? _savedBlocks;
+  String? _savedChain;
 
   /// Desktops draw at the monitor's rate by default; phones stay at 60 fps
   /// (cooler, longer battery) unless the player turns it on.
@@ -93,6 +94,7 @@ class Settings extends ChangeNotifier {
       s._lastPlay = prefs.getString('lastPlay');
       s._savedGame = prefs.getString('savedGame');
       s._savedBlocks = prefs.getString('savedBlocks');
+      s._savedChain = prefs.getString('savedChain');
       for (final m in GameMode.values) {
         s._best[m] = prefs.getInt('best_${m.name}') ?? 0;
         final time = prefs.getDouble('bestTime_${m.name}');
@@ -183,6 +185,15 @@ class Settings extends ChangeNotifier {
     final changed = (v == null) != (_savedGame == null);
     _savedGame = v;
     v == null ? _prefs?.remove('savedGame') : _prefs?.setString('savedGame', v);
+    if (changed) notifyListeners();
+  }
+
+  /// A Zincir Küpler game left half way (JSON), to continue later.
+  String? get savedChain => _savedChain;
+  set savedChain(String? v) {
+    final changed = (v == null) != (_savedChain == null);
+    _savedChain = v;
+    v == null ? _prefs?.remove('savedChain') : _prefs?.setString('savedChain', v);
     if (changed) notifyListeners();
   }
 

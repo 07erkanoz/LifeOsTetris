@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifeos_kupler/app.dart';
 import 'package:lifeos_kupler/audio/audio_service.dart';
+import 'package:lifeos_kupler/core/chain/chain_game.dart';
 import 'package:lifeos_kupler/core/tetris_game.dart';
 import 'package:lifeos_kupler/l10n/strings.dart';
 import 'package:lifeos_kupler/settings/settings.dart';
@@ -54,6 +55,9 @@ void main() {
           settings.recordBlockLevel(n, 3);
         }
         settings.savedSugar = jsonEncode({'level': 12});
+        final chain = ChainGame()..start(ChainMode.endless);
+        chain.score = 4321;
+        settings.savedChain = jsonEncode(chain.toSave());
         await tester.pumpWidget(RepaintBoundary(key: _root, child: KuplerApp(settings: settings, audio: AudioService(enabled: false))));
         for (var i = 0; i < 40; i++) {
           await tester.pump(const Duration(milliseconds: 33));

@@ -36,6 +36,7 @@ import 'about_page.dart';
 import 'blocks_screen.dart';
 import 'chain_screen.dart';
 import 'sugar_map_screen.dart';
+import 'sugar_screen.dart';
 import 'board_view.dart';
 import 'power_bar.dart';
 import 'theme_picker.dart';

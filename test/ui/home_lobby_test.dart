@@ -8,7 +8,9 @@ import 'package:lifeos_kupler/core/chain/chain_game.dart';
 import 'package:lifeos_kupler/l10n/strings.dart';
 import 'package:lifeos_kupler/settings/settings.dart';
 import 'package:lifeos_kupler/theme/palette.dart';
+import 'package:lifeos_kupler/game/chain/chain_controller.dart';
 import 'package:lifeos_kupler/ui/chain_screen.dart';
+import 'package:lifeos_kupler/ui/sugar_screen.dart';
 
 Future<void> pumpFor(WidgetTester tester, int frames, [int ms = 33]) async {
   for (var i = 0; i < frames; i++) {
@@ -102,5 +104,74 @@ void main() {
     settings.effects = true;
     await tester.pump(const Duration(milliseconds: 33));
     expect(moving(), isTrue);
+  });
+
+  testWidgets('a Zincir Küpler game left half way continues from the home, paused', (tester) async {
+    final settings = await pumpLobby(tester);
+    expect(find.byKey(const ValueKey('resume-chain')), findsNothing);
+    ChainScreen.open(tester.element(find.byKey(const ValueKey('play'))), settings: settings, audio: AudioService(enabled: false), mode: ChainMode.timeAttack);
+    await pumpFor(tester, 12, 40);
+    await tester.tap(find.byKey(const ValueKey('chain-start')));
+    await pumpFor(tester, 20);
+    var c = (tester.state(find.byType(ChainScreen)) as dynamic).c as ChainController;
+    c.game.score = 4321;
+    // Back pauses (and saves), back again leaves.
+    await tester.binding.handlePopRoute();
+    await pumpFor(tester, 6);
+    expect(c.paused, isTrue);
+    expect(settings.savedChain, isNotNull);
+    await tester.binding.handlePopRoute();
+    await pumpFor(tester, 15, 40);
+    expect(find.byType(ChainScreen), findsNothing);
+
+    expect(find.byKey(const ValueKey('resume-chain')), findsOneWidget);
+    expect(find.textContaining('4.321'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('resume-chain')));
+    await pumpFor(tester, 15, 40);
+    c = (tester.state(find.byType(ChainScreen)) as dynamic).c as ChainController;
+    expect(c.game.score, 4321);
+    expect(c.game.mode, ChainMode.timeAttack);
+    expect(c.paused, isTrue, reason: 'it waits for the player');
+    expect(tester.takeException(), isNull);
+
+    // A new game drops the saved one.
+    c.start();
+    expect(settings.savedChain, isNull);
+  });
+
+  testWidgets('a Şeker Küpler level left half way has its own continue button', (tester) async {
+    final settings = Settings.memory()..language = AppLanguage.tr;
+    await pumpLobby(tester, settings: settings);
+    expect(find.byKey(const ValueKey('resume-sugar')), findsNothing);
+    settings.savedSugar = jsonEncode({'level': 3});
+    await pumpFor(tester, 4);
+    expect(find.byKey(const ValueKey('resume-sugar')), findsOneWidget);
+    expect(find.textContaining('Seviye 3'), findsWidgets);
+  });
+
+  testWidgets('the Şeker Küpler continue button goes straight into the level', (tester) async {
+    final settings = Settings.memory()..language = AppLanguage.tr;
+    await pumpLobby(tester, settings: settings);
+    // Play a level a little, then leave it from the pause menu.
+    SugarScreen.open(tester.element(find.byKey(const ValueKey('play'))), settings: settings, audio: AudioService(enabled: false), level: 2);
+    await pumpFor(tester, 12, 40);
+    await tester.ensureVisible(find.byKey(const ValueKey('sugar-play')));
+    await tester.tap(find.byKey(const ValueKey('sugar-play')));
+    await pumpFor(tester, 30);
+    final sugar = (tester.state(find.byType(SugarScreen)) as dynamic).c;
+    sugar.game.score = 500;
+    await tester.tap(find.byKey(const ValueKey('sugar-pause')));
+    await pumpFor(tester, 8);
+    await tester.ensureVisible(find.byKey(const ValueKey('sugar-home')));
+    await tester.tap(find.byKey(const ValueKey('sugar-home')));
+    await pumpFor(tester, 15, 40);
+    expect(find.byKey(const ValueKey('resume-sugar')), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('resume-sugar')));
+    await pumpFor(tester, 20, 40);
+    final back = (tester.state(find.byType(SugarScreen)) as dynamic).c;
+    expect(back.started, isTrue, reason: 'no start panel: straight into the level');
+    expect(back.level.number, 2);
+    expect(back.game.score, 500);
   });
 }

@@ -267,6 +267,8 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
     final s = AppStrings.of(context);
     final saved = c.savedSummary;
     final savedPuzzle = BlocksController.summaryOf(c.settings.savedBlocks);
+    final sugarLevel = _savedSugarLevel(c.settings);
+    final chain = _savedChainSummary(c.settings);
     return [
       if (saved != null) ...[
         GradientButton(
@@ -287,6 +289,28 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
           icon: Icons.replay_rounded,
           secondary: true,
           onTap: () => BlocksScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics, entry: BlocksEntry.resume),
+        ),
+        const SizedBox(height: 12),
+      ],
+      if (sugarLevel != null) ...[
+        GradientButton(
+          key: const ValueKey('resume-sugar'),
+          label: s.resumeGame,
+          subtitle: '${s.sugarTitle} · ${s.sugarCardLevel(sugarLevel)}',
+          icon: Icons.replay_rounded,
+          secondary: true,
+          onTap: () => SugarScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics, level: sugarLevel, resume: true),
+        ),
+        const SizedBox(height: 12),
+      ],
+      if (chain != null) ...[
+        GradientButton(
+          key: const ValueKey('resume-chain'),
+          label: s.resumeGame,
+          subtitle: '${s.chainTitle} · ${chain.mode == ChainMode.timeAttack ? s.chainTimeTitle : s.chainEndlessTitle} · ${s.score(chain.score)}',
+          icon: Icons.replay_rounded,
+          secondary: true,
+          onTap: () => ChainScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics, mode: chain.mode, resume: true),
         ),
         const SizedBox(height: 12),
       ],
@@ -350,7 +374,7 @@ bool _played(Settings s, _PlayMode m) {
   final game = m.gameMode;
   if (game != null) return s.bestScore(game) > 0 || s.bestTime(game) != null;
   final chain = m.chainMode;
-  if (chain != null) return ChainDifficulty.values.any((d) => s.chainBest(chain, d) > 0);
+  if (chain != null) return ChainDifficulty.values.any((d) => s.chainBest(chain, d) > 0) || _savedChainSummary(s)?.mode == chain;
   return switch (m) {
     _PlayMode.blocksLevels => s.totalBlockStars > 0,
     _PlayMode.blocksEndless => s.blocksBest > 0,
@@ -366,6 +390,17 @@ int? _savedSugarLevel(Settings s) {
   if (raw == null) return null;
   try {
     return (jsonDecode(raw) as Map<String, Object?>)['level'] as int?;
+  } catch (_) {
+    return null;
+  }
+}
+
+({ChainMode mode, int score})? _savedChainSummary(Settings s) {
+  final raw = s.savedChain;
+  if (raw == null) return null;
+  try {
+    final save = jsonDecode(raw) as Map<String, Object?>;
+    return (mode: ChainMode.values.byName(save['mode'] as String), score: save['score'] as int);
   } catch (_) {
     return null;
   }
@@ -422,6 +457,7 @@ List<_PlayMode> _lobbyCards(Settings s, _PlayMode last) {
   ];
   int rank(_PlayMode m) {
     if (m == _PlayMode.sugar && s.savedSugar != null) return 0;
+    if (m.chainMode != null && _savedChainSummary(s)?.mode == m.chainMode) return 0;
     if (!_played(s, m) && m.isNew) return 1;
     if (!_played(s, m)) return 2;
     return 3;
@@ -858,6 +894,11 @@ const _modeTones = {
     default:
       final record = m.record(settings, s);
       if (record != null) line = s.bestLine(record);
+      final chain = _savedChainSummary(settings);
+      if (chain != null && chain.mode == m.chainMode) {
+        badge = s.badgeContinue;
+        line = s.score(chain.score);
+      }
       if (m == _PlayMode.chainTime && record == null) line = '${s.chainTitle} · ${m.subtitle(s)}';
   }
   return (badge: badge, badgeColors: tone, line: line, progress: progress?.clamp(0.0, 1.0));

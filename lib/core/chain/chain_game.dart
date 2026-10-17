@@ -781,6 +781,83 @@ class ChainGame {
     rise = 0;
   }
 
+  // ------------------------------------------------------------- saving --
+
+  /// The game as plain data, to continue later. Cubes that are bursting are
+  /// left out (they were going anyway); everything else comes back still
+  /// and falls into place.
+  Map<String, Object?> toSave() {
+    final slabIds = <GarbageSlab, int>{};
+    for (final (i, s) in slabs.indexed) {
+      slabIds[s] = i;
+    }
+    return {
+      'v': 1,
+      'mode': mode.name,
+      'difficulty': difficulty.name,
+      'rise': rise,
+      'score': score,
+      'level': level,
+      'cleared': cleared,
+      'maxChain': maxChain,
+      'time': time,
+      'stopTime': stopTime,
+      'grace': grace,
+      'garbageIn': _garbageIn,
+      'cursor': [cursorX, cursorY],
+      'slabs': [for (final s in slabs) [s.x, s.y, s.width]],
+      'board': [
+        for (final row in board)
+          [
+            for (final b in row)
+              b == null || b.state == BlockState.clearing ? null : [b.color.index, b.slab == null ? -1 : (slabIds[b.slab] ?? -1)],
+          ],
+      ],
+      'incoming': [for (final b in incoming) b.color.index],
+    };
+  }
+
+  /// Continues a game saved with [toSave].
+  void restore(Map<String, Object?> save) {
+    final mode = ChainMode.values.byName(save['mode'] as String);
+    final difficulty = ChainDifficulty.values.byName(save['difficulty'] as String);
+    start(mode, difficulty: difficulty);
+    double d(String k) => (save[k] as num).toDouble();
+    rise = d('rise');
+    score = save['score'] as int;
+    level = save['level'] as int;
+    cleared = save['cleared'] as int;
+    maxChain = save['maxChain'] as int;
+    time = d('time');
+    stopTime = d('stopTime');
+    grace = d('grace');
+    _garbageIn = d('garbageIn');
+    final cursor = save['cursor'] as List;
+    cursorX = cursor[0] as int;
+    cursorY = cursor[1] as int;
+    slabs
+      ..clear()
+      ..addAll([
+        for (final s in save['slabs'] as List) GarbageSlab(_nextId++, (s as List)[0] as int, s[1] as int, s[2] as int),
+      ]);
+    final rows = save['board'] as List;
+    for (var y = 0; y < height; y++) {
+      final row = rows[y] as List;
+      for (var x = 0; x < width; x++) {
+        final cell = row[x] as List?;
+        if (cell == null) {
+          board[y][x] = null;
+          continue;
+        }
+        final slab = (cell[1] as int) >= 0 ? slabs[cell[1] as int] : null;
+        board[y][x] = ChainBlock(_nextId++, ChainColor.values[cell[0] as int], slab: slab);
+      }
+    }
+    incoming = [for (final c in save['incoming'] as List) ChainBlock(_nextId++, ChainColor.values[c as int])];
+    _events.clear();
+    status = ChainStatus.playing;
+  }
+
   void debugSetIncoming(String row) {
     incoming = [for (final ch in row.split('')) ChainBlock(_nextId++, _letters[ch]!)];
   }

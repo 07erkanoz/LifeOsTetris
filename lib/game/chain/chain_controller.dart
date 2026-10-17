@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/widgets.dart';
@@ -60,14 +61,46 @@ class ChainController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Continues the saved game, paused, so the player picks it up when
+  /// ready. False when there is none (or it cannot be read).
+  bool resumeSaved() {
+    final raw = settings.savedChain;
+    if (raw == null) return false;
+    try {
+      game.restore(jsonDecode(raw) as Map<String, Object?>);
+    } catch (_) {
+      settings.savedChain = null;
+      return false;
+    }
+    mode = game.mode;
+    difficulty = game.difficulty;
+    fx.reset();
+    paused = true;
+    newRecord = false;
+    _overAge = -1;
+    _grab = null;
+    audio.duck = 0.35;
+    _process(game.drainEvents());
+    notifyListeners();
+    return true;
+  }
+
+  /// Keeps a game in progress to continue later.
+  void saveProgress() {
+    if (!started || game.isOver) return;
+    settings.savedChain = jsonEncode(game.toSave());
+  }
+
   void start() {
+    if (settings.savedChain != null) settings.savedChain = null;
     game.start(mode, difficulty: difficulty);
     fx.reset();
     paused = false;
     newRecord = false;
     _overAge = -1;
     _grab = null;
-    settings.lastPlay = mode == ChainMode.timeAttack ? 'chainTime' : 'chainEndless';
+    final last = mode == ChainMode.timeAttack ? 'chainTime' : 'chainEndless';
+    if (settings.lastPlay != last) settings.lastPlay = last;
     audio.startMusic();
     audio.duck = 1;
     audio.play(Sfx.start, volume: 0.8);
@@ -90,6 +123,7 @@ class ChainController extends ChangeNotifier {
     _grab = null;
     audio.duck = paused ? 0.35 : 1;
     audio.play(Sfx.click);
+    if (paused) saveProgress();
     notifyListeners();
   }
 
@@ -243,6 +277,7 @@ class ChainController extends ChangeNotifier {
           audio.duck = 0.4;
           if (settings.vibration) haptics.heavy();
           newRecord = settings.recordChainGame(mode: mode, difficulty: difficulty, score: game.score, seconds: game.time);
+          if (settings.savedChain != null) settings.savedChain = null;
         default:
           break;
       }

@@ -22,17 +22,20 @@ const _hot = [Color(0xFFFFE21F), Color(0xFFFF8A10)];
 /// "Zincir Küpler": swap neighbouring cubes, line up three of a colour, and
 /// let falling cubes chain while the stack rises from below.
 class ChainScreen extends StatefulWidget {
-  const ChainScreen({super.key, required this.settings, required this.audio, this.haptics, required this.mode});
+  const ChainScreen({super.key, required this.settings, required this.audio, this.haptics, required this.mode, this.resume = false});
 
   final Settings settings;
   final AudioService audio;
   final Haptics? haptics;
   final ChainMode mode;
 
-  static Future<void> open(BuildContext context, {required Settings settings, required AudioService audio, Haptics? haptics, required ChainMode mode}) =>
+  /// Continue the saved game instead of showing the start panel.
+  final bool resume;
+
+  static Future<void> open(BuildContext context, {required Settings settings, required AudioService audio, Haptics? haptics, required ChainMode mode, bool resume = false}) =>
       Navigator.of(context).push(
         PageRouteBuilder(
-          pageBuilder: (_, _, _) => ChainScreen(settings: settings, audio: audio, haptics: haptics, mode: mode),
+          pageBuilder: (_, _, _) => ChainScreen(settings: settings, audio: audio, haptics: haptics, mode: mode, resume: resume),
           transitionsBuilder: (_, animation, _, child) => FadeTransition(opacity: animation, child: child),
         ),
       );
@@ -51,6 +54,7 @@ class _ChainScreenState extends State<ChainScreen> with SingleTickerProviderStat
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (widget.resume) c.resumeSaved();
     _ticker.start();
   }
 
@@ -88,6 +92,7 @@ class _ChainScreenState extends State<ChainScreen> with SingleTickerProviderStat
   }
 
   void _leave() {
+    c.saveProgress();
     if (mounted) Navigator.of(context).pop();
   }
 

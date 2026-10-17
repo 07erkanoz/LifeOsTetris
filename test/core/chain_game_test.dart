@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -224,5 +225,32 @@ void main() {
     expect(events.whereType<ChainLevelUp>().single.level, 2);
     expect(g.secondsPerRow(2), lessThan(g.secondsPerRow(1)));
     expect(g.secondsPerRow(ChainGame.maxLevel), greaterThanOrEqualTo(0.9));
+  });
+
+  test('a saved game comes back as it was, through JSON', () {
+    final g = ChainGame(random: Random(7))..start(ChainMode.endless, difficulty: ChainDifficulty.hard);
+    g.debugSetBoard(['......', '###...', 'Y.....', 'BBGYMB', 'GMYBGM']);
+    g.debugSetIncoming('MBGYBY');
+    for (var i = 0; i < 40; i++) {
+      g.update(1 / 30);
+    }
+    g.score = 1234;
+    final save = jsonDecode(jsonEncode(g.toSave())) as Map<String, Object?>;
+    final back = ChainGame(random: Random(99))..restore(save);
+    expect(back.mode, ChainMode.endless);
+    expect(back.difficulty, ChainDifficulty.hard);
+    expect(back.score, 1234);
+    expect(back.level, g.level);
+    expect(back.time, closeTo(g.time, 1e-9));
+    expect(back.rise, closeTo(g.rise, 1e-9));
+    expect(back.slabs, hasLength(g.slabs.length));
+    expect(back.debugRows(), g.debugRows());
+    expect([for (final b in back.incoming) b.color], [for (final b in g.incoming) b.color]);
+    expect(back.status, ChainStatus.playing);
+    // It plays on.
+    for (var i = 0; i < 30; i++) {
+      back.update(1 / 30);
+    }
+    expect(back.isOver, isFalse);
   });
 }
