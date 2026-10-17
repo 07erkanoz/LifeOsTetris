@@ -64,11 +64,26 @@ jobs:
       - name: Prepare the Xcode project
         run: flutter build ios --release --config-only --build-number=$(( ${{ github.run_number }} * 10 + ${{ github.run_attempt }} ))
 
-      # A distribution certificate and App Store profile, made through the
-      # API key. They stay on the account: revoking them would invalidate the
-      # build (ITMS-90035, expired TestFlight builds).
+      # One distribution certificate signs every build: kept between runs
+      # in the cache, encrypted with a password made from the API key, and
+      # never revoked (that would invalidate its builds: ITMS-90035).
+      - name: Restore the signing certificate
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/ios-signing
+          key: ios-signing-${{ github.run_id }}
+          restore-keys: ios-signing-
+
       - name: Set up signing
+        id: signing
         run: python3 ios/ci_signing.py setup
+
+      - name: Keep the signing certificate
+        if: steps.signing.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/ios-signing
+          key: ios-signing-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Archive
         run: |
