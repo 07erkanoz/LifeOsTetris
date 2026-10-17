@@ -1,0 +1,55 @@
+name: Store video
+
+# The store video (App Store app preview, the YouTube video for Google Play):
+# tool/store_video_test.dart renders the frames from the real game, ffmpeg
+# (already on the runner) makes them an MP4 with the game's own music.
+# Run it by hand (Actions → Store video → Run workflow); the videos land in
+# the run's artifacts.
+on:
+  workflow_dispatch:
+    inputs:
+      videos:
+        description: 'Device-locale pairs: iphone-tr iphone-en-US ipad-tr ipad-en-US'
+        default: 'iphone-tr'
+
+env:
+  FLUTTER_VERSION: '3.47.7'
+
+jobs:
+  video:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+
+      # App Store app previews: H.264 at 30 fps, stereo AAC, 15 to 30 s;
+      # 886×1920 for iPhones, 1200×1600 for iPads.
+      - name: Render and encode
+        env:
+          VIDEOS: ${{ inputs.videos }}
+        run: |
+          for v in $VIDEOS; do
+            device=${v%%-*}
+            locale=${v#*-}
+            flutter test tool/store_video_test.dart --dart-define=VIDEO_DEVICE=$device --dart-define=VIDEO_LOCALE=$locale
+            frames=$(ls build/video/$locale-$device | wc -l)
+            seconds=$(python3 -c "print(round($frames / 30, 3))")
+            fade=$(python3 -c "print(round($frames / 30 - 1.5, 3))")
+            ffmpeg -y -framerate 30 -i "build/video/$locale-$device/frame_%05d.png" -i assets/audio/music/track1.mp3 \
+              -filter_complex "[1:a]atrim=0:$seconds,afade=t=in:d=0.4,afade=t=out:st=$fade:d=1.5[a]" \
+              -map 0:v -map "[a]" -t "$seconds" \
+              -c:v libx264 -profile:v high -level 4.0 -pix_fmt yuv420p -r 30 -b:v 12M \
+              -c:a aac -b:a 256k -ar 48000 -ac 2 -movflags +faststart "Lokum-$v.mp4"
+            ffprobe -v error -show_entries stream=codec_name,width,height,r_frame_rate:format=duration -of compact "Lokum-$v.mp4"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lokum-store-videos
+          path: Lokum-*.mp4
