@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' as ui;
 
@@ -12,11 +13,14 @@ import '../audio/haptics.dart';
 import '../core/blocks/adventure.dart';
 import '../core/blocks/level_generator.dart';
 import '../core/chain/chain_game.dart';
+import '../core/sugar/sugar_game.dart' show SugarColor;
 import '../core/sugar/sugar_levels.dart';
 import '../core/tetris_game.dart';
 import '../game/blocks/blocks_controller.dart';
+import '../game/chain/chain_sprites.dart' show chainColors, paintPyramidCube;
 import '../game/game_controller.dart';
 import '../game/motivation.dart';
+import '../game/sugar/sugar_art.dart' show LokumPose, paintCandy, paintLokum, paintSparkle, paintSugarLabel;
 import '../l10n/voice_lines.dart';
 import '../l10n/strings.dart';
 import '../platform/display_mode.dart';
@@ -37,6 +41,7 @@ import 'power_bar.dart';
 import 'theme_picker.dart';
 import 'widgets.dart';
 
+part 'home_lobby.dart';
 part 'home_menu.dart';
 
 String formatTime(double seconds) {
@@ -228,7 +233,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   Widget _overlay() {
     final game = controller.game;
-    if (game.status == GameStatus.ready) return _StartOverlay(key: const ValueKey('start'), c: controller);
+    if (game.status == GameStatus.ready) return _HomeLobby(key: const ValueKey('start'), c: controller);
     if (controller.showGameOver) return _GameOverOverlay(key: const ValueKey('over'), c: controller);
     if (game.paused) return _PauseOverlay(key: const ValueKey('pause'), c: controller);
     return const SizedBox.shrink(key: ValueKey('none'));
@@ -1044,12 +1049,6 @@ class SettingsPanel extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------- overlays
-
-/// A phone held sideways (wide but short): menus switch to two columns.
-bool _isShortLandscape(BuildContext context) {
-  final size = MediaQuery.sizeOf(context);
-  return size.width > size.height * 1.2 && size.height < 520;
-}
 
 class _OverlayShell extends StatelessWidget {
   const _OverlayShell({required this.children, this.landscapeTail = 0, this.maxWidth = 400});

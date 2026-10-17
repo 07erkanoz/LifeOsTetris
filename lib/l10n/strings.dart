@@ -211,6 +211,20 @@ class AppStrings {
   String get superTitle => _t('Süper Küpler', 'Super Blocks');
   String get superSubtitle => _t('Enerji topla, güçleri kullan!', 'Charge up and unleash powers!');
   String get newBadge => _t('YENİ', 'NEW');
+  // Home lobby: Lokum's suggestions and the mode cards.
+  String get forYou => _t('SENİN İÇİN', 'FOR YOU');
+  String get tipUntried => _t('Bunu hiç denemedin!', "You haven't tried this one!");
+  String get tipTry => _t('Hemen dene', 'Try it');
+  String tipLeftOff(int level) => _t('Kaldığın yer: Seviye $level', 'You stopped at level $level');
+  String get tipContinue => _t('Devam et', 'Continue');
+  String get tipDaily => _t('Bugünün bulmacası hazır!', "Today's puzzle is ready!");
+  String get tipSolve => _t('Çöz', 'Solve');
+  String get tipBeatBest => _t('Rekorunu geçebilir misin?', 'Can you beat your best?');
+  String get tipPlay => _t('Oyna', 'Play');
+  String get tipTapMe => _t('Bana dokun, bir fikrim daha var!', 'Tap me for another idea!');
+  String get badgeContinue => _t('DEVAM', 'CONTINUE');
+  String bestLine(String score) => _t('Rekor $score', 'Best $score');
+  String starsLine(int got, int all) => _t('$got / $all yıldız', '$got / $all stars');
   String get powersLabel => _t('GÜÇLER', 'POWERS');
   String get energyLabel => _t('ENERJİ', 'ENERGY');
   String get ghostLineHint => _t('Doğru satırda dokun, boşluklar dolsun!', 'Tap on the right row to fill the gaps!');

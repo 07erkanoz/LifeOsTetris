@@ -253,8 +253,11 @@ void main() {
   testWidgets('about page shows the developer', (tester) async {
     await pumpApp(tester, const Size(390, 844));
     await tester.tap(find.text('Hakkında'));
-    // The About hero animates forever, so pump a fixed time instead of settling.
-    await tester.pump(const Duration(milliseconds: 600));
+    // The About hero (and the home's cards) animate forever, so pump frames
+    // for a fixed time instead of settling, until the page has slid in.
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 33));
+    }
     await tester.scrollUntilVisible(find.text('Erkan ÖZ'), 300, scrollable: find.byType(Scrollable).last);
     expect(find.text('Erkan ÖZ'), findsOneWidget);
     expect(find.text('erkanoz.com'), findsOneWidget);
