@@ -109,7 +109,7 @@ void paintJar(Canvas canvas, Offset c, double s, double fill, {bool shine = fals
 }
 
 /// The scene on postcard [i].
-int postcardScene(int i) => const [3, 0, 5, 4, 2, 2, 3, 3, 0, 0, 1, 0, 5, 4, 0][i % 15];
+int postcardScene(int i) => const [3, 0, 5, 4, 2, 2, 3, 3, 0, 0, 1, 0, 5, 4, 0, 6, 10, 7, 8, 9][i % 20];
 
 /// A small postcard: a white border round its İstanbul scene.
 void paintPostcard(Canvas canvas, Rect r, int i, {bool locked = false}) {

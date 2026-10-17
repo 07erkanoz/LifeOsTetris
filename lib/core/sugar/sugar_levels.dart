@@ -1,11 +1,12 @@
 import 'sugar_game.dart';
 
-/// The Şeker Küpler levels: six chapters of ten. Every fifth level opens a
-/// chest; the tenth of a chapter is its boss. Each chapter brings something
-/// new: ice, chains, candy boxes, timed bombs, then all of them.
+/// The Şeker Küpler levels: twelve chapters of ten. Every fifth level opens
+/// a chest; the tenth of a chapter is its boss. Each chapter brings something
+/// new: ice, chains, candy boxes, timed bombs, all of them; then chocolate,
+/// pomegranates, conveyor belts, cakes, doors, and Ekşi Limon himself.
 class SugarLevels {
   static const int perChapter = 10;
-  static const int chapters = 6;
+  static const int chapters = 12;
   static int get count => all.length;
   static int chapterOf(int level) => ((level - 1) ~/ perChapter).clamp(0, chapters - 1);
   static bool chestAt(int level) => level % 5 == 0;
@@ -16,6 +17,11 @@ class SugarLevels {
   static SugarGoal Function() _color(SugarColor c, int n) => () => SugarGoal.color(c, n);
   static SugarGoal Function() _ice(int n) => () => SugarGoal.ice(n);
   static SugarGoal Function() _box(int n) => () => SugarGoal.box(n);
+  static SugarGoal Function() _choco(int n) => () => SugarGoal.choco(n);
+  static SugarGoal Function() _fruit(int n) => () => SugarGoal.fruit(n);
+  static SugarGoal Function() _cake(int n) => () => SugarGoal.cake(n);
+  static SugarGoal Function() _door(int n) => () => SugarGoal.door(n);
+  static SugarGoal Function() _limon(int n) => () => SugarGoal.limon(n);
 
   static const _r = SugarColor.red, _o = SugarColor.orange, _y = SugarColor.yellow, _g = SugarColor.green, _b = SugarColor.blue;
 
@@ -91,6 +97,78 @@ class SugarLevels {
     _l(58, 14, 5, _boxIceVault, [_box(8), _ice(12)], [5500, 10000, 12000], hard: true, bombEvery: 4, bombTimer: 9),
     _l(59, 32, 5, _chainFrameIce, [_ice(20)], [15000, 26000, 46500], bombEvery: 6, bombTimer: 11),
     _l(60, 40, 5, _grandFinale, [_box(8), _ice(24), _color(_r, 35)], [19000, 32500, 43000], boss: true, bombEvery: 6, bombTimer: 11),
+
+    // ------------------------------------------------------- 7 · Kadıköy --
+    _l(61, 16, 5, _chocoPairs, [_choco(8)], [6000, 12500, 19000], hint: 'choco'),
+    _l(62, 14, 5, _chocoCorners, [_choco(12)], [7000, 11000, 13500]),
+    _l(63, 14, 5, _chocoBand, [_choco(6), _color(_b, 24)], [3500, 7000, 10000]),
+    _l(64, 20, 5, _chocoIce, [_choco(8), _ice(16)], [6500, 15500, 20500]),
+    _l(65, 16, 5, _chocoChains, [_choco(4), _color(_r, 24)], [6500, 9000, 10500]),
+    _l(66, 14, 5, _chocoBoxes, [_choco(4), _box(8), _color(_y, 25)], [4500, 9000, 11000]),
+    _l(67, 14, 6, _chocoFrame, [_choco(12)], [3000, 6500, 7500]),
+    _l(68, 14, 5, _chocoBottom, [_choco(22)], [5500, 11000, 12000], hard: true),
+    _l(69, 18, 5, _chocoMiddle, [_choco(4), _color(_g, 25)], [4000, 9000, 14000], bombEvery: 6, bombTimer: 11),
+    _l(70, 18, 5, _chocoFortress, [_choco(16), _ice(12), _color(_r, 30)], [7000, 10500, 14500], boss: true),
+
+    // ------------------------------------------------------- 8 · Ortaköy --
+    _l(71, 16, 5, _fruitTwo, [_fruit(2)], [6000, 10500, 18000], hint: 'fruit'),
+    _l(72, 22, 5, _fruitIce, [_fruit(3), _ice(16)], [12500, 18000, 20000]),
+    _l(73, 28, 5, _fruitChains, [_fruit(3)], [12000, 23000, 38000]),
+    _l(74, 32, 5, _fruitChoco, [_fruit(3), _choco(8)], [11500, 18500, 31000]),
+    _l(75, 18, 5, _fruitBoxes, [_fruit(3), _box(5)], [9500, 12500, 17500]),
+    _l(76, 24, 5, _fruitTwo, [_fruit(3), _color(_o, 25)], [14000, 18500, 25500]),
+    _l(77, 22, 5, _fruitIceSides, [_fruit(3), _ice(12)], [11500, 18500, 22500]),
+    _l(78, 28, 5, _fruitChoco, [_fruit(3), _choco(8)], [12500, 21000, 33000], hard: true),
+    _l(79, 16, 5, _fruitTwo, [_fruit(3), _color(_y, 25)], [7000, 11500, 14500], bombEvery: 5, bombTimer: 10),
+    _l(80, 34, 5, _fruitFortress, [_fruit(4), _box(8), _ice(8)], [18000, 25000, 34000], boss: true),
+
+    // -------------------------------------------------- 9 · Boğaz Vapuru --
+    _l(81, 12, 5, _open, [_color(_b, 36)], [7500, 11000, 12000], hint: 'belt', belts: {3: 1}),
+    _l(82, 14, 5, _iceDecks, [_ice(16), _color(_g, 62)], [13500, 20500, 25000], belts: {2: 1, 5: -1}),
+    _l(83, 12, 5, _open, [_color(_r, 30), _color(_g, 30)], [6500, 11500, 12500], belts: {3: 1, 4: -1}),
+    _l(84, 14, 5, _fruitTwo, [_fruit(3)], [7500, 15000, 21500], belts: {6: 1}),
+    _l(85, 14, 5, _chocoMiddle, [_choco(4), _color(_o, 43)], [8000, 14000, 15000], belts: {1: -1, 6: 1}),
+    _l(86, 14, 5, _chainDecks, [_color(_o, 43)], [7500, 13500, 14000], belts: {3: 1}),
+    _l(87, 12, 6, _open, [_color(_y, 22), _color(_b, 22)], [4000, 9000, 9500], belts: {2: 1, 4: -1, 6: 1}),
+    _l(88, 14, 5, _boxDecks, [_box(8), _color(_r, 35)], [9500, 14000, 14500], hard: true, belts: {3: 1, 4: 1}),
+    _l(89, 18, 5, _open, [_color(_g, 38)], [6500, 12500, 15000], belts: {7: -1}, bombEvery: 5, bombTimer: 10),
+    _l(90, 14, 5, _iceDecksChoco, [_ice(16), _choco(4), _color(_b, 43)], [10000, 17500, 18500], boss: true, belts: {2: 1, 5: -1}),
+
+    // ------------------------------------------------------ 10 · İstiklal --
+    _l(91, 14, 5, _cakeOne, [_cake(1)], [15000, 18500, 23500], hint: 'cake'),
+    _l(92, 16, 5, _cakeTwo, [_cake(2), _color(_r, 36)], [6500, 11500, 15500]),
+    _l(93, 14, 5, _cakeIce, [_cake(2), _ice(24)], [6000, 13500, 16000]),
+    _l(94, 14, 5, _cakeFour, [_cake(4), _color(_y, 25)], [5500, 9000, 11000]),
+    _l(95, 14, 5, _cakeFruit, [_cake(1), _fruit(2)], [4500, 10500, 17500]),
+    _l(96, 16, 5, _cakeChoco, [_cake(2), _choco(5), _color(_g, 30)], [5500, 10500, 15500]),
+    _l(97, 14, 5, _cakeTwo, [_cake(2), _color(_o, 36)], [7500, 12000, 13000], belts: {6: 1}),
+    _l(98, 14, 5, _cakeBoxes, [_cake(3), _box(4)], [8500, 14000, 20500], hard: true),
+    _l(99, 14, 5, _cakeTwo, [_cake(2), _color(_b, 30)], [7500, 10500, 13500], bombEvery: 5, bombTimer: 10),
+    _l(100, 16, 5, _cakeFortress, [_cake(4), _ice(8), _color(_o, 35)], [9500, 14000, 16500], boss: true),
+
+    // --------------------------------------------------------- 11 · Balat --
+    _l(101, 16, 5, _doorsTwo, [_door(2)], [7000, 14000, 18500], hint: 'door'),
+    _l(102, 20, 5, _doorsRow, [_door(4)], [7000, 10500, 18500]),
+    _l(103, 22, 5, _doorsIce, [_door(4), _ice(8)], [8000, 16500, 21500]),
+    _l(104, 28, 5, _doorsChains, [_door(4)], [9500, 17500, 20000]),
+    _l(105, 18, 5, _doorsCake, [_door(4), _cake(1)], [8000, 12000, 19500]),
+    _l(106, 22, 5, _doorsFruit, [_door(2), _fruit(2)], [9500, 20500, 29500]),
+    _l(107, 14, 5, _doorsRow, [_door(4)], [6500, 13500, 15500], belts: {6: -1}),
+    _l(108, 20, 5, _doorsChoco, [_door(4), _choco(6)], [10000, 17500, 20500], hard: true),
+    _l(109, 14, 5, _doorsTwo, [_door(2), _color(_y, 25)], [6500, 10000, 10500], bombEvery: 5, bombTimer: 10),
+    _l(110, 28, 5, _doorsFortress, [_door(6), _box(4)], [12500, 19000, 24500], boss: true),
+
+    // ------------------------------------------------ 12 · Çamlıca Tepesi --
+    _l(111, 24, 5, _fruitChoco, [_fruit(2), _choco(8)], [8000, 23000, 24000]),
+    _l(112, 14, 5, _doorsRow, [_door(4), _color(_r, 43)], [9000, 16000, 17500], belts: {2: 1, 5: -1}),
+    _l(113, 14, 5, _cakeChoco, [_cake(2), _choco(5), _color(_y, 30)], [6000, 10000, 12500]),
+    _l(114, 14, 5, _fruitTwo, [_fruit(3)], [9500, 19000, 21500], belts: {3: -1, 6: 1}),
+    _l(115, 16, 5, _doorsCake, [_door(4), _cake(1), _color(_r, 24)], [6000, 9000, 13500]),
+    _l(116, 14, 5, _chocoChains, [_choco(4), _color(_b, 24)], [4500, 11500, 12000], bombEvery: 5, bombTimer: 10),
+    _l(117, 14, 5, _cakeTwo, [_cake(2), _color(_g, 36)], [8000, 15000, 17000], belts: {1: 1, 6: -1}),
+    _l(118, 26, 5, _everything, [_cake(1), _door(2), _choco(4), _fruit(1)], [10000, 26500, 43500], hard: true),
+    _l(119, 22, 5, _doorsFruit, [_door(2), _fruit(3)], [8000, 15500, 22500]),
+    _l(120, 34, 5, _open, [_limon(420)], [15000, 20000, 32500], boss: true, hint: 'limon', limonEvery: 4),
   ];
 
   static SugarLevel _l(
@@ -105,6 +183,8 @@ class SugarLevels {
     String? hint,
     int bombTimer = 9,
     int bombEvery = 0,
+    Map<int, int> belts = const {},
+    int limonEvery = 0,
   }) {
     assert(layout.length == SugarGame.size && layout.every((r) => r.length == SugarGame.size));
     // Earlier chapters are luckier: more specials from the sky, more free
@@ -122,15 +202,19 @@ class SugarLevels {
       hint: hint,
       bombTimer: bombTimer,
       bombEvery: bombEvery,
-      luck: const [18, 14, 12, 10, 9, 8][ch],
-      gifts: n <= 5 ? 2 : (ch <= 1 || boss ? 1 : 0),
-      rush: const [70, 80, 90, 95, 100, 105][ch],
-      calm: const [40, 48, 52, 55, 58, 58][ch],
+      luck: const [18, 14, 12, 10, 9, 8, 9, 9, 8, 8, 8, 8][ch],
+      gifts: n <= 5 ? 2 : (ch <= 1 || boss || hint != null ? 1 : 0),
+      rush: const [70, 80, 90, 95, 100, 105, 100, 100, 105, 105, 105, 110][ch],
+      calm: const [40, 48, 52, 55, 58, 58, 56, 56, 58, 58, 58, 58][ch],
+      belts: belts,
+      limonEvery: limonEvery,
     );
   }
 
   // '.' plain · 'i' ice · 'I' thick ice · 'c' chained · 'C' chained on ice
   // 'K' box (two layers) · 'k' box (one layer) · 'T' timed bomb
+  // 'H' chocolate · 'N' pomegranate · 'W' cake (its other cells 'w')
+  // '1'–'5' a door in red, orange, yellow, green, blue
 
   static const _open = ['........', '........', '........', '........', '........', '........', '........', '........'];
   static const _iceMiddle = ['........', '........', '..iiii..', '..iiii..', '..iiii..', '..iiii..', '........', '........'];
@@ -171,6 +255,56 @@ class SugarLevels {
   static const _rainbowArch = ['........', '..iiii..', '.ii..ii.', '.i....i.', '.i.kk.i.', '.i.kk.i.', '........', '........'];
   static const _rainbowIsland = ['........', '..iiii..', '.iiiiii.', '.ik..ki.', '.ik..ki.', '.iiiiii.', '..iiii..', '........'];
   static const _grandFinale = ['KiiiiiiK', 'i......i', 'i.KccK.i', 'i.c..c.i', 'i.c..c.i', 'i.KccK.i', 'i......i', 'KiiiiiiK'];
+
+  // Kadıköy: chocolate.
+  static const _chocoPairs = ['........', '........', '........', '........', '........', '.HH..HH.', '.HH..HH.', '........'];
+  static const _chocoMiddle = ['........', '........', '........', '...HH...', '...HH...', '........', '........', '........'];
+  static const _chocoCorners = ['........', '........', '........', '........', '........', '........', 'HHH..HHH', 'HHH..HHH'];
+  static const _chocoBand = ['........', '........', '........', '........', 'HHH..HHH', '........', '........', '........'];
+  static const _chocoIce = ['iiiiiiii', '........', '..HHHH..', '........', '........', '..HHHH..', '........', 'iiiiiiii'];
+  static const _chocoChains = ['........', '.cc..cc.', '........', '...HH...', '...HH...', '........', '.cc..cc.', '........'];
+  static const _chocoBoxes = ['........', '........', '.kk..kk.', '...HH...', '...HH...', '.kk..kk.', '........', '........'];
+  static const _chocoFrame = ['........', 'HH....HH', 'H......H', '........', '........', 'H......H', 'HH....HH', '........'];
+  static const _chocoBottom = ['........', '........', '........', '........', '........', 'HHH..HHH', 'HHHHHHHH', 'HHHHHHHH'];
+  static const _chocoFortress = ['........', 'HHH..HHH', 'H..ii..H', '..iiii..', '..iiii..', 'H..ii..H', 'HHH..HHH', '........'];
+
+  // Ortaköy: pomegranates, from the top row.
+  static const _fruitTwo = ['..N..N..', '........', '........', '........', '........', '........', '........', '........'];
+  static const _fruitIce = ['...NN...', '........', '........', '........', 'iiiiiiii', 'iiiiiiii', '........', '........'];
+  static const _fruitChains = ['..N..N..', '........', '.c.cc.c.', '........', '........', '.c.cc.c.', '........', '........'];
+  static const _fruitChoco = ['.N....N.', '........', '........', 'HH....HH', 'HH....HH', '........', '........', '........'];
+  static const _fruitBoxes = ['..N..N..', '........', '........', 'k.kk.kk.', '........', '........', '........', '........'];
+  static const _fruitIceSides = ['...NN...', '........', 'ii....ii', 'ii....ii', 'ii....ii', '........', '........', '........'];
+  static const _fruitFortress = ['.N....N.', '........', 'k.iiii.k', 'k.i..i.k', 'k.i..i.k', 'k......k', '........', '........'];
+
+  // Boğaz Vapuru: decks under the belts.
+  static const _iceDecks = ['........', '........', 'iiiiiiii', '........', '........', 'iiiiiiii', '........', '........'];
+  static const _chainDecks = ['........', '........', '.c....c.', '........', '........', '.c....c.', '........', '........'];
+  static const _boxDecks = ['........', 'kk....kk', '........', '........', '........', '........', 'kk....kk', '........'];
+  static const _iceDecksChoco = ['........', '...HH...', 'iiiiiiii', '........', '........', 'iiiiiiii', '...HH...', '........'];
+
+  // İstiklal: cakes.
+  static const _cakeOne = ['........', '........', '........', '...Ww...', '...ww...', '........', '........', '........'];
+  static const _cakeTwo = ['........', '........', '........', '.Ww..Ww.', '.ww..ww.', '........', '........', '........'];
+  static const _cakeIce = ['........', '........', 'iiiiiiii', 'iWwiiWwi', 'iwwiiwwi', 'iiiiiiii', '........', '........'];
+  static const _cakeFour = ['........', '.Ww..Ww.', '.ww..ww.', '........', '........', '.Ww..Ww.', '.ww..ww.', '........'];
+  static const _cakeFruit = ['...N....', '........', '........', '...Ww...', '...ww...', '........', '........', '........'];
+  static const _cakeChoco = ['........', '........', 'H......H', 'H.Ww.Ww.', '..ww.ww.', 'H......H', '........', '........'];
+  static const _cakeBoxes = ['........', 'k.Ww...k', '..ww....', '....Ww..', '....ww..', '.Ww.....', 'kww....k', '........'];
+  static const _cakeFortress = ['........', '.Ww..Ww.', '.ww..ww.', '..iiii..', '..iiii..', '.Ww..Ww.', '.ww..ww.', '........'];
+
+  // Balat: doors in red (1), orange (2), yellow (3), green (4), blue (5).
+  static const _doorsTwo = ['........', '........', '........', '........', '..1..5..', '........', '........', '........'];
+  static const _doorsRow = ['........', '........', '........', '.1.2.3.4', '........', '........', '........', '........'];
+  static const _doorsIce = ['........', '........', '.1....3.', '..iiii..', '..iiii..', '.4....5.', '........', '........'];
+  static const _doorsChains = ['........', '..cccc..', '.2....4.', '........', '........', '.3....1.', '..cccc..', '........'];
+  static const _doorsCake = ['........', '........', '..1..2..', '...Ww...', '...ww...', '..3..5..', '........', '........'];
+  static const _doorsFruit = ['..N..N..', '........', '........', '1......5', '........', '........', '........', '........'];
+  static const _doorsChoco = ['........', '..H..H..', '.1....2.', '...HH...', '........', '.3....4.', '..H..H..', '........'];
+  static const _doorsFortress = ['........', '.1.kk.2.', '........', '3......4', '........', '........', '.5.kk.1.', '........'];
+
+  // Çamlıca: a bit of everything.
+  static const _everything = ['...N....', '.1....2.', '........', '...Ww...', '...ww...', '........', 'HH....HH', '........'];
 }
 
 /// Helpers a player can spend in a level: smash one sweet, turn one into a

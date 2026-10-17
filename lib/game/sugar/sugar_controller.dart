@@ -134,6 +134,15 @@ class SugarController extends ChangeNotifier {
   /// The postcard a chapter's last level gave, if it did.
   int? newCard;
 
+  /// When Ekşi Limon last threw slices or lost his temper (board time).
+  double limonThrew = -10;
+
+  /// Ekşi Limon beaten for the first time: the story's end and its prize.
+  bool finaleWon = false;
+
+  /// Ekşi Limon is in this level.
+  bool get hasLimon => level.limonEvery > 0;
+
   /// What Lokum wears.
   LokumOutfit get outfit => LokumOutfit.worn(settings.lokumOutfit, settings.totalSugarStars, settings.unlocks);
 
@@ -191,6 +200,8 @@ class SugarController extends ChangeNotifier {
     popped.clear();
     surprise = null;
     newCard = null;
+    limonThrew = -10;
+    finaleWon = false;
     _overAge = -1;
     _playTime = 0;
     _idle = 0;
@@ -342,8 +353,8 @@ class SugarController extends ChangeNotifier {
     final booster = armed;
     if (booster != null) {
       final ok = switch (booster) {
-        SugarBooster.hammer => game.board[y][x] != null || game.box[y][x] > 0,
-        SugarBooster.rainbow => game.board[y][x] != null && !game.board[y][x]!.chained && !game.board[y][x]!.isPrism,
+        SugarBooster.hammer => game.canHammer(x, y),
+        SugarBooster.rainbow => game.board[y][x] != null && !game.board[y][x]!.chained && !game.board[y][x]!.isPrism && !game.board[y][x]!.fruit,
         SugarBooster.moves || SugarBooster.shuffle => false,
       };
       if (ok && settings.useSugarBooster(booster)) {
@@ -581,6 +592,67 @@ class SugarController extends ChangeNotifier {
           fx.floaters.add(SugarFloater('+${e.points}', e.x + 0.5, e.y + 0.5, 0.55 + min(0.35, e.index * 0.03), const [Color(0xFFFFFFFF), Color(0xFFFFE066)], duration: 1.0, delay: 0.25));
           audio.playCombo(min(8, e.index + 1));
           _wait(0.32);
+        case SugarChocoCleared():
+          fx.chips(e.x + 0.5, e.y + 0.5, const Color(0xFF8A4A2A), count: 10);
+          audio.play(Sfx.hard, volume: 0.5);
+        case SugarChocoSpread():
+          ghosts.add(SugarGhost(e.piece, e.x.toDouble(), e.y.toDouble(), at));
+          fx.chips(e.x + 0.5, e.y + 0.5, const Color(0xFF6A3418), count: 8);
+          audio.play(Sfx.bump, volume: 0.45);
+          say('choco', LokumPose.wow);
+          _wait(at - now + 0.3);
+        case SugarFruitDone():
+          ghosts.add(SugarGhost(e.piece, e.x.toDouble(), e.y.toDouble(), at));
+          fx.burst(e.x + 0.5, e.y + 0.5, const Color(0xFFFF4A6A), delay: at - now, count: 12);
+          fx.floaters.add(SugarFloater('+1000', e.x + 0.5, e.y + 0.1, 0.5, const [Color(0xFFFFFFFF), Color(0xFFFF9AAE)], duration: 1.1, delay: max(0, at - now)));
+          audio.play(Sfx.levelup, volume: 0.55);
+          say('fruit', LokumPose.cheer);
+          _wait(at - now + 0.3);
+        case SugarCakeHit():
+          fx.chips(e.x + 1, e.y + 1, e.left > 0 ? const Color(0xFFFFB0D0) : const Color(0xFFFFE066), count: e.left > 0 ? 10 : 22);
+          audio.play(e.left > 0 ? Sfx.hard : Sfx.bomb, volume: 0.55);
+          if (e.left == 0) {
+            fx.kick(0.2);
+            fx.confetti(count: 24, delay: at - now);
+            say('cake', LokumPose.cheer, priority: 2);
+          }
+        case SugarDoorOpened():
+          fx.chips(e.x + 0.5, e.y + 0.5, sugarColors[e.color]!, count: 14);
+          audio.play(Sfx.lock, volume: 0.7);
+          say('door', LokumPose.wink);
+        case SugarBelted():
+          var longest = 0.0;
+          for (final (id, fromX, toX, y) in e.moves) {
+            final dir = level.belts[y] ?? 1;
+            // Round the end: in from the far edge.
+            final from = (toX - fromX).sign == dir ? fromX.toDouble() : (toX - dir).toDouble();
+            motions[id] = SugarMotion(Offset(from, y.toDouble()), Offset(toX.toDouble(), y.toDouble()), at, 0.32);
+            longest = 0.32;
+          }
+          audio.play(Sfx.gravity, volume: 0.45);
+          _wait(at - now + longest);
+        case SugarSliceThrown():
+          for (var i = 0; i < e.cells.length; i++) {
+            final (x, y) = e.cells[i];
+            ghosts.add(SugarGhost(e.pieces[i], x.toDouble(), y.toDouble(), at + 0.25 + i * 0.08));
+            fx.chips(x + 0.5, y + 0.5, const Color(0xFFFFE04A), count: 8);
+          }
+          limonThrew = now;
+          audio.play(Sfx.bump, volume: 0.7);
+          say('limon', LokumPose.scared, priority: 2);
+          _wait(0.7);
+        case SugarSliceCleared():
+          fx.chips(e.x + 0.5, e.y + 0.5, const Color(0xFFFFF06A), count: 9);
+          audio.play(Sfx.hard, volume: 0.4);
+        case SugarLimonPhase():
+          fx.callout(strings.sugarLimonAngry, size: 1.1);
+          fx.kick(0.8);
+          fx.flash = 0.6;
+          limonThrew = now;
+          audio.play(Sfx.bomb);
+          if (settings.vibration) haptics.heavy();
+          say('limonAngry', LokumPose.wow, priority: 3);
+          _wait(1.0);
         case SugarWon():
           _finish();
         case SugarLost():
@@ -612,6 +684,10 @@ class SugarController extends ChangeNotifier {
           settings.applyGift(Gift(card: card));
           newCard = card;
         }
+      }
+      if (hasLimon && !settings.unlocked(Unlock.sceneCamlica)) {
+        settings.applyGift(Rewards.finale);
+        finaleWon = true;
       }
       fx.confetti(count: 80);
       audio.play(Sfx.levelup);

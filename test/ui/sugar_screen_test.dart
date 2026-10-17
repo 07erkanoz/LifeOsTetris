@@ -266,6 +266,6 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('sugar-level-3')), warnIfMissed: false);
     await pumpFor(tester, 10, 40);
     expect(find.byType(SugarScreen), findsNothing);
-    expect(SugarLevels.count, 60);
+    expect(SugarLevels.count, 120);
   });
 }

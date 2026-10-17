@@ -195,6 +195,16 @@ class _GoalIconPainter extends CustomPainter {
         paintIce(canvas, r, layers: 1, seed: 1);
       case GoalKind.box:
         paintCandyBox(canvas, r);
+      case GoalKind.choco:
+        paintChocolate(canvas, r);
+      case GoalKind.fruit:
+        paintPomegranate(canvas, r);
+      case GoalKind.cake:
+        paintCake(canvas, r.inflate(size.width * 0.08));
+      case GoalKind.door:
+        paintDoor(canvas, r, sugarColors[SugarColor.blue]!);
+      case GoalKind.limon:
+        paintEksiLimon(canvas, r.center + Offset(0, size.height * 0.08), size.width * 0.72);
       case GoalKind.score:
         paintGoldStar(canvas, r.center, size.width * 0.46);
     }
@@ -468,6 +478,7 @@ int? sugarSceneIndex(String? name) => switch (name) {
   'sceneGalata' => 4,
   'sceneSnow' => 1,
   'sceneIslands' => 5,
+  'sceneCamlica' => 11,
   _ => null,
 };
 

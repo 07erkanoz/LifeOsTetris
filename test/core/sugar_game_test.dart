@@ -51,7 +51,7 @@ void main() {
       final g = SugarGame(seed: level.number)..start(level);
       for (var y = 0; y < 8; y++) {
         for (var x = 0; x < 8; x++) {
-          expect(g.board[y][x] != null || g.box[y][x] > 0, isTrue, reason: 'level ${level.number} ($x, $y)');
+          expect(g.board[y][x] != null || g.blocked(x, y), isTrue, reason: 'level ${level.number} ($x, $y)');
         }
       }
       expect(g.drainEvents(), isEmpty, reason: 'nothing happens before the first move');
@@ -428,17 +428,35 @@ void main() {
     expect(c.score, greaterThan(0));
   });
 
-  test('levels: sixty in six chapters, goals match the board, bosses and chests', () {
-    expect(SugarLevels.count, 60);
+  test('levels: 120 in twelve chapters, goals match the board, bosses and chests', () {
+    expect(SugarLevels.count, 120);
     for (final level in SugarLevels.all) {
       final cells = level.layout.join().split('');
       final ice = cells.where((c) => c == 'i' || c == 'I' || c == 'C').length;
       final boxes = cells.where((c) => c == 'K' || c == 'k').length;
+      final chocolate = cells.where((c) => c == 'H').length;
+      final cakes = cells.where((c) => c == 'W').length;
+      final doors = cells.where((c) => '123456'.contains(c)).length;
       for (final goal in level.goals.map((f) => f())) {
         if (goal.kind == GoalKind.ice) expect(goal.target, ice, reason: 'level ${level.number}');
         if (goal.kind == GoalKind.box) expect(goal.target, boxes, reason: 'level ${level.number}');
         if (goal.kind == GoalKind.color) expect(goal.color!.index, lessThan(level.colors), reason: 'level ${level.number} asks for a colour it lacks');
+        // Chocolate may spread, but there must be enough to start with.
+        if (goal.kind == GoalKind.choco) expect(goal.target, inInclusiveRange(1, chocolate), reason: 'level ${level.number}');
+        if (goal.kind == GoalKind.cake) expect(goal.target, cakes, reason: 'level ${level.number}');
+        if (goal.kind == GoalKind.door) expect(goal.target, doors, reason: 'level ${level.number}');
       }
+      // Doors in colours the level has, and every cake whole.
+      for (final c in cells.where((c) => '123456'.contains(c))) {
+        expect(int.parse(c), lessThanOrEqualTo(level.colors), reason: 'level ${level.number}');
+      }
+      for (var y = 0; y < 8; y++) {
+        for (var x = 0; x < 8; x++) {
+          if (level.layout[y][x] != 'W') continue;
+          expect([level.layout[y][x + 1], level.layout[y + 1][x], level.layout[y + 1][x + 1]], ['w', 'w', 'w'], reason: 'level ${level.number} cake at ($x, $y)');
+        }
+      }
+      expect(level.goals.any((f) => f().kind == GoalKind.limon), level.number == SugarLevels.count, reason: 'Ekşi Limon waits at the very end');
       expect(level.stars[0] <= level.stars[1] && level.stars[1] <= level.stars[2], isTrue, reason: 'level ${level.number}');
       expect(level.boss, level.number % 10 == 0);
       // Every column under a box can be reached from the side.
@@ -451,10 +469,11 @@ void main() {
     expect(SugarLevels.chapterOf(10), 0);
     expect(SugarLevels.chapterOf(11), 1);
     expect(SugarLevels.chapterOf(60), 5);
+    expect(SugarLevels.chapterOf(120), 11);
   });
 
   test('the solver wins the first levels', () {
-    for (final n in [1, 2, 3, 11, 31]) {
+    for (final n in [1, 2, 3, 11, 31, 61, 71, 81, 91, 101]) {
       final g = SugarSolver.play(SugarLevels.of(n), 42);
       expect(g.status, SugarStatus.won, reason: 'level $n');
     }

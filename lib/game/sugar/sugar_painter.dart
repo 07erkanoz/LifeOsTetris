@@ -62,8 +62,27 @@ class SugarBoardPainter extends CustomPainter {
       }
     }
 
+    // Arrows on the rim show which way each belt runs.
+    for (final MapEntry(key: y, value: dir) in c.level.belts.entries) {
+      final cy = o.dy + (y + 0.5) * cell;
+      for (final x in [board.left - cell * 0.09, board.right + cell * 0.09]) {
+        final back = x - dir * cell * 0.07;
+        canvas.drawPath(
+          Path()..addPolygon([Offset(x + dir * cell * 0.07, cy), Offset(back, cy - cell * 0.13), Offset(back, cy + cell * 0.13)], true),
+          Paint()..color = const Color(0xFFFFC21A),
+        );
+      }
+    }
+
     canvas.save();
     canvas.clipRRect(RRect.fromRectAndRadius(board.inflate(cell * 0.12), Radius.circular(cell * 0.4)));
+
+    // Conveyor belts run under the sweets.
+    for (final MapEntry(key: y, value: dir) in c.level.belts.entries) {
+      for (var x = 0; x < SugarGame.size; x++) {
+        sprites.draw(canvas, sprites.belt(dir), o + Offset(x * cell, y * cell));
+      }
+    }
 
     // Selection glow under the cube.
     final sel = c.selected;
@@ -77,12 +96,20 @@ class SugarBoardPainter extends CustomPainter {
       );
     }
 
-    // Candy boxes stay put.
+    // Boxes, chocolate, doors and lemon slices stay put; cakes take four
+    // cells.
     for (var y = 0; y < SugarGame.size; y++) {
       for (var x = 0; x < SugarGame.size; x++) {
+        final at = o + Offset(x * cell, y * cell);
         final b = g.box[y][x];
-        if (b > 0) sprites.draw(canvas, sprites.box(b), o + Offset(x * cell, y * cell));
+        if (b > 0) sprites.draw(canvas, sprites.box(b), at);
+        if (g.choco[y][x] > 0) sprites.draw(canvas, sprites.chocolate, at);
+        if (g.slice[y][x] > 0) sprites.draw(canvas, sprites.lemonSlice, at);
+        if (g.door[y][x] > 0) sprites.draw(canvas, sprites.door(SugarColor.values[g.door[y][x] - 1]), at);
       }
+    }
+    for (final (x, y) in g.cakes) {
+      if (g.cake[y][x] > 0) sprites.drawCake(canvas, g.cake[y][x], o + Offset(x * cell, y * cell));
     }
 
     // Sweets, where their motions put them.

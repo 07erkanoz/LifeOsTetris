@@ -4,7 +4,9 @@ import 'dart:math';
 /// line up. Four in a row make a striped sweet, an L or T a wrapped one,
 /// five in a row a rainbow ball; specials fire when matched or hit, and two
 /// specials swapped together combine. Levels give moves and goals, and may
-/// hold ice, chains, candy boxes and timed bombs.
+/// hold ice, chains, candy boxes, timed bombs, spreading chocolate,
+/// pomegranates to bring down, conveyor belts, layered cakes, coloured
+/// doors and, at the very end, Ekşi Limon throwing lemon slices.
 ///
 /// Pure game logic. Time does not pass here: [SugarGame.advance] runs the
 /// next phase of a move (a blast, a clear, the fall and refill) so a screen
@@ -16,7 +18,7 @@ enum SugarColor { red, orange, yellow, green, blue, purple }
 enum Special { none, lineH, lineV, bomb, prism }
 
 class SugarPiece {
-  SugarPiece(this.id, this.color, {this.special = Special.none, this.chained = false, this.timer});
+  SugarPiece(this.id, this.color, {this.special = Special.none, this.chained = false, this.timer, this.fruit = false});
 
   final int id;
   SugarColor color;
@@ -28,28 +30,41 @@ class SugarPiece {
   /// A timed bomb: moves left before it goes off (null for other sweets).
   int? timer;
 
+  /// A pomegranate: it never matches or pops; it falls with the sweets and
+  /// is collected on the bottom row.
+  final bool fruit;
+
   bool get isPrism => special == Special.prism;
   bool get isLine => special == Special.lineH || special == Special.lineV;
   bool get isBomb => timer != null;
 
-  SugarPiece copy() => SugarPiece(id, color, special: special, chained: chained, timer: timer);
+  /// A plain sweet: no special, no chain, no timer, not a pomegranate.
+  bool get isPlain => special == Special.none && !chained && timer == null && !fruit;
+
+  SugarPiece copy() => SugarPiece(id, color, special: special, chained: chained, timer: timer, fruit: fruit);
 }
 
 typedef Cell = (int, int);
 
-enum GoalKind { score, color, ice, box }
+/// What a level asks for: points, sweets of a colour, ice broken, boxes
+/// opened, chocolate cleared, pomegranates brought down, cakes eaten,
+/// doors opened, or Ekşi Limon's sourness taken away.
+enum GoalKind { score, color, ice, box, choco, fruit, cake, door, limon }
 
 class SugarGoal {
-  SugarGoal.score(this.target)
-      : kind = GoalKind.score,
-        color = null;
-  SugarGoal.color(SugarColor this.color, this.target) : kind = GoalKind.color;
-  SugarGoal.ice(this.target)
-      : kind = GoalKind.ice,
-        color = null;
-  SugarGoal.box(this.target)
-      : kind = GoalKind.box,
-        color = null;
+  SugarGoal._(this.kind, this.target, [this.color]);
+  SugarGoal.score(int target) : this._(GoalKind.score, target);
+  SugarGoal.color(SugarColor color, int target) : this._(GoalKind.color, target, color);
+  SugarGoal.ice(int target) : this._(GoalKind.ice, target);
+  SugarGoal.box(int target) : this._(GoalKind.box, target);
+  SugarGoal.choco(int target) : this._(GoalKind.choco, target);
+  SugarGoal.fruit(int target) : this._(GoalKind.fruit, target);
+  SugarGoal.cake(int target) : this._(GoalKind.cake, target);
+  SugarGoal.door(int target) : this._(GoalKind.door, target);
+
+  /// Ekşi Limon's sourness: every sweet matched takes one point off, every
+  /// sweet a special blasts takes two.
+  SugarGoal.limon(int target) : this._(GoalKind.limon, target);
 
   final GoalKind kind;
   final SugarColor? color;
@@ -59,20 +74,14 @@ class SugarGoal {
   bool get done => progress >= target;
   int get left => max(0, target - progress);
 
-  SugarGoal copy() {
-    final g = switch (kind) {
-      GoalKind.score => SugarGoal.score(target),
-      GoalKind.color => SugarGoal.color(color!, target),
-      GoalKind.ice => SugarGoal.ice(target),
-      GoalKind.box => SugarGoal.box(target),
-    };
-    return g..progress = progress;
-  }
+  SugarGoal copy() => SugarGoal._(kind, target, color)..progress = progress;
 }
 
 /// A level. Layout rows: '.' plain, 'i' ice, 'I' thick ice, 'c' chained,
 /// 'C' chained on ice, 'K' candy box (two layers), 'k' box (one layer),
-/// 'T' a timed bomb.
+/// 'T' a timed bomb, 'H' chocolate, 'N' a pomegranate, 'W' the top-left of
+/// a cake (its other three cells 'w'), '1'–'6' a door in that colour
+/// (red, orange, yellow, green, blue, purple), 'L' a lemon slice.
 class SugarLevel {
   const SugarLevel({
     required this.number,
@@ -90,6 +99,10 @@ class SugarLevel {
     this.gifts = 0,
     this.rush = 45,
     this.calm = 55,
+    this.belts = const {},
+    this.fruitsAtOnce = 2,
+    this.limonEvery = 0,
+    this.limonThrow = 3,
   });
 
   final int number;
@@ -123,6 +136,19 @@ class SugarLevel {
   /// Out of a hundred new sweets, how many are kept from matching on
   /// landing (lower: more free cascades).
   final int calm;
+
+  /// Conveyor belts: row → direction (1 right, -1 left). After every move
+  /// the sweets on a belt row move one cell along it, round the ends.
+  final Map<int, int> belts;
+
+  /// Pomegranates on the board at once (more drop in as they are brought
+  /// down, until the goal's count has come).
+  final int fruitsAtOnce;
+
+  /// Ekşi Limon throws [limonThrow] lemon slices every [limonEvery] moves
+  /// (0: he is not in this level); more and more often as he weakens.
+  final int limonEvery;
+  final int limonThrow;
 }
 
 // ----------------------------------------------------------------- events --
@@ -245,6 +271,66 @@ class SugarLost extends SugarEvent {
   final bool bomb;
 }
 
+/// Chocolate was cleared from a cell.
+class SugarChocoCleared extends SugarEvent {
+  const SugarChocoCleared(this.x, this.y);
+  final int x, y;
+}
+
+/// No chocolate was cleared this move: it spread over [piece] at ([x], [y]).
+class SugarChocoSpread extends SugarEvent {
+  const SugarChocoSpread(this.x, this.y, this.piece);
+  final int x, y;
+  final SugarPiece piece;
+}
+
+/// A pomegranate reached the bottom and was collected.
+class SugarFruitDone extends SugarEvent {
+  const SugarFruitDone(this.x, this.y, this.piece);
+  final int x, y;
+  final SugarPiece piece;
+}
+
+/// The cake whose top-left is ([x], [y]) lost a layer; [left] remain.
+class SugarCakeHit extends SugarEvent {
+  const SugarCakeHit(this.x, this.y, this.left);
+  final int x, y, left;
+}
+
+/// A door matched in its colour opened.
+class SugarDoorOpened extends SugarEvent {
+  const SugarDoorOpened(this.x, this.y, this.color);
+  final int x, y;
+  final SugarColor color;
+}
+
+/// The belts moved: each sweet [id] went from column [fromX] to [toX] on
+/// row [y] (round the end when they are far apart).
+class SugarBelted extends SugarEvent {
+  const SugarBelted(this.moves);
+  final List<(int id, int fromX, int toX, int y)> moves;
+}
+
+/// Ekşi Limon threw lemon slices onto [cells], over the [pieces] there.
+class SugarSliceThrown extends SugarEvent {
+  const SugarSliceThrown(this.cells, this.pieces);
+  final List<Cell> cells;
+  final List<SugarPiece> pieces;
+}
+
+/// A lemon slice was washed away.
+class SugarSliceCleared extends SugarEvent {
+  const SugarSliceCleared(this.x, this.y);
+  final int x, y;
+}
+
+/// Ekşi Limon lost a third of his sourness: [phase] 1 or 2. He shuffles
+/// the board and throws more often.
+class SugarLimonPhase extends SugarEvent {
+  const SugarLimonPhase(this.phase);
+  final int phase;
+}
+
 enum SugarStatus { ready, idle, resolving, won, lost }
 
 /// Small, copyable random numbers (xorshift), so a game can be cloned and
@@ -284,7 +370,24 @@ class SugarGame {
 
   /// Candy box layers per cell (0: no box). A box cell holds no sweet.
   List<List<int>> box = [for (var y = 0; y < size; y++) List<int>.filled(size, 0)];
+
+  /// Chocolate (1) per cell; it holds no sweet and spreads.
+  List<List<int>> choco = _grid();
+
+  /// Cake layers left on each of a cake's four cells (0: none).
+  List<List<int>> cake = _grid();
+
+  /// The top-left cells of the cakes still on the board.
+  List<Cell> cakes = [];
+
+  /// A door per cell: its colour's index + 1 (0: no door).
+  List<List<int>> door = _grid();
+
+  /// Lemon slices (1) Ekşi Limon threw.
+  List<List<int>> slice = _grid();
   List<SugarGoal> goals = [];
+
+  static List<List<int>> _grid() => [for (var y = 0; y < size; y++) List<int>.filled(size, 0)];
   int colors = 5;
   int moves = 0;
   int score = 0;
@@ -297,6 +400,9 @@ class SugarGame {
   int _nextId = 1;
 
   final List<(int, int, SugarPiece)> _fire = [];
+
+  /// Sweets a cake or a door just left, safe from the blast that freed them.
+  final Set<Cell> _fresh = {};
   bool _needGravity = false;
   bool _needMatch = false;
   bool _moveDone = false;
@@ -309,6 +415,16 @@ class SugarGame {
   int _finaleShots = 0;
   int _finaleRounds = 0;
   int _starsShown = 0;
+
+  /// After a move: the belts still to turn, chocolate cleared this move,
+  /// Ekşi Limon's throw still to come.
+  bool _beltDue = false;
+  bool _chocoHit = false;
+  bool _spreadDue = false;
+  bool _throwDue = false;
+
+  /// Ekşi Limon's phase: 0, then 1 and 2 as each third of him goes.
+  int limonPhase = 0;
   Cell? _swapA, _swapB;
   final List<SugarEvent> _events = [];
 
@@ -317,6 +433,25 @@ class SugarGame {
   bool get inFinale => _finaleStarted;
   int get iceLeft => ice.fold(0, (n, row) => n + row.where((h) => h > 0).length);
   int get boxesLeft => box.fold(0, (n, row) => n + row.where((h) => h > 0).length);
+  int get chocoLeft => choco.fold(0, (n, row) => n + row.where((h) => h > 0).length);
+  int get fruitsOnBoard => board.fold(0, (n, row) => n + row.where((p) => p?.fruit ?? false).length);
+
+  /// Something sits in the cell instead of a sweet: a box, chocolate, a
+  /// cake, a door or a lemon slice.
+  bool blocked(int x, int y) => box[y][x] > 0 || choco[y][x] > 0 || cake[y][x] > 0 || door[y][x] > 0 || slice[y][x] > 0;
+
+  SugarGoal? _goal(GoalKind kind) {
+    for (final g in goals) {
+      if (g.kind == kind) return g;
+    }
+    return null;
+  }
+
+  /// Ekşi Limon's sourness left, 0..1 (1 when he is not in the level).
+  double get limonLeft {
+    final g = _goal(GoalKind.limon);
+    return g == null ? 1 : g.left / g.target;
+  }
 
   /// Only score goals: the level plays every move before it ends.
   bool get playsAllMoves => goals.isNotEmpty && goals.every((g) => g.kind == GoalKind.score);
@@ -344,12 +479,17 @@ class SugarGame {
     _fire.clear();
     _needGravity = _needMatch = _moveDone = _bombDue = _rushing = _finaleStarted = false;
     _finaleLeft = _finaleShots = _finaleRounds = _starsShown = 0;
+    _beltDue = _chocoHit = _spreadDue = _throwDue = false;
+    limonPhase = 0;
     _events.clear();
     goals = [for (final g in level.goals) g()];
     for (var y = 0; y < size; y++) {
       board[y].fillRange(0, size, null);
-      box[y].fillRange(0, size, 0);
+      for (final grid in [box, choco, cake, door, slice]) {
+        grid[y].fillRange(0, size, 0);
+      }
     }
+    cakes = [];
     for (var y = 0; y < size; y++) {
       for (var x = 0; x < size; x++) {
         final ch = level.layout[y][x];
@@ -363,7 +503,17 @@ class SugarGame {
           'k' => 1,
           _ => 0,
         };
-        if (box[y][x] > 0) continue;
+        if (ch == 'H') choco[y][x] = 1;
+        if (ch == 'L') slice[y][x] = 1;
+        if (ch == 'W' || ch == 'w') cake[y][x] = 3;
+        if (ch == 'W') cakes.add((x, y));
+        final d = int.tryParse(ch);
+        if (d != null && d >= 1 && d <= 6) door[y][x] = d;
+        if (blocked(x, y)) continue;
+        if (ch == 'N') {
+          board[y][x] = SugarPiece(_nextId++, SugarColor.values[_rnd.next(colors)], fruit: true);
+          continue;
+        }
         final p = _newPiece(avoidAt: (x, y))..chained = ch == 'c' || ch == 'C';
         if (ch == 'T') p.timer = level.bombTimer;
         board[y][x] = p;
@@ -384,7 +534,7 @@ class SugarGame {
   List<Cell> _plainCells() => [
     for (var y = 0; y < size; y++)
       for (var x = 0; x < size; x++)
-        if (board[y][x] case final p? when p.special == Special.none && !p.chained && !p.isBomb) (x, y),
+        if (board[y][x] case final p? when p.isPlain) (x, y),
   ];
 
   SugarPiece _newPiece({Cell? avoidAt}) {
@@ -398,7 +548,7 @@ class SugarGame {
 
   /// Would colour [c] at ([x], [y]) line up three with its neighbours.
   bool _wouldMatch(int x, int y, SugarColor c) {
-    bool same(int x, int y) => x >= 0 && y >= 0 && x < size && y < size && board[y][x] != null && !board[y][x]!.isPrism && board[y][x]!.color == c;
+    bool same(int x, int y) => x >= 0 && y >= 0 && x < size && y < size && board[y][x] != null && !board[y][x]!.isPrism && !board[y][x]!.fruit && board[y][x]!.color == c;
     return (same(x - 1, y) && (same(x - 2, y) || same(x + 1, y))) ||
         (same(x + 1, y) && same(x + 2, y)) ||
         (same(x, y - 1) && (same(x, y - 2) || same(x, y + 1))) ||
@@ -426,7 +576,7 @@ class SugarGame {
     final (ax, ay) = a;
     final (bx, by) = b;
     final pa = board[ay][ax]!, pb = board[by][bx]!;
-    final combo = (pa.special != Special.none && pb.special != Special.none) || pa.isPrism || pb.isPrism;
+    final combo = _pair(pa, pb);
     board[ay][ax] = pb;
     board[by][bx] = pa;
     if (!combo && _groups().isEmpty) {
@@ -443,6 +593,11 @@ class SugarGame {
     _rushing = false;
     final every = level?.bombEvery ?? 0;
     if (every > 0 && movesMade % every == 0) _bombDue = true;
+    _beltDue = level?.belts.isNotEmpty ?? false;
+    _chocoHit = false;
+    _spreadDue = true;
+    final throwEvery = _throwEvery;
+    _throwDue = throwEvery > 0 && movesMade % throwEvery == 0;
     _swapA = a;
     _swapB = b;
     status = SugarStatus.resolving;
@@ -452,6 +607,17 @@ class SugarGame {
       _needMatch = true;
     }
     return true;
+  }
+
+  /// Two sweets that fire together when swapped: two specials, or a
+  /// rainbow ball with anything but a pomegranate.
+  static bool _pair(SugarPiece pa, SugarPiece pb) =>
+      (pa.special != Special.none && pb.special != Special.none && !pa.fruit && !pb.fruit) || (pa.isPrism && !pb.fruit) || (pb.isPrism && !pa.fruit);
+
+  /// Moves between Ekşi Limon's throws now (0: no throws).
+  int get _throwEvery {
+    final every = level?.limonEvery ?? 0;
+    return every <= 0 ? 0 : max(2, every - limonPhase);
   }
 
   /// [pa] moved to [at], [pb] to [from].
@@ -473,7 +639,7 @@ class SugarGame {
       final targets = [
         for (var yy = 0; yy < size; yy++)
           for (var xx = 0; xx < size; xx++)
-            if (board[yy][xx] != null && !board[yy][xx]!.isPrism && board[yy][xx]!.color == other.color) (xx, yy),
+            if (board[yy][xx] != null && !board[yy][xx]!.isPrism && !board[yy][xx]!.fruit && board[yy][xx]!.color == other.color) (xx, yy),
       ];
       if (other.special != Special.none) {
         // Every sweet of that colour turns into the other special and fires.
@@ -514,7 +680,7 @@ class SugarGame {
     final count = <SugarColor, int>{};
     for (final row in board) {
       for (final p in row) {
-        if (p != null && !p.isPrism) count[p.color] = (count[p.color] ?? 0) + 1;
+        if (p != null && !p.isPrism && !p.fruit) count[p.color] = (count[p.color] ?? 0) + 1;
       }
     }
     if (count.isEmpty) return const [];
@@ -522,7 +688,7 @@ class SugarGame {
     return [
       for (var y = 0; y < size; y++)
         for (var x = 0; x < size; x++)
-          if (board[y][x] != null && !board[y][x]!.isPrism && board[y][x]!.color == c) (x, y),
+          if (board[y][x] != null && !board[y][x]!.isPrism && !board[y][x]!.fruit && board[y][x]!.color == c) (x, y),
     ];
   }
 
@@ -534,13 +700,16 @@ class SugarGame {
     final removed = <(int, int, SugarPiece)>[];
     var points = 0;
     final each = blastPoints * (_comboBlast ? 2 : 1) * _blastBoost;
+    final cakesHit = <Cell>{};
+    _fresh.clear();
     for (final (cx, cy) in hit) {
-      if (box[cy][cx] > 0) {
-        points += _knock(cx, cy);
+      if (_fresh.contains((cx, cy))) continue;
+      if (blocked(cx, cy)) {
+        points += _hitBlock(cx, cy, cakesHit);
         continue;
       }
       final p = board[cy][cx];
-      if (p != null) {
+      if (p != null && !p.fruit) {
         if (p.chained) {
           p.chained = false;
           points += 60;
@@ -555,10 +724,79 @@ class SugarGame {
       points += _crack(cx, cy);
     }
     score += points;
-    _count(removed);
+    _count(removed, blast: true);
     if (removed.isNotEmpty || points > 0) _events.add(SugarCleared(removed, cascade: cascade, points: points));
     _needGravity = true;
     _checkStars();
+  }
+
+  /// A blast (or a match beside it, [match] its colour) reaches the
+  /// blocked cell ([x], [y]): a box or a cake loses a layer (a cake once
+  /// per blast, kept in [cakesHit]), chocolate and lemon slices go, a door
+  /// opens only to a match of its own colour.
+  int _hitBlock(int x, int y, Set<Cell> cakesHit, {SugarColor? match}) {
+    if (box[y][x] > 0) return _knock(x, y);
+    if (choco[y][x] > 0) {
+      choco[y][x] = 0;
+      _chocoHit = true;
+      _events.add(SugarChocoCleared(x, y));
+      _goal(GoalKind.choco)?.progress++;
+      return 60;
+    }
+    if (slice[y][x] > 0) {
+      slice[y][x] = 0;
+      _events.add(SugarSliceCleared(x, y));
+      return 60;
+    }
+    if (cake[y][x] > 0) {
+      final anchor = _cakeAt(x, y);
+      if (anchor == null || !cakesHit.add(anchor)) return 0;
+      return _bite(anchor);
+    }
+    if (door[y][x] > 0 && match != null && door[y][x] == match.index + 1) return _openDoor(x, y);
+    return 0;
+  }
+
+  /// The top-left of the cake covering ([x], [y]).
+  Cell? _cakeAt(int x, int y) {
+    for (final (ax, ay) in cakes) {
+      if (x >= ax && x <= ax + 1 && y >= ay && y <= ay + 1) return (ax, ay);
+    }
+    return null;
+  }
+
+  /// One layer off the cake at [anchor]; the last one leaves a wrapped
+  /// sweet where the cake stood.
+  int _bite(Cell anchor) {
+    final (ax, ay) = anchor;
+    final left = cake[ay][ax] - 1;
+    for (var dy = 0; dy < 2; dy++) {
+      for (var dx = 0; dx < 2; dx++) {
+        cake[ay + dy][ax + dx] = left;
+      }
+    }
+    _events.add(SugarCakeHit(ax, ay, left));
+    if (left > 0) return 120;
+    cakes.remove(anchor);
+    _goal(GoalKind.cake)?.progress++;
+    final made = SugarPiece(_nextId++, SugarColor.values[_rnd.next(colors)], special: Special.bomb);
+    board[ay][ax] = made;
+    _fresh.add(anchor);
+    _events.add(SugarCreated(ax, ay, made));
+    return 400;
+  }
+
+  /// The door at ([x], [y]) opens; a striped sweet waits behind it.
+  int _openDoor(int x, int y) {
+    final color = SugarColor.values[door[y][x] - 1];
+    door[y][x] = 0;
+    _events.add(SugarDoorOpened(x, y, color));
+    _goal(GoalKind.door)?.progress++;
+    final made = SugarPiece(_nextId++, color, special: _rnd.next(2) == 0 ? Special.lineH : Special.lineV);
+    board[y][x] = made;
+    _fresh.add((x, y));
+    _events.add(SugarCreated(x, y, made));
+    return 250;
   }
 
   int _crack(int x, int y) {
@@ -585,10 +823,11 @@ class SugarGame {
     return 200;
   }
 
-  void _count(List<(int, int, SugarPiece)> removed) {
+  void _count(List<(int, int, SugarPiece)> removed, {bool blast = false}) {
     for (final g in goals) {
       if (g.kind == GoalKind.color) g.progress += removed.where((r) => r.$3.color == g.color && !r.$3.isPrism).length;
       if (g.kind == GoalKind.score) g.progress = score;
+      if (g.kind == GoalKind.limon && !_finaleStarted) g.progress = min(g.target, g.progress + removed.length * (blast ? 2 : 1));
     }
     final fill = level?.rush ?? 0;
     if (fill > 0 && !_rushing && !_finaleStarted) rushMeter = min(1, rushMeter + removed.length / fill);
@@ -612,7 +851,7 @@ class SugarGame {
   /// each makes (and where).
   List<({List<Cell> cells, Special make, Cell at, SugarColor color})> _groups() {
     final runs = <(List<Cell>, bool)>[];
-    bool matchable(SugarPiece? p) => p != null && !p.isPrism;
+    bool matchable(SugarPiece? p) => p != null && !p.isPrism && !p.fruit;
     for (var y = 0; y < size; y++) {
       var x = 0;
       while (x < size) {
@@ -691,6 +930,8 @@ class SugarGame {
     bestCascade = max(bestCascade, cascade);
     final removed = <(int, int, SugarPiece)>[];
     final knocked = <Cell>{};
+    final cakesHit = <Cell>{};
+    _fresh.clear();
     var points = 0;
     for (var g in groups) {
       if (g.make != Special.none && ((board[g.at.$2][g.at.$1]?.chained ?? false) || (board[g.at.$2][g.at.$1]?.isBomb ?? false))) {
@@ -703,13 +944,17 @@ class SugarGame {
         Special.none => 0,
       }) * cascade;
       for (final (x, y) in g.cells) {
-        // Boxes next to a match take a knock (once each per clear).
+        // Blocked cells next to a match take a knock (once each per clear).
         for (final (dx, dy) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
           final n = (x + dx, y + dy);
-          if (_inside(n.$1, n.$2) && box[n.$2][n.$1] > 0 && knocked.add(n)) points += _knock(n.$1, n.$2);
+          if (!_inside(n.$1, n.$2) || !blocked(n.$1, n.$2) || knocked.contains(n)) continue;
+          final isDoor = door[n.$2][n.$1] > 0;
+          points += _hitBlock(n.$1, n.$2, cakesHit, match: g.color);
+          // A door shut to this colour may still open to another match.
+          if (!isDoor || door[n.$2][n.$1] == 0) knocked.add(n);
         }
         final p = board[y][x];
-        if (p == null) continue;
+        if (p == null || _fresh.contains((x, y))) continue;
         if (p.chained) {
           p.chained = false;
           points += 60;
@@ -746,7 +991,7 @@ class SugarGame {
 
   // -------------------------------------------------------------- gravity --
 
-  bool _open(int x, int y) => box[y][x] == 0;
+  bool _open(int x, int y) => !blocked(x, y);
 
   /// Sweets fall straight down; under a box they slide in from the side.
   /// New ones come in at the top of each column that is open to the top.
@@ -762,6 +1007,7 @@ class SugarGame {
     }
 
     var lucky = false;
+    var fruitDue = _fruitDue;
     final luck = _finaleStarted ? 0 : (level?.luck ?? 0);
     final calm = level?.calm ?? 55;
     for (var guard = 0; guard < 200; guard++) {
@@ -787,8 +1033,11 @@ class SugarGame {
         }
         for (var y = count - 1; y >= 0; y--) {
           // Some new sweets match on landing (cascades are fun), most do not.
-          final p = _newPiece(avoidAt: _rnd.next(100) < calm ? (x, y) : null);
-          if (_bombDue) {
+          var p = _newPiece(avoidAt: _rnd.next(100) < calm ? (x, y) : null);
+          if (fruitDue && y == 0) {
+            fruitDue = false;
+            p = SugarPiece(p.id, p.color, fruit: true);
+          } else if (_bombDue) {
             _bombDue = false;
             p.timer = level?.bombTimer ?? 9;
           } else if (!lucky && luck > 0 && _rnd.next(1000) < luck) {
@@ -824,6 +1073,32 @@ class SugarGame {
     ]));
   }
 
+  /// Another pomegranate should drop in: fewer than the level's share on
+  /// the board, and not all of the goal's count have come yet.
+  bool get _fruitDue {
+    final g = _goal(GoalKind.fruit);
+    if (g == null || _finaleStarted) return false;
+    final on = fruitsOnBoard;
+    return on < (level?.fruitsAtOnce ?? 2) && g.progress + on < g.target;
+  }
+
+  /// Pomegranates on the bottom row are collected.
+  bool _collectFruit() {
+    var any = false;
+    const y = size - 1;
+    for (var x = 0; x < size; x++) {
+      final p = board[y][x];
+      if (p == null || !p.fruit) continue;
+      board[y][x] = null;
+      _goal(GoalKind.fruit)?.progress++;
+      score += 1000;
+      _events.add(SugarFruitDone(x, y, p));
+      any = true;
+    }
+    if (any) _checkStars();
+    return any;
+  }
+
   // -------------------------------------------------------------- advance --
 
   /// Runs the next phase of the move in progress. Returns false once the
@@ -841,6 +1116,7 @@ class SugarGame {
     if (_needGravity) {
       _needGravity = false;
       _gravity();
+      if (_collectFruit()) _needGravity = true;
       _needMatch = true;
       return true;
     }
@@ -860,7 +1136,27 @@ class SugarGame {
       return _end(won: true);
     }
     if (moves <= 0) return _end(won: goalsDone);
+    // A third of Ekşi Limon gone: he shuffles the board in a temper.
+    final phase = _limonPhaseNow;
+    if (phase > limonPhase) {
+      limonPhase = phase;
+      _events.add(SugarLimonPhase(phase));
+      _shuffle();
+      return true;
+    }
     if (_moveDone) {
+      if (_beltDue) {
+        _beltDue = false;
+        if (_turnBelts()) return true;
+      }
+      if (_spreadDue) {
+        _spreadDue = false;
+        if (!_chocoHit) _spread();
+      }
+      if (_throwDue) {
+        _throwDue = false;
+        if (_throw()) return true;
+      }
       _moveDone = false;
       if (_tickBombs()) return false;
     }
@@ -874,6 +1170,72 @@ class SugarGame {
     }
     status = SugarStatus.idle;
     return false;
+  }
+
+  int get _limonPhaseNow {
+    final g = _goal(GoalKind.limon);
+    return g == null ? 0 : min(2, g.progress * 3 ~/ g.target);
+  }
+
+  /// Every belt row moves one cell along, round its ends (blocked cells
+  /// sit still and the sweets go round them).
+  bool _turnBelts() {
+    final out = <(int, int, int, int)>[];
+    for (final MapEntry(key: y, value: dir) in (level?.belts ?? const <int, int>{}).entries) {
+      final open = [for (var x = 0; x < size; x++) if (!blocked(x, y)) x];
+      if (open.length < 2) continue;
+      final pieces = [for (final x in open) board[y][x]];
+      for (var i = 0; i < open.length; i++) {
+        final to = (i + dir) % open.length;
+        final p = pieces[i];
+        board[y][open[to]] = p;
+        if (p != null) out.add((p.id, open[i], open[to], y));
+      }
+    }
+    if (out.isEmpty) return false;
+    _events.add(SugarBelted(out));
+    _needMatch = true;
+    return true;
+  }
+
+  /// No chocolate was cleared this move: it creeps onto a plain sweet
+  /// next to it.
+  void _spread() {
+    final options = <Cell>[];
+    for (var y = 0; y < size; y++) {
+      for (var x = 0; x < size; x++) {
+        if (choco[y][x] == 0) continue;
+        for (final (dx, dy) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
+          final nx = x + dx, ny = y + dy;
+          if (_inside(nx, ny) && !blocked(nx, ny) && (board[ny][nx]?.isPlain ?? false)) options.add((nx, ny));
+        }
+      }
+    }
+    if (options.isEmpty) return;
+    final (x, y) = options[_rnd.next(options.length)];
+    final p = board[y][x]!;
+    board[y][x] = null;
+    choco[y][x] = 1;
+    _events.add(SugarChocoSpread(x, y, p));
+  }
+
+  /// Ekşi Limon throws lemon slices onto plain sweets: one more for each
+  /// third of him gone.
+  bool _throw() {
+    final plain = _plainCells();
+    final n = (level?.limonThrow ?? 3) + limonPhase;
+    final cells = <Cell>[];
+    final pieces = <SugarPiece>[];
+    for (var i = 0; i < n && plain.isNotEmpty; i++) {
+      final (x, y) = plain.removeAt(_rnd.next(plain.length));
+      pieces.add(board[y][x]!);
+      board[y][x] = null;
+      slice[y][x] = 1;
+      cells.add((x, y));
+    }
+    if (cells.isEmpty) return false;
+    _events.add(SugarSliceThrown(cells, pieces));
+    return true;
   }
 
   bool _end({required bool won}) {
@@ -991,7 +1353,7 @@ class SugarGame {
           if (!_inside(b.$1, b.$2)) continue;
           final pa = board[y][x], pb = board[b.$2][b.$1];
           if (pa == null || pb == null || pa.chained || pb.chained) continue;
-          if (pa.isPrism || pb.isPrism || (pa.special != Special.none && pb.special != Special.none)) return (a, b);
+          if (_pair(pa, pb)) return (a, b);
           board[y][x] = pb;
           board[b.$2][b.$1] = pa;
           final ok = _groups().isNotEmpty;
@@ -1008,7 +1370,7 @@ class SugarGame {
     final free = [
       for (var y = 0; y < size; y++)
         for (var x = 0; x < size; x++)
-          if (board[y][x] != null && !board[y][x]!.chained) (x, y),
+          if (board[y][x] != null && !board[y][x]!.chained && !board[y][x]!.fruit) (x, y),
     ];
     for (var attempt = 0; attempt < 50; attempt++) {
       final pieces = [for (final (x, y) in free) board[y][x]!];
@@ -1042,12 +1404,22 @@ class SugarGame {
 
   // ------------------------------------------------------------- boosters --
 
-  /// The hammer: smashes one sweet (or a chain, a layer of ice, a box layer).
+  /// Whether the hammer can hit ([x], [y]): a sweet (not a pomegranate)
+  /// or something in the cell.
+  bool canHammer(int x, int y) => _inside(x, y) && (blocked(x, y) || (board[y][x] != null && !board[y][x]!.fruit));
+
+  /// The hammer: smashes one sweet (or a chain, a layer of ice, a box
+  /// layer, chocolate, a cake layer, a lemon slice) or opens a door.
   bool hammer(int x, int y) {
-    if (status != SugarStatus.idle || !_inside(x, y)) return false;
-    if (board[y][x] == null && box[y][x] == 0) return false;
+    if (status != SugarStatus.idle || !canHammer(x, y)) return false;
     cascade = 0;
     status = SugarStatus.resolving;
+    if (door[y][x] > 0) {
+      _fresh.clear();
+      score += _openDoor(x, y);
+      _needGravity = true;
+      return true;
+    }
     _blast(Special.none, x, y, [(x, y)]);
     return true;
   }
@@ -1056,7 +1428,7 @@ class SugarGame {
   bool rainbow(int x, int y) {
     if (status != SugarStatus.idle || !_inside(x, y)) return false;
     final p = board[y][x];
-    if (p == null || p.chained || p.isPrism) return false;
+    if (p == null || p.chained || p.isPrism || p.fruit) return false;
     p
       ..special = Special.prism
       ..timer = null;
@@ -1094,7 +1466,7 @@ class SugarGame {
   // -------------------------------------------------------- saving, copies --
 
   Map<String, Object?> toSave() => {
-    'v': 2,
+    'v': 3,
     'level': level?.number,
     'moves': moves,
     'made': movesMade,
@@ -1104,10 +1476,16 @@ class SugarGame {
     'next': _nextId,
     'board': [
       for (final row in board)
-        [for (final p in row) p == null ? null : [p.color.index, p.special.index, p.chained ? 1 : 0, p.timer ?? -1]],
+        [for (final p in row) p == null ? null : [p.color.index, p.special.index, p.chained ? 1 : 0, p.timer ?? -1, p.fruit ? 1 : 0]],
     ],
     'ice': ice,
     'box': box,
+    'choco': choco,
+    'cake': cake,
+    'cakes': [for (final (x, y) in cakes) [x, y]],
+    'door': door,
+    'slice': slice,
+    'phase': limonPhase,
     'goals': [for (final g in goals) g.progress],
   };
 
@@ -1128,17 +1506,30 @@ class SugarGame {
         final timer = p != null && p.length > 3 ? p[3] as int : -1;
         board[y][x] = p == null
             ? null
-            : SugarPiece(_nextId++, SugarColor.values[p[0] as int], special: Special.values[p[1] as int], chained: p[2] == 1, timer: timer < 0 ? null : timer);
+            : SugarPiece(_nextId++, SugarColor.values[p[0] as int],
+                special: Special.values[p[1] as int], chained: p[2] == 1, timer: timer < 0 ? null : timer, fruit: p.length > 4 && p[4] == 1);
       }
     }
-    final iceRows = save['ice'] as List;
-    final boxRows = save['box'] as List?;
-    for (var y = 0; y < size; y++) {
-      for (var x = 0; x < size; x++) {
-        ice[y][x] = ((iceRows[y] as List)[x] as num).toInt();
-        box[y][x] = boxRows == null ? 0 : ((boxRows[y] as List)[x] as num).toInt();
+    void grid(List<List<int>> into, String key) {
+      final saved = save[key] as List?;
+      for (var y = 0; y < size; y++) {
+        for (var x = 0; x < size; x++) {
+          into[y][x] = saved == null ? 0 : ((saved[y] as List)[x] as num).toInt();
+        }
       }
     }
+
+    grid(ice, 'ice');
+    grid(box, 'box');
+    // Saves from before the cakes and doors keep the level's own layout.
+    if (save.containsKey('choco')) {
+      grid(choco, 'choco');
+      grid(cake, 'cake');
+      grid(door, 'door');
+      grid(slice, 'slice');
+      cakes = [for (final c in (save['cakes'] as List? ?? const [])) ((c as List)[0] as int, c[1] as int)];
+    }
+    limonPhase = (save['phase'] as int?) ?? 0;
     final progress = save['goals'] as List;
     for (var i = 0; i < goals.length && i < progress.length; i++) {
       goals[i].progress = progress[i] as int;
@@ -1151,13 +1542,20 @@ class SugarGame {
   }
 
   SugarGame copy() {
+    List<List<int>> dup(List<List<int>> grid) => [for (final row in grid) List.of(row)];
     final g = SugarGame()
       .._rnd = _rnd.copy()
       ..level = level
       ..status = status
       ..board = [for (final row in board) [for (final p in row) p?.copy()]]
-      ..ice = [for (final row in ice) List.of(row)]
-      ..box = [for (final row in box) List.of(row)]
+      ..ice = dup(ice)
+      ..box = dup(box)
+      ..choco = dup(choco)
+      ..cake = dup(cake)
+      ..cakes = List.of(cakes)
+      ..door = dup(door)
+      ..slice = dup(slice)
+      ..limonPhase = limonPhase
       ..goals = [for (final goal in goals) goal.copy()]
       ..colors = colors
       ..moves = moves
@@ -1177,7 +1575,11 @@ class SugarGame {
       .._finaleLeft = _finaleLeft
       .._finaleShots = _finaleShots
       .._finaleRounds = _finaleRounds
-      .._starsShown = _starsShown;
+      .._starsShown = _starsShown
+      .._beltDue = _beltDue
+      .._chocoHit = _chocoHit
+      .._spreadDue = _spreadDue
+      .._throwDue = _throwDue;
     g._fire.addAll(_fire.map((f) => (f.$1, f.$2, f.$3.copy())));
     return g;
   }
@@ -1187,22 +1589,38 @@ class SugarGame {
   static const _letters = {'R': SugarColor.red, 'O': SugarColor.orange, 'Y': SugarColor.yellow, 'G': SugarColor.green, 'B': SugarColor.blue, 'P': SugarColor.purple};
 
   /// Test helper: rows of colour letters; lower case is chained, '#' a
-  /// two-layer box, '+' a one-layer box, '.' empty.
+  /// two-layer box, '+' a one-layer box, '%' chocolate, '~' a lemon slice,
+  /// '*' a pomegranate, '=' a cake cell (with its top-left in [cakeAt]),
+  /// '|' a door (its colour in [doors]), '.' empty.
   void debugSetBoard(
     List<String> rows, {
     Map<Cell, Special> specials = const {},
     Map<Cell, int> iceAt = const {},
     Map<Cell, int> timers = const {},
+    Map<Cell, int> cakeAt = const {},
+    Map<Cell, SugarColor> doors = const {},
     int moves = 20,
   }) {
     this.moves = moves;
+    cakes = cakeAt.keys.toList();
     for (var y = 0; y < size; y++) {
       for (var x = 0; x < size; x++) {
         final ch = rows[y][x];
         box[y][x] = ch == '#' ? 2 : (ch == '+' ? 1 : 0);
         ice[y][x] = iceAt[(x, y)] ?? 0;
-        if (ch == '.' || box[y][x] > 0) {
+        choco[y][x] = ch == '%' ? 1 : 0;
+        slice[y][x] = ch == '~' ? 1 : 0;
+        door[y][x] = ch == '|' ? doors[(x, y)]!.index + 1 : 0;
+        cake[y][x] = 0;
+        for (final MapEntry(key: (ax, ay), value: layers) in cakeAt.entries) {
+          if (x >= ax && x <= ax + 1 && y >= ay && y <= ay + 1) cake[y][x] = layers;
+        }
+        if (ch == '.' || blocked(x, y)) {
           board[y][x] = null;
+          continue;
+        }
+        if (ch == '*') {
+          board[y][x] = SugarPiece(_nextId++, SugarColor.red, fruit: true);
           continue;
         }
         board[y][x] = SugarPiece(_nextId++, _letters[ch.toUpperCase()]!,
@@ -1218,9 +1636,19 @@ class SugarGame {
         for (var x = 0; x < size; x++)
           box[y][x] > 0
               ? (box[y][x] > 1 ? '#' : '+')
-              : board[y][x] == null
-                  ? '.'
-                  : (board[y][x]!.isPrism ? '@' : _letters.entries.firstWhere((e) => e.value == board[y][x]!.color).key),
+              : choco[y][x] > 0
+                  ? '%'
+                  : slice[y][x] > 0
+                      ? '~'
+                      : cake[y][x] > 0
+                          ? '='
+                          : door[y][x] > 0
+                              ? '|'
+                              : board[y][x] == null
+                                  ? '.'
+                                  : board[y][x]!.fruit
+                                      ? '*'
+                                      : (board[y][x]!.isPrism ? '@' : _letters.entries.firstWhere((e) => e.value == board[y][x]!.color).key),
       ].join(),
   ];
 }

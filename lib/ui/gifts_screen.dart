@@ -535,7 +535,7 @@ class _Collection extends StatelessWidget {
       ChainCubeStyle.lokum => settings.unlocked(Unlock.cubesLokum),
       ChainCubeStyle.cini => settings.unlocked(Unlock.cubesCini),
     };
-    const scenes = [null, Unlock.sceneGalata, Unlock.sceneSnow, Unlock.sceneIslands];
+    const scenes = [null, Unlock.sceneGalata, Unlock.sceneSnow, Unlock.sceneIslands, Unlock.sceneCamlica];
     return CandyPanel(
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
       child: Column(
@@ -585,7 +585,7 @@ class _Collection extends StatelessWidget {
                     onTap: () => settings.sugarScene = scenes[i]?.name,
                     picture: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: SizedBox(width: 64, height: 40, child: SugarBackdrop(scene: sugarSceneIndex(scenes[i]?.name))),
+                      child: AspectRatio(aspectRatio: 1.6, child: SugarBackdrop(scene: sugarSceneIndex(scenes[i]?.name))),
                     ),
                   ),
                 ),
@@ -751,7 +751,7 @@ void _tryUnlock(Settings settings, Unlock u) {
       settings.chainCubes = ChainCubeStyle.lokum.name;
     case Unlock.cubesCini:
       settings.chainCubes = ChainCubeStyle.cini.name;
-    case Unlock.sceneGalata || Unlock.sceneSnow || Unlock.sceneIslands:
+    case Unlock.sceneGalata || Unlock.sceneSnow || Unlock.sceneIslands || Unlock.sceneCamlica:
       settings.sugarScene = u.name;
     case Unlock.outfitTulipCrown || Unlock.outfitCaptain || Unlock.outfitApron || Unlock.outfitSimitNecklace || Unlock.outfitGuide:
       settings.lokumOutfit = LokumOutfit.values.firstWhere((o) => o.gift == u.name).name;
@@ -779,7 +779,7 @@ class _UnlockPicture extends StatelessWidget {
         }
       },
     ),
-    Unlock.sceneGalata || Unlock.sceneSnow || Unlock.sceneIslands => ClipRRect(
+    Unlock.sceneGalata || Unlock.sceneSnow || Unlock.sceneIslands || Unlock.sceneCamlica => ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: SizedBox(width: 220, height: 140, child: SugarBackdrop(scene: sugarSceneIndex(unlock.name))),
     ),

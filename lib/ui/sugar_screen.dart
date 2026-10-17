@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -9,6 +10,7 @@ import '../audio/haptics.dart';
 import '../core/rewards.dart';
 import '../core/sugar/sugar_game.dart';
 import '../core/sugar/sugar_levels.dart';
+import '../game/sugar/istanbul_art.dart';
 import '../game/sugar/sugar_art.dart';
 import '../game/sugar/sugar_controller.dart';
 import '../game/sugar/sugar_painter.dart';
@@ -161,7 +163,8 @@ class _SugarScreenState extends State<SugarScreen> with SingleTickerProviderStat
           backgroundColor: const Color(0xFF3A1470),
           body: Stack(
             children: [
-              Positioned.fill(child: SugarBackdrop(chapter: SugarLevels.chapterOf(c.level.number), scene: sugarSceneIndex(c.settings.sugarScene))),
+              // Ekşi Limon's hill by night, whatever scene was chosen.
+              Positioned.fill(child: SugarBackdrop(chapter: SugarLevels.chapterOf(c.level.number), scene: c.hasLimon ? 11 : sugarSceneIndex(c.settings.sugarScene))),
               SafeArea(
                 child: ListenableBuilder(
                   listenable: c,
@@ -268,6 +271,13 @@ class _Play extends StatelessWidget {
                           top: -cell * 1.25,
                           child: IgnorePointer(child: _Mascot(c: c, size: cell * 1.05)),
                         ),
+                        // Ekşi Limon glowers from the top-left one.
+                        if (c.hasLimon)
+                          Positioned(
+                            left: -4,
+                            top: -cell * 1.3,
+                            child: IgnorePointer(child: _Limon(c: c, size: cell * 1.2)),
+                          ),
                       ],
                     ),
                     SizedBox(
@@ -311,6 +321,65 @@ class _Mascot extends StatelessWidget {
       );
     },
   );
+}
+
+/// Ekşi Limon above the board: he bobs, laughs when he throws, and his
+/// sourness drains from the bar under him.
+class _Limon extends StatelessWidget {
+  const _Limon({required this.c, required this.size});
+
+  final SugarController c;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: c.frame,
+    builder: (context, _, _) => CustomPaint(
+      key: const ValueKey('sugar-limon'),
+      size: Size(size * 1.5, size * 1.25),
+      painter: _LimonPainter(left: c.game.limonLeft, since: c.now - c.limonThrew, time: c.now),
+    ),
+  );
+}
+
+class _LimonPainter extends CustomPainter {
+  _LimonPainter({required this.left, required this.since, required this.time});
+
+  final double left, since, time;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = size.height / 1.25;
+    // A hop and a wobble right after a throw.
+    final throwing = since >= 0 && since < 0.8;
+    final hop = throwing ? sin(since / 0.8 * pi) * s * 0.18 : sin(time * 2) * s * 0.03;
+    canvas.save();
+    canvas.translate(size.width / 2, s * 0.55 - hop);
+    if (throwing) canvas.rotate(sin(since * 18) * 0.12);
+    paintEksiLimon(canvas, Offset.zero, s * 0.82, laugh: throwing || left > 0.34);
+    canvas.restore();
+    final bar = Rect.fromLTWH(size.width * 0.08, s * 1.04, size.width * 0.84, s * 0.16);
+    final rr = RRect.fromRectAndRadius(bar, Radius.circular(bar.height / 2));
+    canvas.drawRRect(rr, Paint()..color = const Color(0xFF2A0B4F).withValues(alpha: 0.8));
+    if (left > 0) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH(bar.left, bar.top, max(bar.height, bar.width * left), bar.height), Radius.circular(bar.height / 2)),
+        Paint()..shader = ui.Gradient.linear(bar.topLeft, bar.bottomLeft, const [Color(0xFFFFF06A), Color(0xFFD8A400)]),
+      );
+    }
+    for (final t in [1 / 3, 2 / 3]) {
+      canvas.drawLine(Offset(bar.left + bar.width * t, bar.top + 2), Offset(bar.left + bar.width * t, bar.bottom - 2), Paint()
+        ..strokeWidth = 2
+        ..color = Colors.white.withValues(alpha: 0.9));
+    }
+    canvas.drawRRect(rr, Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..color = Colors.white);
+  }
+
+  @override
+  bool shouldRepaint(_LimonPainter old) => old.left != left || old.since != since || old.time != time;
 }
 
 class _Boosters extends StatelessWidget {
@@ -439,8 +508,15 @@ class _GoalChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final done = goal.done;
-    final share = (goal.progress / goal.target).clamp(0.0, 1.0);
-    final text = goal.kind == GoalKind.score ? _thousands(goal.target) : '${min(goal.progress, goal.target)}/${goal.target}';
+    // Ekşi Limon's bar shows the sourness left, in lemon yellow.
+    final limon = goal.kind == GoalKind.limon;
+    final share = ((limon ? goal.left : goal.progress) / goal.target).clamp(0.0, 1.0);
+    final text = switch (goal.kind) {
+      GoalKind.score => _thousands(goal.target),
+      // Ekşi Limon's sourness left.
+      GoalKind.limon => AppStrings.of(context).percent((goal.left * 100 / goal.target).ceil()),
+      _ => '${min(goal.progress, goal.target)}/${goal.target}',
+    };
     return Container(
       padding: const EdgeInsets.fromLTRB(4, 4, 8, 4),
       decoration: BoxDecoration(color: const Color(0xFFF3D9F0), borderRadius: BorderRadius.circular(14)),
@@ -480,7 +556,7 @@ class _GoalChip extends StatelessWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(4),
-                      gradient: LinearGradient(colors: done ? const [Color(0xFF6BF0A0), Color(0xFF1FB85A)] : const [Color(0xFF6BE3FF), Color(0xFF2E86FF)]),
+                      gradient: LinearGradient(colors: done ? const [Color(0xFF6BF0A0), Color(0xFF1FB85A)] : limon ? const [Color(0xFFFFF06A), Color(0xFFD8A400)] : const [Color(0xFF6BE3FF), Color(0xFF2E86FF)]),
                     ),
                   ),
                 ),
@@ -591,6 +667,11 @@ class _GoalLine extends StatelessWidget {
       GoalKind.color => s.sugarGoalColor(goal.target),
       GoalKind.ice => s.sugarGoalIce(goal.target),
       GoalKind.box => s.sugarGoalBox(goal.target),
+      GoalKind.choco => s.sugarGoalChoco(goal.target),
+      GoalKind.fruit => s.sugarGoalFruit(goal.target),
+      GoalKind.cake => s.sugarGoalCake(goal.target),
+      GoalKind.door => s.sugarGoalDoor(goal.target),
+      GoalKind.limon => s.sugarGoalLimon,
     };
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
@@ -805,7 +886,21 @@ class _WonPanel extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             DancingLokum(outfit: c.settings.outfit, size: 70, moving: c.settings.effects),
-            CandyText(s.sugarWon, size: 32, colors: const [Color(0xFFFFF6B0), Color(0xFFFFC21A), Color(0xFFFF6A00)], outline: const Color(0xFF6A0E4A)),
+            // The end of the story: the book is back.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: CandyText(c.finaleWon ? s.finaleTitle : s.sugarWon, size: 32, colors: const [Color(0xFFFFF6B0), Color(0xFFFFC21A), Color(0xFFFF6A00)], outline: const Color(0xFF6A0E4A)),
+            ),
+            if (c.finaleWon)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  s.finaleText,
+                  key: const ValueKey('sugar-finale'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontFamily: 'Baloo2', fontSize: 15, fontWeight: FontWeight.w700, color: sugarInk, height: 1.2),
+                ),
+              ),
             const SizedBox(height: 8),
             TweenAnimationBuilder<double>(
               tween: Tween(begin: 0, end: stars.toDouble()),
@@ -913,6 +1008,12 @@ class _RewardLines extends StatelessWidget {
           if (surprise != null)
             Text(s.lokumSurprise([for (final e in surprise.boosters.entries) '${sugarBoosterName(s, e.key)} ×${e.value}'].join(', ')), textAlign: TextAlign.center, style: style.copyWith(color: const Color(0xFFE0247A))),
           if (c.newCard case final card?) Text(s.newPostcard(s.postcard(card).title), textAlign: TextAlign.center, style: style.copyWith(color: const Color(0xFFB07A1E))),
+          if (c.finaleWon)
+            Text(
+              s.finalePrize([for (final e in Rewards.finale.boosters.entries) '${sugarBoosterName(s, e.key)} ×${e.value}'].join(', ')),
+              textAlign: TextAlign.center,
+              style: style.copyWith(color: const Color(0xFFB07A1E)),
+            ),
           if (total > 0) Text(s.jarGained(total), style: style),
           if (forEvent > 0) Text(s.eventGained(s.eventName(event.name), forEvent), style: style),
         ],

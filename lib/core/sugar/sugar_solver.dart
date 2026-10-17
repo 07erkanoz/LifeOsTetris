@@ -37,19 +37,30 @@ class SugarSolver {
     }
   }
 
-  static ({int chains, int specials, double danger}) _board(SugarGame g) {
-    var chains = 0, specials = 0;
+  static ({int chains, int specials, double danger, int layers, int depth}) _board(SugarGame g) {
+    var chains = 0, specials = 0, layers = 0, depth = 0;
     var danger = 0.0;
-    for (final row in g.board) {
-      for (final p in row) {
+    for (var y = 0; y < SugarGame.size; y++) {
+      for (var x = 0; x < SugarGame.size; x++) {
+        // Box and cake layers, chocolate and lemon slices still to clear.
+        layers += g.box[y][x] + g.choco[y][x] + g.slice[y][x] + g.cake[y][x];
+        final p = g.board[y][x];
         if (p == null) continue;
         if (p.chained) chains++;
         if (p.special != Special.none) specials++;
+        // Pomegranates lower down are nearer home, and a gap under one
+        // (seen before anything falls) will take it down.
+        if (p.fruit) {
+          depth += y;
+          for (var k = y + 1; k < SugarGame.size; k++) {
+            if (g.board[k][x] == null && !g.blocked(x, k)) depth++;
+          }
+        }
         final t = p.timer;
         if (t != null) danger += 1 / (t * t);
       }
     }
-    return (chains: chains, specials: specials, danger: danger);
+    return (chains: chains, specials: specials, danger: danger, layers: layers, depth: depth);
   }
 
   static double value(SugarGame before, SugarGame after) {
@@ -64,20 +75,19 @@ class SugarSolver {
         GoalKind.color => gained * 12,
         GoalKind.ice => gained * 30,
         GoalKind.box => gained * 40,
+        GoalKind.choco => gained * 30,
+        GoalKind.fruit => gained * 160,
+        GoalKind.cake => gained * 90,
+        GoalKind.door => gained * 70,
+        GoalKind.limon => gained * 2,
       };
     }
-    // Box layers knocked count too, not only boxes gone.
-    var layersBefore = 0, layersAfter = 0;
-    for (var y = 0; y < SugarGame.size; y++) {
-      for (var x = 0; x < SugarGame.size; x++) {
-        layersBefore += before.box[y][x];
-        layersAfter += after.box[y][x];
-      }
-    }
+    // Layers knocked count too, not only boxes gone.
     final b = _board(before), a = _board(after);
     return v +
         (after.score - before.score) / 200 +
-        (layersBefore - layersAfter) * 14 +
+        (b.layers - a.layers) * 14 +
+        (a.depth - b.depth) * 10 +
         (b.chains - a.chains) * 6 +
         (a.specials - b.specials) * 8 +
         (b.danger - a.danger) * 400 +

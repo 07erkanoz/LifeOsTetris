@@ -298,6 +298,7 @@ class AppStrings {
     'sceneGalata' => _t('Galata gecesi', 'Galata by night'),
     'sceneSnow' => _t('Karlı Kız Kulesi', "Snowy Maiden's Tower"),
     'sceneIslands' => _t('Adalar baharı', 'Spring on the islands'),
+    'sceneCamlica' => _t('Çamlıca gecesi', 'Çamlıca by night'),
     'shuffle' => _t('Karıştır', 'Shuffle'),
     'freeze' => _t('Zamanı Durdur', 'Stop the Clock'),
     'outfitTulipCrown' => _t('Lale tacı', 'Tulip crown'),
@@ -309,7 +310,7 @@ class AppStrings {
   String unlockText(String u) => switch (u) {
     'cubesLokum' => _t("Zincir Küpler'de pudra şekerli lokum küpler.", 'Powdered lokum cubes for Chain Blocks.'),
     'cubesCini' => _t("Zincir Küpler'de İznik çinisi görünümü.", 'Iznik tile cubes for Chain Blocks.'),
-    'sceneGalata' || 'sceneSnow' || 'sceneIslands' => _t('Şeker tahtasının arkasında yeni bir İstanbul manzarası.', 'A new Istanbul scene behind the Sugar Blocks board.'),
+    'sceneGalata' || 'sceneSnow' || 'sceneIslands' || 'sceneCamlica' => _t('Şeker tahtasının arkasında yeni bir İstanbul manzarası.', 'A new Istanbul scene behind the Sugar Blocks board.'),
     'shuffle' => _t("Şeker'de takıldığında tahtayı karıştırır.", 'Shuffles the Sugar Blocks board when you are stuck.'),
     'freeze' => _t("Zincir'de yükselişi birkaç saniye durdurur.", 'Holds the Chain Blocks stack for a few seconds.'),
     _ => _t("Lokum'un dolabında yeni bir kostüm.", "A new outfit in Lokum's wardrobe."),
@@ -327,7 +328,7 @@ class AppStrings {
   String postcardsCount(int got, int all) => '$got / $all';
   String get postcardLocked => _t('Sandıklardan çıkar', 'Found in chests');
   String get freezeLabel => _t('Durdur', 'Stop');
-  /// The İstanbul postcards, oldest first.
+  /// The İstanbul postcards in their sets, each set oldest first.
   ({String title, String when, String fact}) postcard(int i) => switch (i) {
     0 => (title: _t('Yerebatan Sarnıcı', 'The Basilica Cistern'), when: '532', fact: _t('I. Justinianus döneminde yapıldı; tavanını 336 sütun taşır.', 'Built under Justinian I; 336 columns hold up its roof.')),
     1 => (title: _t('Ayasofya', 'Hagia Sophia'), when: '537', fact: _t('I. Justinianus döneminde tamamlandı; dev kubbesiyle yüzyıllarca dünyanın en büyük kapalı mekânlarından biri oldu.', 'Completed under Justinian I; its great dome made it one of the largest interiors in the world for centuries.')),
@@ -343,16 +344,22 @@ class AppStrings {
     11 => (title: _t('Mısır Çarşısı', 'The Spice Bazaar'), when: '1660–1664', fact: _t('Yeni Cami külliyesinin parçası olarak tamamlandı; adını yapımına ayrılan Mısır gelirlerinden alır.', 'Completed as part of the New Mosque complex; named for the Egyptian revenues set aside to build it.')),
     12 => (title: _t('Lale Devri', 'The Tulip Era'), when: '1718–1730', fact: _t("Lale bahçeleri ve helva sohbetleri İstanbul'un modası oldu; nadir lale soğanları servet değerindeydi.", 'Tulip gardens and halva gatherings were the fashion; rare bulbs were worth fortunes.')),
     13 => (title: _t('Galata Köprüsü', 'The Galata Bridge'), when: '1845', fact: _t("Haliç'in iki yakasını bağlayan ilk Galata Köprüsü açıldı; köprü o günden beri birkaç kez yenilendi.", 'The first Galata Bridge joined the two shores of the Golden Horn; it has been rebuilt several times since.')),
+    15 => (title: _t('Kalkedon', 'Chalcedon'), when: _t('MÖ 685', '685 BC'), fact: _t("Megaralılar Kadıköy'e Bizantion'dan 17 yıl önce yerleşti. Herodot'a göre karşı kıyıyı seçmedikleri için onlara 'körler' dendi.", 'Megarians settled at Kadıköy 17 years before Byzantion. Herodotus says they were called blind for missing the better shore opposite.')),
+    16 => (title: _t('Balat', 'Balat'), when: '1492', fact: _t("İspanya'dan sürülen Sefarad Yahudileri II. Bayezid'in kabulüyle Balat'a yerleşti; Rum, Ermeni ve Yahudi mahalleleri yan yana yaşadı.", 'Sephardic Jews driven out of Spain settled in Balat, received by Bayezid II; Greek, Armenian and Jewish quarters lived side by side.')),
+    17 => (title: _t('Ortaköy Camii', 'The Ortaköy Mosque'), when: '1856', fact: _t("Sultan Abdülmecid'in yaptırdığı Büyük Mecidiye Camii, Garabet ve oğlu Nigoğos Balyan'ın eseri; suyun hemen kıyısında durur.", 'The Grand Mecidiye Mosque, built for Sultan Abdülmecid by Garabet Balyan and his son Nigoğos, stands right at the water.')),
+    18 => (title: _t('Sühulet', 'The Sühulet'), when: '1872', fact: _t("Şirket-i Hayriye'nin Sühulet'i Kabataş ile Üsküdar arasında at arabalarını taşıdı; dünyanın ilk araba vapurlarından biri.", "Şirket-i Hayriye's Sühulet carried horse carts between Kabataş and Üsküdar, one of the world's first car ferries.")),
+    19 => (title: _t('Tünel', 'The Tünel'), when: '1875', fact: _t("Karaköy'den Beyoğlu'na tırmanan Tünel, Londra'dan sonra dünyanın en eski ikinci yeraltı hattı.", "Climbing from Karaköy to Beyoğlu, the Tünel is the world's second oldest underground line, after London's.")),
     _ => (title: _t('Şirket-i Hayriye', 'Şirket-i Hayriye'), when: '1851', fact: _t("Boğaz'da düzenli vapur seferlerini başlatan şirket kuruldu; vapurlar kıyı köylerini şehre bağladı.", 'The company that began regular Bosphorus ferries was founded; its boats tied the shore villages to the city.')),
   };
   String postcardSet(int i) => switch (i) {
     0 => _t('Fetihten önce', 'Before the conquest'),
     1 => _t('Fetih ve çarşılar', 'Conquest and bazaars'),
-    _ => _t("Boğaz'ın yüzyılları", 'Centuries of the Bosphorus'),
+    2 => _t("Boğaz'ın yüzyılları", 'Centuries of the Bosphorus'),
+    _ => _t('İki yakanın hikâyeleri', 'Tales of the two shores'),
   };
   String get setClaim => _t('SET ÖDÜLÜ', 'SET PRIZE');
   String get setDone => _t('Tamamlandı', 'Complete');
-  String get albumHint => _t('Bölüm sonları, etkinlikler ve sandıklar kart verir. Üç seti tamamla, rehber şapkası senin olsun.', 'Chapter ends, events and chests give cards. Complete all three sets for the guide\'s hat.');
+  String get albumHint => _t('Bölüm sonları, etkinlikler ve sandıklar kart verir. Bütün setleri tamamla, rehber şapkası senin olsun.', 'Chapter ends, events and chests give cards. Complete every set for the guide\'s hat.');
   String newPostcard(String title) => _t('Yeni kartpostal: $title', 'New postcard: $title');
   String get tipDidYouKnow => _t('Biliyor muydun?', 'Did you know?');
   String get tipSeeCard => _t('Kartı gör', 'See the card');
@@ -529,7 +536,13 @@ class AppStrings {
     2 => _t('Rumeli Hisarı', 'Rumeli Fortress'),
     3 => _t('Kapalıçarşı', 'Grand Bazaar'),
     4 => 'Galata',
-    _ => _t('Adalar', "Princes' Islands"),
+    5 => _t('Adalar', "Princes' Islands"),
+    6 => 'Kadıköy',
+    7 => 'Ortaköy',
+    8 => _t('Boğaz Vapuru', 'The Bosphorus ferry'),
+    9 => _t('İstiklal', 'İstiklal Avenue'),
+    10 => 'Balat',
+    _ => _t('Çamlıca Tepesi', 'Çamlıca Hill'),
   };
 
   /// The story card of chapter [n]: when and where, what happened there
@@ -580,7 +593,7 @@ class AppStrings {
       limon: _t("Galata'nın her köşesine saatli bombalar kurdum. Gözcüler bile yetişemez.", 'I set time bombs all over Galata. Not even the watchmen will keep up.'),
       lokum: _t('Gözcü gibi düşün: önce sayısı en az olanı söndür. Süre bitmeden!', 'Think like a watchman: put out the lowest count first. Before time runs out!'),
     ),
-    _ => (
+    5 => (
       when: _t('1072 · Kınalıada', '1072 · Kınalıada'),
       history: _t(
         "Tahttan indirilen Bizans imparatoru IV. Romanos Diogenes buraya sürgün edildi. Adaların 'Prens Adaları' diye anılması, böyle sürgünlerin yeri olmalarından gelir.",
@@ -588,6 +601,60 @@ class AppStrings {
       ),
       limon: _t('Ben sürgüne gitmem, kaçarım. Adaların gökkuşağını da yanıma alıyorum!', "I don't get exiled, I escape. And I'm taking the islands' rainbow with me!"),
       lokum: _t('Renkleri gökkuşağı toplarıyla geri alacağız. Defterin son sayfaları onda; peşini bırakmak yok.', "We'll win the colours back with rainbow balls. He has the book's last pages; we don't let go."),
+    ),
+    6 => (
+      when: _t('MÖ 685 · Kalkedon', '685 BC · Chalcedon'),
+      history: _t(
+        "Megaralılar Kadıköy'e, Bizantion'dan 17 yıl önce yerleşti. Herodot'un aktardığına göre Pers komutanı Megabazos, karşıdaki yarımadayı bırakıp bu kıyıyı seçtikleri için onlara 'körler' demişti.",
+        'Megarians settled at Kadıköy 17 years before Byzantion was founded. Herodotus tells how the Persian general Megabazus called them blind for choosing this shore over the peninsula opposite.',
+      ),
+      limon: _t('Körler kıyısı, öyle mi? Bu yakanın şekerlerini acı kakaoyla kaplıyorum; her hamlede biraz daha yayılacak.', "The shore of the blind, is it? I'm coating this side's sweets in bitter cocoa, and it spreads with every move."),
+      lokum: _t('Biz karşıyı da görürüz, bu yakayı da. Çikolatanın yanında eşleştir; her hamlede birini kır ki yayılmasın.', "We see both shores. Match beside the chocolate and break some every move, so it can't spread."),
+    ),
+    7 => (
+      when: _t('1856 · Ortaköy', '1856 · Ortaköy'),
+      history: _t(
+        "Sultan Abdülmecid, Ortaköy iskelesinin hemen yanına Büyük Mecidiye Camii'ni yaptırdı. Mimarları Dolmabahçe Sarayı'nı da yapan Garabet Balyan ile oğlu Nigoğos'tu; cami suya o kadar yakındır ki dalgalar avlusunun dibine vurur.",
+        'Sultan Abdülmecid had the Grand Mecidiye Mosque built beside the Ortaköy pier. Its architects were Garabet Balyan and his son Nigoğos, who also built Dolmabahçe Palace; it stands so close to the water that waves break at its courtyard.',
+      ),
+      limon: _t('Defterdeki nar şerbeti tarifinin narlarını tahtanın tepesine sakladım. Aşağı inemeyecekler.', "I've hidden the pomegranates for the book's sherbet at the top of the board. They'll never come down."),
+      lokum: _t('Narlar şekerle birlikte düşer. Altlarını eşleştir, en alt sıraya varınca toplanırlar.', 'Pomegranates fall with the sweets. Match below them; once they reach the bottom row they are ours.'),
+    ),
+    8 => (
+      when: _t('1872 · Sühulet', '1872 · The Sühulet'),
+      history: _t(
+        "Şirket-i Hayriye'nin Sühulet vapuru, Kabataş ile Üsküdar arasında at arabalarını güvertesinde taşımaya başladı. Tasarımı şirketin müdürü Giritli Hüseyin Haki Efendi'nindi; dünyanın ilk araba vapurlarından biri sayılır.",
+        "Şirket-i Hayriye's ferry Sühulet began carrying horse carts on its deck between Kabataş and Üsküdar. It was designed by the company's director Hüseyin Haki Efendi and counts among the world's first car ferries.",
+      ),
+      limon: _t('Vapurun güvertesini ele geçirdim. Şekerleri bantlara dizdim; her hamlede kayıp gidecekler.', "I've taken the ferry's deck. The sweets are on the belts now, and they slide away with every move."),
+      lokum: _t('Bant her hamleden sonra bir kare kayar. Şekerin nereye varacağını düşün; bazen eşleşme kendiliğinden gelir.', 'The belt moves one cell after every move. Think where the sweets will land; sometimes the match comes by itself.'),
+    ),
+    9 => (
+      when: _t('1875 · Tünel', '1875 · The Tünel'),
+      history: _t(
+        "Karaköy'den Beyoğlu'na tırmanan Tünel açıldı. Londra'dan sonra dünyanın en eski ikinci yeraltı hattıdır; yokuşu bir buçuk dakikada çıkar. Hemen yukarıdaki Cadde-i Kebir, bugünkü İstiklal, pastaneleriyle ünlendi.",
+        "The Tünel opened, climbing from Karaköy to Beyoğlu. It is the world's second oldest underground line, after London's, and takes the hill in a minute and a half. The Grande Rue above, today's İstiklal, grew famous for its patisseries.",
+      ),
+      limon: _t('Caddenin pastalarını kat kat dizdim, şekerlerin önüne yığdım. Bakalım kaç katını yiyebileceksin.', "I've stacked the avenue's cakes tier upon tier in front of the sweets. Let's see how many tiers you can eat."),
+      lokum: _t('Pastanın yanındaki her eşleşme bir kat yer. Son kat gidince yerinden paketli şeker çıkar!', 'Every match beside a cake eats a tier. When the last one goes, a wrapped sweet appears in its place!'),
+    ),
+    10 => (
+      when: _t('1492 · Balat', '1492 · Balat'),
+      history: _t(
+        "İspanya'dan sürülen Sefarad Yahudileri, II. Bayezid'in kabulüyle İstanbul'a geldi; birçoğu Haliç kıyısındaki Balat'a yerleşti. Rum, Ermeni ve Yahudi mahalleleri yüzyıllarca yan yana yaşadı; renkli cumbalı evler bugün de yokuşları süsler.",
+        'Sephardic Jews driven out of Spain came to Istanbul, received by Bayezid II, and many settled in Balat on the Golden Horn. Greek, Armenian and Jewish quarters lived side by side for centuries; colourful bay-windowed houses still line its hills.',
+      ),
+      limon: _t("Balat'ın renkli kapılarını kilitledim. Her biri yalnız kendi rengini tanır; anahtarlar bende.", "I've locked Balat's coloured doors. Each knows only its own colour, and I have the keys."),
+      lokum: _t('Anahtara gerek yok: kapının yanında kendi renginde bir eşleşme yap, kapı açılsın. Arkasında çizgili şeker var.', "No key needed: make a match in the door's own colour beside it and it opens. A striped sweet waits behind."),
+    ),
+    _ => (
+      when: _t('Çamlıca Tepesi', 'Çamlıca Hill'),
+      history: _t(
+        "Şehrin iki yakasını ve Boğaz'ı birden gören Çamlıca, 19. yüzyılda İstanbulluların mesire yeriydi; kaynak suyu ünlüydü. Ekşi Limon tarif defterinin son sayfalarıyla tepeye kaçtı. Bütün şehir aşağıda, ışıl ışıl.",
+        'Çamlıca, which sees both shores and the Bosphorus at once, was where 19th-century Istanbul went for outings; its spring water was famous. Sour Lemon has fled up here with the last pages of the book. The whole city glitters below.',
+      ),
+      limon: _t('Buraya kadar geldin demek. Bu tepe benim; oynadıkça tahtana limon atacağım. Ekşiliğimi bitirebilirsen defter senin.', "So you made it this far. This hill is mine, and I'll throw lemons on your board as you play. Wear down all my sourness and the book is yours."),
+      lokum: _t('Her eşleşme onu biraz tatlandırır, özel şekerler iki kat! Limon dilimlerinin yanında eşleştir, temizle. Hadi, son sayfa!', 'Every match sweetens him a little, specials twice as much! Match beside the lemon slices to wash them away. Come on, the last page!'),
     ),
   };
   String get storyNext => _t('Devam ›', 'Next ›');
@@ -601,6 +668,20 @@ class AppStrings {
   String get sugarRainbow => _t('Gökkuşağı', 'Rainbow');
   String get sugarRainbowHint => _t('Gökkuşağı topu yapmak istediğin şekere dokun', 'Tap the sweet to turn into a rainbow ball');
   String sugarGoalBox(int n) => _t('$n kutuyu aç', 'Open $n boxes');
+  String sugarGoalChoco(int n) => _t('$n çikolatayı temizle', 'Clear $n chocolate');
+  String sugarGoalFruit(int n) => _t('$n narı aşağı indir', 'Bring down $n pomegranates');
+  String sugarGoalCake(int n) => _t('$n pastayı bitir', 'Eat $n cakes');
+  String sugarGoalDoor(int n) => _t('$n kapıyı aç', 'Open $n doors');
+  String get sugarGoalLimon => _t("Ekşi Limon'u tatlandır", 'Sweeten Sour Lemon');
+  String get sugarLimonAngry => _t('LİMON\nKIZDI!', 'LEMON\nIS MAD!');
+  String get limonName => _t('EKŞİ LİMON', 'SOUR LEMON');
+  String percent(int n) => _t('%$n', '$n%');
+  String get finaleTitle => _t('İSTANBUL TATLANDI!', 'THE CITY IS SWEET AGAIN!');
+  String get finaleText => _t(
+    "Tarif defteri yerine döndü. Ekşi Limon bile pudra şekerine bulandı; şimdi bir lokum tadabilir mi diye soruyor.",
+    'The book of recipes is home. Even Sour Lemon is covered in powdered sugar, and now he asks if he might taste a lokum.',
+  );
+  String finalePrize(String items) => _t('Büyük ödül: Çamlıca gecesi manzarası, $items', 'Grand prize: the Çamlıca by night scene, $items');
 
   /// What Lokum, the mascot, says: [key] picks the moment, [i] the line.
   String lokum(String key, int i) {
@@ -624,6 +705,12 @@ class AppStrings {
       'over' => [_t('Bir daha?', 'Again?'), _t('Az kaldı, tekrar!', 'So close, once more!')],
       'record' => [_t('Yeni rekor!', 'New best!'), _t('Sen bir şampiyonsun!', "You're a champ!")],
       'pause' => [_t('Mola! Bir çay içelim mi?', 'A break! Tea, anyone?'), _t('Dinlen biraz.', 'Have a rest.')],
+      'choco' => [_t('Çikolata yayılıyor!', 'The chocolate is spreading!'), _t('Çikolatayı durdur!', 'Stop the chocolate!')],
+      'fruit' => [_t('Bir nar daha!', 'Another pomegranate!'), _t('Nar bizde!', 'Got the pomegranate!')],
+      'cake' => [_t('Pasta bitti!', 'Cake gone!'), _t('Afiyet olsun!', 'Enjoy!')],
+      'door' => [_t('Kapı açıldı!', 'The door is open!'), _t('Bak arkasında ne var!', "Look what's behind it!")],
+      'limon' => [_t('Limon attı, temizle!', 'Lemons! Wash them away!'), _t('Ekşi geliyor!', 'Here comes the sour!')],
+      'limonAngry' => [_t('Kızdı! Devam!', "He's mad! Keep going!"), _t('Az kaldı, tatlanıyor!', "Nearly there, he's sweetening!")],
       _ => [''],
     };
     return lines[i % lines.length];
@@ -640,6 +727,12 @@ class AppStrings {
     'box' => _t('Şeker kutusunun yanında eşleştir, kutu açılsın.', 'Match next to a candy box to open it.'),
     'box2' => _t('Pembe kurdeleli kutular iki kez açılır.', 'Boxes with a ribbon take two hits.'),
     'timed' => _t('Süreli bombayı sayısı sıfıra inmeden eşleştir!', 'Match the timed bomb before its count reaches zero!'),
+    'choco' => _t('Çikolatanın yanında eşleştir. Bir hamlede hiç kırmazsan bir kare yayılır!', 'Match beside the chocolate. Break none in a move and it spreads a cell!'),
+    'fruit' => _t('Nar eşleşmez, şekerle düşer. En alt sıraya indir, toplansın.', "Pomegranates don't match; they fall with the sweets. Bring them to the bottom row."),
+    'belt' => _t('Banttaki şekerler her hamleden sonra ok yönünde bir kare kayar.', 'Sweets on a belt move one cell the way the arrows point after every move.'),
+    'cake' => _t('Pastanın yanındaki her eşleşme bir katını yer. Son kat gidince paketli şeker çıkar.', 'Every match beside a cake eats a tier. The last tier leaves a wrapped sweet.'),
+    'door' => _t('Kapı yalnız kendi renginde bir eşleşmeyle açılır; arkasında çizgili şeker var.', 'A door opens only to a match in its own colour; a striped sweet waits behind.'),
+    'limon' => _t("Her eşleşme Ekşi Limon'u tatlandırır, özel şekerler iki kat. Attığı dilimlerin yanında eşleştir!", 'Every match sweetens Sour Lemon, specials twice as much. Match beside the slices he throws!'),
     _ => '',
   };
   String get targetTitle => _t('Hedef', 'Targets');

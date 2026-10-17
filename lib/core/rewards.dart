@@ -16,6 +16,9 @@ enum Unlock {
   sceneSnow,
   sceneIslands,
 
+  /// Çamlıca by night, for beating Ekşi Limon.
+  sceneCamlica,
+
   /// The Şeker shuffle booster.
   shuffle,
 
@@ -144,14 +147,22 @@ abstract final class Rewards {
   // ----------------------------------------------------------- postcards --
 
   /// The İstanbul postcards, oldest first, in sets of [setSize].
-  static const int postcards = 15;
+  static const int postcards = 20;
   static const int setSize = 5;
   static int get sets => postcards ~/ setSize;
 
   /// The card a chapter (0-based) gives when its last level is passed:
   /// Mısır Çarşısı, the frozen Bosphorus, Rumeli Hisarı, the Bedesten,
-  /// Galata Tower, Kınalıada.
-  static const List<int> chapterCards = [11, 10, 4, 6, 3, 2];
+  /// Galata Tower, Kınalıada, Chalcedon, the Ortaköy mosque, the Sühulet,
+  /// the Tünel, Balat. Çamlıca gives [finale] instead.
+  static const List<int> chapterCards = [11, 10, 4, 6, 3, 2, 15, 17, 18, 19, 16];
+
+  /// Beating Ekşi Limon on Çamlıca, the last level.
+  static const Gift finale = Gift(
+    boosters: {SugarBooster.hammer: 5, SugarBooster.rainbow: 3, SugarBooster.moves: 3, SugarBooster.shuffle: 2},
+    freezes: 3,
+    unlock: Unlock.sceneCamlica,
+  );
 
   /// The cards chests, the jar and the seventh day give, in turn.
   static const List<int> chestCards = [0, 1, 5, 8, 13];
@@ -164,6 +175,7 @@ abstract final class Rewards {
   static Gift setPrize(int i, {bool all = false}) => switch (i) {
     0 => Gift(boosters: const {SugarBooster.hammer: 3, SugarBooster.rainbow: 2, SugarBooster.moves: 2}, unlock: all ? Unlock.outfitGuide : null),
     1 => Gift(boosters: const {SugarBooster.rainbow: 3, SugarBooster.moves: 3, SugarBooster.shuffle: 2}, unlock: all ? Unlock.outfitGuide : null),
+    3 => Gift(boosters: const {SugarBooster.hammer: 3, SugarBooster.rainbow: 3, SugarBooster.moves: 3}, freezes: 2, unlock: all ? Unlock.outfitGuide : null),
     _ => Gift(boosters: const {SugarBooster.hammer: 4, SugarBooster.rainbow: 3}, freezes: 2, unlock: all ? Unlock.outfitGuide : null),
   };
 }

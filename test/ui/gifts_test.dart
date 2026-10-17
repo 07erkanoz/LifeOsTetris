@@ -98,7 +98,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('a full set of postcards gives its prize; all three give the guide\'s hat', (tester) async {
+  testWidgets('a full set of postcards gives its prize; all of them give the guide\'s hat', (tester) async {
     final settings = await pumpApp(tester);
     for (var i = 0; i < 5; i++) {
       settings.applyGift(Gift(card: i));
@@ -116,8 +116,10 @@ void main() {
     for (var i = 5; i < Rewards.postcards; i++) {
       settings.applyGift(Gift(card: i));
     }
-    settings.claimSetPrize(1);
-    final last = settings.claimSetPrize(2)!;
+    for (var set = 1; set < Rewards.sets - 1; set++) {
+      settings.claimSetPrize(set);
+    }
+    final last = settings.claimSetPrize(Rewards.sets - 1)!;
     expect(last.unlock, Unlock.outfitGuide);
     expect(settings.unlocked(Unlock.outfitGuide), isTrue);
     expect(tester.takeException(), isNull);

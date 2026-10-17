@@ -39,6 +39,10 @@ SugarLevel withMoves(SugarLevel l, int moves, {List<SugarGoal Function()>? goals
   gifts: l.gifts,
   rush: l.rush,
   calm: l.calm,
+  belts: l.belts,
+  fruitsAtOnce: l.fruitsAtOnce,
+  limonEvery: l.limonEvery,
+  limonThrow: l.limonThrow,
 );
 
 ({double win, List<int> scores}) evaluate(SugarLevel l) {

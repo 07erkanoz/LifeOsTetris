@@ -1054,6 +1054,157 @@ void _paintOutfitShape(Canvas canvas, double s, LokumOutfit outfit) {
   }
 }
 
+// ---------------------------------------- the pieces of chapters 7 to 12 --
+
+/// Chocolate spreading over a cell: Ekşi Limon's bitter cocoa.
+void paintChocolate(Canvas canvas, Rect cell) {
+  final s = cell.width;
+  final r = cell.deflate(s * 0.04);
+  final rr = RRect.fromRectAndRadius(r, Radius.circular(s * 0.18));
+  canvas.drawRRect(rr.shift(Offset(0, s * 0.05)), Paint()..color = Colors.black.withValues(alpha: 0.35));
+  canvas.drawRRect(rr, Paint()..shader = ui.Gradient.radial(r.topLeft + Offset(s * 0.3, s * 0.3), s, const [Color(0xFF9A5A3A), Color(0xFF5A2A14), Color(0xFF3A1808)], const [0, 0.55, 1]));
+  // Squares pressed in, like a bar.
+  for (var i = 0; i < 2; i++) {
+    for (var k = 0; k < 2; k++) {
+      final q = Rect.fromLTWH(r.left + s * (0.14 + i * 0.38), r.top + s * (0.14 + k * 0.38), s * 0.3, s * 0.3);
+      canvas.drawRRect(RRect.fromRectAndRadius(q, Radius.circular(s * 0.05)), Paint()..color = const Color(0xFF6A3418));
+      canvas.drawLine(q.topLeft + Offset(s * 0.04, s * 0.03), q.topRight + Offset(-s * 0.04, s * 0.03), Paint()
+        ..strokeWidth = s * 0.03
+        ..color = const Color(0xFFB07A50).withValues(alpha: 0.7));
+    }
+  }
+  // Drips over the bottom edge.
+  for (final (dx, len) in [(0.25, 0.14), (0.62, 0.2)]) {
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(r.left + s * dx, r.bottom - s * 0.06, s * 0.1, s * len), Radius.circular(s * 0.05)), Paint()..color = const Color(0xFF4A2010));
+  }
+}
+
+/// A pomegranate to bring down to the bottom.
+void paintPomegranate(Canvas canvas, Rect cell) {
+  final s = cell.width;
+  final c = cell.center + Offset(0, s * 0.04);
+  canvas.drawOval(Rect.fromCenter(center: c + Offset(0, s * 0.34), width: s * 0.6, height: s * 0.12), Paint()..color = Colors.black.withValues(alpha: 0.3));
+  canvas.drawCircle(c, s * 0.34, Paint()..shader = ui.Gradient.radial(c - Offset(s * 0.12, s * 0.12), s * 0.5, const [Color(0xFFFF8A8A), Color(0xFFD81E3C), Color(0xFF8A0A1E)], const [0, 0.55, 1]));
+  final crown = Path()
+    ..moveTo(c.dx - s * 0.12, c.dy - s * 0.3)
+    ..lineTo(c.dx - s * 0.14, c.dy - s * 0.44)
+    ..lineTo(c.dx - s * 0.05, c.dy - s * 0.36)
+    ..lineTo(c.dx, c.dy - s * 0.46)
+    ..lineTo(c.dx + s * 0.05, c.dy - s * 0.36)
+    ..lineTo(c.dx + s * 0.14, c.dy - s * 0.44)
+    ..lineTo(c.dx + s * 0.12, c.dy - s * 0.3)
+    ..close();
+  canvas.drawPath(crown, Paint()..color = const Color(0xFF9A0A22));
+  canvas.drawOval(Rect.fromCenter(center: c - Offset(s * 0.13, s * 0.12), width: s * 0.16, height: s * 0.1), Paint()..color = Colors.white.withValues(alpha: 0.5));
+  final seeds = Random(2);
+  for (var i = 0; i < 4; i++) {
+    canvas.drawCircle(c + Offset((seeds.nextDouble() - 0.3) * s * 0.3, (seeds.nextDouble() - 0.2) * s * 0.3), s * 0.025, Paint()..color = const Color(0xFFFFC0C8).withValues(alpha: 0.8));
+  }
+}
+
+/// A conveyor tile: a dark belt with chevrons pointing [dir] (+1 right).
+void paintBelt(Canvas canvas, Rect cell, {double dir = 1}) {
+  final s = cell.width;
+  canvas.drawRect(cell, Paint()..shader = ui.Gradient.linear(cell.topCenter, cell.bottomCenter, const [Color(0xFF3A3A50), Color(0xFF22222E), Color(0xFF3A3A50)], const [0, 0.5, 1]));
+  for (final y in [cell.top + s * 0.05, cell.bottom - s * 0.05]) {
+    canvas.drawLine(Offset(cell.left, y), Offset(cell.right, y), Paint()
+      ..strokeWidth = s * 0.06
+      ..color = const Color(0xFFFFC21A));
+  }
+  for (final x in [0.3, 0.7]) {
+    final cx = cell.left + s * x;
+    canvas.drawPath(Path()
+      ..moveTo(cx - dir * s * 0.08, cell.center.dy - s * 0.16)
+      ..lineTo(cx + dir * s * 0.08, cell.center.dy)
+      ..lineTo(cx - dir * s * 0.08, cell.center.dy + s * 0.16), Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = s * 0.06
+      ..strokeCap = StrokeCap.round
+      ..color = const Color(0xFF8A8AA8));
+  }
+}
+
+/// A layered cake filling [r] (two cells square on the board); [layers]
+/// tiers left (1..3).
+void paintCake(Canvas canvas, Rect r, {int layers = 3}) {
+  final s = r.width;
+  canvas.drawOval(Rect.fromCenter(center: Offset(r.center.dx, r.bottom - s * 0.08), width: s * 0.96, height: s * 0.16), Paint()..color = Colors.black.withValues(alpha: 0.3));
+  canvas.drawOval(Rect.fromCenter(center: Offset(r.center.dx, r.bottom - s * 0.1), width: s * 0.92, height: s * 0.14), Paint()..color = const Color(0xFFE6E6F0));
+  const sponge = [Color(0xFFFFD8A0), Color(0xFFFFB0D0), Color(0xFFE8C090)];
+  const cream = [Color(0xFFFFFFFF), Color(0xFFFF7AB8), Color(0xFF8A4A2A)];
+  const icing = [Color(0xFFFF7AB8), Color(0xFFFFFFFF), Color(0xFFFFFFFF)];
+  for (var i = 0; i < layers; i++) {
+    final tw = s * (0.84 - i * 0.2);
+    final th = s * 0.24;
+    final tier = Rect.fromCenter(center: Offset(r.center.dx, r.bottom - s * 0.2 - i * th), width: tw, height: th);
+    canvas.drawRRect(RRect.fromRectAndRadius(tier, Radius.circular(s * 0.04)), Paint()..color = sponge[i]);
+    canvas.drawRect(Rect.fromLTWH(tier.left, tier.center.dy - s * 0.015, tier.width, s * 0.03), Paint()..color = cream[i].withValues(alpha: 0.7));
+    final drip = Path()..moveTo(tier.left, tier.top);
+    for (var k = 0; k <= 6; k++) {
+      final x = tier.left + tier.width * k / 6;
+      drip.lineTo(x, tier.top + (k.isEven ? s * 0.07 : s * 0.035));
+    }
+    drip
+      ..lineTo(tier.right, tier.top - s * 0.01)
+      ..lineTo(tier.left, tier.top - s * 0.01)
+      ..close();
+    canvas.drawPath(drip, Paint()..color = icing[i]);
+  }
+  final top = r.bottom - s * 0.2 - (layers - 1) * s * 0.24 - s * 0.12;
+  canvas.drawCircle(Offset(r.center.dx, top - s * 0.04), s * 0.06, Paint()..color = const Color(0xFFE2333C));
+  canvas.drawCircle(Offset(r.center.dx - s * 0.02, top - s * 0.06), s * 0.018, Paint()..color = Colors.white.withValues(alpha: 0.7));
+}
+
+/// A Balat door painted [color]: only a match of that colour beside it
+/// opens it.
+void paintDoor(Canvas canvas, Rect cell, Color color, {bool open = false}) {
+  final s = cell.width;
+  final r = cell.deflate(s * 0.06);
+  final arch = RRect.fromRectAndCorners(r, topLeft: Radius.circular(s * 0.4), topRight: Radius.circular(s * 0.4), bottomLeft: Radius.circular(s * 0.06), bottomRight: Radius.circular(s * 0.06));
+  canvas.drawRRect(arch.shift(Offset(0, s * 0.05)), Paint()..color = Colors.black.withValues(alpha: 0.35));
+  canvas.drawRRect(arch, Paint()..color = const Color(0xFFF2E6D8));
+  final leaf = arch.deflate(s * 0.07);
+  if (open) {
+    canvas.drawRRect(leaf, Paint()..color = const Color(0xFF2A1438));
+    canvas.drawPath(Path()..addPolygon([leaf.outerRect.topLeft + Offset(0, s * 0.1), leaf.outerRect.topLeft + Offset(s * 0.2, s * 0.18), leaf.outerRect.bottomLeft + Offset(s * 0.2, -s * 0.04), leaf.outerRect.bottomLeft], true),
+        Paint()..color = color);
+    paintSparkle(canvas, leaf.outerRect.center + Offset(s * 0.08, 0), s * 0.14, const Color(0xFFFFE066));
+    return;
+  }
+  canvas.drawRRect(leaf, Paint()..shader = ui.Gradient.linear(leaf.outerRect.topLeft, leaf.outerRect.bottomRight, [Color.lerp(color, Colors.white, 0.25)!, Color.lerp(color, Colors.black, 0.2)!]));
+  final panel = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = s * 0.03
+    ..color = Color.lerp(color, Colors.black, 0.35)!;
+  canvas.drawLine(Offset(leaf.outerRect.center.dx, leaf.top + s * 0.1), Offset(leaf.outerRect.center.dx, leaf.bottom), panel);
+  for (final dx in [-1.0, 1.0]) {
+    canvas.drawRect(Rect.fromCenter(center: leaf.outerRect.center + Offset(dx * s * 0.15, s * 0.14), width: s * 0.18, height: s * 0.26), panel);
+  }
+  canvas.drawCircle(leaf.outerRect.center + Offset(s * 0.06, s * 0.0), s * 0.035, Paint()..color = const Color(0xFFFFE27A));
+}
+
+/// A slice of lemon Ekşi Limon threw: match beside it to wash it away.
+void paintLemonSlice(Canvas canvas, Rect cell, {double turn = 0}) {
+  final s = cell.width;
+  final c = cell.center;
+  canvas.drawCircle(c + Offset(0, s * 0.05), s * 0.4, Paint()..color = Colors.black.withValues(alpha: 0.3));
+  canvas.drawCircle(c, s * 0.4, Paint()..color = const Color(0xFFFFC414));
+  canvas.drawCircle(c, s * 0.35, Paint()..color = const Color(0xFFFFF6C8));
+  for (var i = 0; i < 8; i++) {
+    final a = turn + i * pi / 4;
+    final seg = Path()
+      ..moveTo(c.dx + cos(a + 0.08) * s * 0.04, c.dy + sin(a + 0.08) * s * 0.04)
+      ..arcTo(Rect.fromCircle(center: c, radius: s * 0.31), a + 0.1, pi / 4 - 0.2, false)
+      ..close();
+    canvas.drawPath(seg, Paint()..color = const Color(0xFFFFE04A));
+  }
+  canvas.drawCircle(c, s * 0.05, Paint()..color = const Color(0xFFFFF6C8));
+  canvas.drawArc(Rect.fromCircle(center: c, radius: s * 0.38), pi * 1.1, pi * 0.5, false, Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = s * 0.03
+    ..color = Colors.white.withValues(alpha: 0.6));
+}
+
 /// Paints one piece the way the board shows it.
 void paintSugarPiece(Canvas canvas, Rect r, SugarColor color, Special special) {
   switch (special) {
@@ -1092,8 +1243,8 @@ class SugarSprites {
   final double dpr;
   final Map<Object, ui.Image> _images = {};
 
-  ui.Image _render(void Function(Canvas canvas, Rect r) paint) {
-    final side = cell * (1 + 2 * pad);
+  ui.Image _render(void Function(Canvas canvas, Rect r) paint, {int cells = 1}) {
+    final side = cell * (cells + 2 * pad);
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder)..scale(dpr);
     paint(canvas, Rect.fromLTWH(cell * pad + 1, cell * pad + 1, cell - 2, cell - 2));
@@ -1102,6 +1253,7 @@ class SugarSprites {
   }
 
   ui.Image piece(SugarPiece p) {
+    if (p.fruit) return _images['fruit'] ??= _render(paintPomegranate);
     if (p.isBomb && p.special == Special.none) return _images[('bomb', p.color)] ??= _render((canvas, r) => paintTimedBomb(canvas, r, p.color));
     final key = p.isPrism ? (Special.prism, null) : (p.special, p.color);
     return _images[key] ??= _render((canvas, r) => paintSugarPiece(canvas, r, p.color, p.special));
@@ -1112,6 +1264,25 @@ class SugarSprites {
   ui.Image box(int layers) => _images[('box', layers.clamp(1, 2))] ??= _render((canvas, r) => paintCandyBox(canvas, r, layers: layers));
 
   ui.Image get chains => _images['chains'] ??= _render(paintChains);
+
+  ui.Image get chocolate => _images['choco'] ??= _render(paintChocolate);
+
+  ui.Image get lemonSlice => _images['slice'] ??= _render(paintLemonSlice);
+
+  ui.Image door(SugarColor color) => _images[('door', color)] ??= _render((canvas, r) => paintDoor(canvas, r, sugarColors[color]!));
+
+  ui.Image belt(int dir) => _images[('belt', dir)] ??= _render((canvas, r) => paintBelt(canvas, r.inflate(1), dir: dir.toDouble()));
+
+  /// A cake two cells square: draw it with [drawCake].
+  ui.Image cake(int layers) => _images[('cake', layers.clamp(1, 3))] ??= _render((canvas, r) => paintCake(canvas, Rect.fromLTWH(r.left, r.top, r.width * 2 + 2, r.height * 2 + 2), layers: layers), cells: 2);
+
+  /// Draws a two-cell cake whose top-left cell starts at [origin].
+  void drawCake(Canvas canvas, int layers, Offset origin) {
+    final img = cake(layers);
+    final side = cell * (2 + 2 * pad);
+    final dst = Rect.fromLTWH(origin.dx - cell * pad, origin.dy - cell * pad, side, side);
+    canvas.drawImageRect(img, Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()), dst, Paint()..filterQuality = FilterQuality.low);
+  }
 
   /// Draws [image] over the cell whose top-left is [origin].
   void draw(Canvas canvas, ui.Image image, Offset origin, {double opacity = 1, double scale = 1, double scaleY = 1}) {

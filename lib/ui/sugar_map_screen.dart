@@ -19,8 +19,8 @@ import 'gifts_screen.dart';
 import 'sugar_screen.dart';
 import 'sugar_widgets.dart';
 
-/// The Şeker Küpler map: three chapters of levels along a winding road, from
-/// the bottom up. "Continue" plays the saved level or the next one.
+/// The Şeker Küpler map: twelve chapters of levels along a winding road,
+/// from the bottom up. "Continue" plays the saved level or the next one.
 class SugarMapScreen extends StatefulWidget {
   const SugarMapScreen({super.key, required this.settings, required this.audio, this.haptics});
 
@@ -279,8 +279,27 @@ class _Ribbon extends StatelessWidget {
     [Color(0xFFFFC08A), Color(0xFFFF7A1A)],
     [Color(0xFFFF8A8A), Color(0xFFD0203A)],
     [Color(0xFF8AF0B0), Color(0xFF1FB85A)],
+    [Color(0xFFFFB07A), Color(0xFFD0503A)],
+    [Color(0xFF8AD8FF), Color(0xFF1F8AD0)],
+    [Color(0xFFB0C8FF), Color(0xFF3A5AC8)],
+    [Color(0xFFFF8A9A), Color(0xFFB0203A)],
+    [Color(0xFFFFD06A), Color(0xFFE0801A)],
+    [Color(0xFFFFF06A), Color(0xFFD0A000)],
   ];
-  static const _ink = [Color(0xFF8A1550), Color(0xFF0E4A9A), Color(0xFF3A0F7A), Color(0xFF8A3A00), Color(0xFF7A0E1A), Color(0xFF0E6A32)];
+  static const _ink = [
+    Color(0xFF8A1550),
+    Color(0xFF0E4A9A),
+    Color(0xFF3A0F7A),
+    Color(0xFF8A3A00),
+    Color(0xFF7A0E1A),
+    Color(0xFF0E6A32),
+    Color(0xFF7A2410),
+    Color(0xFF0E4A7A),
+    Color(0xFF1A2A7A),
+    Color(0xFF6A0E1E),
+    Color(0xFF7A3A00),
+    Color(0xFF6A4A00),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -289,15 +308,15 @@ class _Ribbon extends StatelessWidget {
       height: 54,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: _colors[chapter % 6]),
+        gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: _colors[chapter % _colors.length]),
         border: Border.all(color: Colors.white, width: 3),
         boxShadow: [BoxShadow(color: const Color(0xFF2A0B4F).withValues(alpha: 0.6), offset: const Offset(0, 5))],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CandyText(parts.first, size: 13, outline: _ink[chapter % 6], stroke: 0.18),
-          if (parts.length > 1) FittedBox(child: CandyText(parts.last, size: 21, outline: _ink[chapter % 6], stroke: 0.18)),
+          CandyText(parts.first, size: 13, outline: _ink[chapter % _ink.length], stroke: 0.18),
+          if (parts.length > 1) FittedBox(child: CandyText(parts.last, size: 21, outline: _ink[chapter % _ink.length], stroke: 0.18)),
         ],
       ),
     );
@@ -319,6 +338,14 @@ class _MapPainter extends CustomPainter {
     [Color(0xFF5A2A8A), Color(0xFFE08A5A), Color(0xFFFFC08A)],
     [Color(0xFFFFB07A), Color(0xFFE0603A), Color(0xFF7A2040)],
     [Color(0xFF7A2040), Color(0xFF3AA8E0), Color(0xFF8AE8FF)],
+    // Kadıköy at sunset, Ortaköy by day, the ferry's morning, İstiklal's
+    // dusk, Balat's blue sky, Çamlıca by night.
+    [Color(0xFF8AE8FF), Color(0xFFFFB46A), Color(0xFFE0608A)],
+    [Color(0xFFE0608A), Color(0xFF9AD4F8), Color(0xFF3A8AE6)],
+    [Color(0xFF3A8AE6), Color(0xFFFFD8A8), Color(0xFF6AA8E6)],
+    [Color(0xFF6AA8E6), Color(0xFFE0708A), Color(0xFF2A1A5A)],
+    [Color(0xFF2A1A5A), Color(0xFF4AA0F0), Color(0xFFBEE6FF)],
+    [Color(0xFFBEE6FF), Color(0xFF2A1A5A), Color(0xFF0A0826)],
   ];
   static const _hills = [
     [[Color(0xFFB6F2C8), Color(0xFF5CC98A)], [Color(0xFFD6FFE0), Color(0xFF7ADBA0)]],
@@ -327,6 +354,12 @@ class _MapPainter extends CustomPainter {
     [[Color(0xFFFFD9B0), Color(0xFFE0A070)], [Color(0xFFFFE8CC), Color(0xFFF0B888)]],
     [[Color(0xFFE08A5A), Color(0xFFA04A2A)], [Color(0xFFF0A070), Color(0xFFB85A30)]],
     [[Color(0xFFFFF2B0), Color(0xFFF0D070)], [Color(0xFF8AF0B0), Color(0xFF3AC878)]],
+    [[Color(0xFFB0608A), Color(0xFF6A2A5A)], [Color(0xFFC07A9A), Color(0xFF7A3A6A)]],
+    [[Color(0xFF6A9A8A), Color(0xFF2E6A5A)], [Color(0xFF8AB8A8), Color(0xFF3A7A6A)]],
+    [[Color(0xFF4A8ACF), Color(0xFF1A3A7A)], [Color(0xFF6AA0D8), Color(0xFF2A4A8A)]],
+    [[Color(0xFF8A6A8A), Color(0xFF4A3A5A)], [Color(0xFFA0808A), Color(0xFF5A4A6A)]],
+    [[Color(0xFFE08A6A), Color(0xFFA04A3A)], [Color(0xFFFFC07A), Color(0xFFC0702A)]],
+    [[Color(0xFF1E3A2A), Color(0xFF0E1A16)], [Color(0xFF2A4A3A), Color(0xFF14261E)]],
   ];
 
   @override
@@ -393,8 +426,24 @@ class _MapPainter extends CustomPainter {
             paintCandyBox(canvas, Rect.fromCenter(center: Offset(x, y - side / 2), width: side, height: side), layers: 2);
           case 4:
             _rock(canvas, Offset(x, y), 50 + rnd.nextDouble() * 30);
-          default:
+          case 5:
             _palm(canvas, Offset(x, y), 56 + rnd.nextDouble() * 20, i);
+          case 6:
+            final side = 30 + rnd.nextDouble() * 14;
+            paintChocolate(canvas, Rect.fromCenter(center: Offset(x, y - side / 2), width: side, height: side));
+          case 7:
+            final side = 34 + rnd.nextDouble() * 14;
+            paintPomegranate(canvas, Rect.fromCenter(center: Offset(x, y - side / 2), width: side, height: side));
+          case 8:
+            _boat(canvas, Offset(x, y), 50 + rnd.nextDouble() * 16);
+          case 9:
+            final side = 40 + rnd.nextDouble() * 16;
+            paintCake(canvas, Rect.fromCenter(center: Offset(x, y - side / 2), width: side, height: side), layers: 1 + i % 3);
+          case 10:
+            final side = 32 + rnd.nextDouble() * 12;
+            paintDoor(canvas, Rect.fromCenter(center: Offset(x, y - side / 2), width: side, height: side * 1.2), sugarColors.values.elementAt(i % 5));
+          default:
+            _pine(canvas, Offset(x, y), 46 + rnd.nextDouble() * 24, snow: false);
         }
       }
     }
@@ -545,14 +594,29 @@ class _MapPainter extends CustomPainter {
     }
   }
 
-  void _pine(Canvas canvas, Offset base, double h) {
+  void _pine(Canvas canvas, Offset base, double h, {bool snow = true}) {
     for (var i = 0; i < 3; i++) {
       final w = h * (0.55 - i * 0.12), top = base.dy - h * (0.35 + i * 0.28);
       canvas.drawPath(Path()..addPolygon([Offset(base.dx, top - h * 0.3), Offset(base.dx + w, top + h * 0.12), Offset(base.dx - w, top + h * 0.12)], true),
           Paint()..color = Color.lerp(const Color(0xFF2F8F7A), const Color(0xFF1E6B5C), i / 2)!);
-      canvas.drawPath(Path()..addPolygon([Offset(base.dx, top - h * 0.3), Offset(base.dx + w * 0.5, top - h * 0.08), Offset(base.dx - w * 0.5, top - h * 0.08)], true),
-          Paint()..color = Colors.white.withValues(alpha: 0.9));
+      if (snow) {
+        canvas.drawPath(Path()..addPolygon([Offset(base.dx, top - h * 0.3), Offset(base.dx + w * 0.5, top - h * 0.08), Offset(base.dx - w * 0.5, top - h * 0.08)], true),
+            Paint()..color = Colors.white.withValues(alpha: 0.9));
+      }
     }
+  }
+
+  /// A little white ferry with its yellow funnel.
+  void _boat(Canvas canvas, Offset base, double w) {
+    final hull = Path()..addPolygon([base + Offset(-w / 2, -w * 0.2), base + Offset(w / 2, -w * 0.2), base + Offset(w * 0.4, 0), base + Offset(-w * 0.4, 0)], true);
+    canvas.drawPath(hull, Paint()..color = Colors.white);
+    canvas.drawRect(Rect.fromLTWH(base.dx - w * 0.46, base.dy - w * 0.12, w * 0.92, w * 0.04), Paint()..color = const Color(0xFF2A3A6A));
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(base.dx - w * 0.3, base.dy - w * 0.4, w * 0.6, w * 0.2), const Radius.circular(3)), Paint()..color = Colors.white);
+    for (var i = 0; i < 4; i++) {
+      canvas.drawRect(Rect.fromLTWH(base.dx - w * 0.25 + i * w * 0.13, base.dy - w * 0.35, w * 0.07, w * 0.07), Paint()..color = const Color(0xFF6A8ACA));
+    }
+    canvas.drawRect(Rect.fromLTWH(base.dx - w * 0.05, base.dy - w * 0.62, w * 0.1, w * 0.22), Paint()..color = const Color(0xFFFFD000));
+    canvas.drawRect(Rect.fromLTWH(base.dx - w * 0.05, base.dy - w * 0.62, w * 0.1, w * 0.05), Paint()..color = const Color(0xFF1A1018));
   }
 
   void _lollipop(Canvas canvas, Offset base, double h, int i) {
