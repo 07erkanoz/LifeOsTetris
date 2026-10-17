@@ -156,10 +156,50 @@ class SugarBoardPainter extends CustomPainter {
 
     _beams(canvas, o, cell, fx);
     _sparks(canvas, o, cell, fx);
+    _dive(canvas, o, cell);
     if (fx.flash > 0) {
       canvas.drawRRect(tray, Paint()..color = Colors.white.withValues(alpha: 0.45 * fx.flash));
     }
     _floaters(canvas, o, cell, fx);
+    canvas.restore();
+  }
+
+  /// Lokum diving in for a sugar rush: down from his corner, along a row
+  /// with his mouth wide open, and out at the far side.
+  void _dive(Canvas canvas, Offset o, double cell) {
+    final start = c.diveStart;
+    if (start == null || !c.diving) return;
+    final t = ((c.now - start) / SugarController.diveLength).clamp(0.0, 1.0);
+    final row = c.diveRow + 0.5;
+    const n = SugarGame.size;
+    late Offset at;
+    var tilt = 0.0;
+    var fade = 1.0;
+    if (t < 0.2) {
+      final k = Curves.easeIn.transform(t / 0.2);
+      at = Offset(n - 0.2 + 0.4 * (1 - k), -1.4 + (row + 1.4) * k);
+      tilt = -0.6 * k;
+    } else if (t < 0.88) {
+      final k = Curves.easeInOut.transform((t - 0.2) / 0.68);
+      at = Offset(n - 0.4 - (n + 0.2) * k, row + 0.12 * sin(k * pi * 6));
+      tilt = -0.5;
+    } else {
+      final k = (t - 0.88) / 0.12;
+      at = Offset(-0.6 - k * 0.6, row - k * 1.2);
+      tilt = -0.5 + k;
+      fade = 1 - k;
+    }
+    final p = o + at * cell;
+    // A sugary trail behind him.
+    for (var i = 1; i <= 6; i++) {
+      final q = p + Offset(i * cell * 0.55, sin(i + t * 20) * cell * 0.15);
+      if (q.dx > o.dx + n * cell + cell) break;
+      paintSparkle(canvas, q, cell * 0.16 * (1 - i / 7), const Color(0xFFFFE066), opacity: fade * (1 - i / 7));
+    }
+    canvas.saveLayer(null, Paint()..color = Colors.white.withValues(alpha: fade));
+    canvas.translate(p.dx, p.dy);
+    canvas.rotate(tilt);
+    paintLokum(canvas, Offset.zero, cell * 1.5, pose: LokumPose.chomp, outfit: c.outfit);
     canvas.restore();
   }
 

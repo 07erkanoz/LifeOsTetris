@@ -558,19 +558,36 @@ class _RushPainter extends CustomPainter {
 
 /// Lokum, with a speech bubble when it has something to say.
 class SugarMascotView extends StatelessWidget {
-  const SugarMascotView({super.key, required this.pose, this.line, this.hop = 0, this.size = 62, this.bubbleLeft = true});
+  const SugarMascotView({
+    super.key,
+    required this.pose,
+    this.line,
+    this.hop = 0,
+    this.size = 62,
+    this.bubbleLeft = true,
+    this.outfit = LokumOutfit.none,
+    this.beat = 0,
+    this.pointLeft = true,
+  });
 
   final LokumPose pose;
   final String? line;
   final double hop;
   final double size;
+  final LokumOutfit outfit;
+
+  /// The dance's beat, 0..1 looping.
+  final double beat;
+
+  /// Points to the left (else to the right).
+  final bool pointLeft;
 
   /// The bubble opens to the left of Lokum (else to the right).
   final bool bubbleLeft;
 
   @override
   Widget build(BuildContext context) {
-    final lokum = SizedBox(width: size * 1.25, height: size * 1.3, child: CustomPaint(painter: _LokumPainter(pose, hop)));
+    final lokum = SizedBox(width: size * 1.25, height: size * 1.3, child: CustomPaint(painter: _LokumPainter(pose, hop, outfit, beat, pointLeft)));
     final text = line;
     if (text == null) return lokum;
     final bubble = Container(
@@ -593,14 +610,61 @@ class SugarMascotView extends StatelessWidget {
 }
 
 class _LokumPainter extends CustomPainter {
-  _LokumPainter(this.pose, this.hop);
+  _LokumPainter(this.pose, this.hop, this.outfit, this.beat, this.pointLeft);
 
   final LokumPose pose;
   final double hop;
+  final LokumOutfit outfit;
+  final double beat;
+  final bool pointLeft;
 
   @override
-  void paint(Canvas canvas, Size size) => paintLokum(canvas, Offset(size.width / 2, size.height * 0.56), size.height / 1.3, pose: pose, hop: hop);
+  void paint(Canvas canvas, Size size) =>
+      paintLokum(canvas, Offset(size.width / 2, size.height * 0.56), size.height / 1.3, pose: pose, hop: hop, outfit: outfit, beat: beat, pointLeft: pointLeft);
 
   @override
-  bool shouldRepaint(_LokumPainter old) => old.pose != pose || old.hop != hop;
+  bool shouldRepaint(_LokumPainter old) => old.pose != pose || old.hop != hop || old.outfit != outfit || old.beat != beat || old.pointLeft != pointLeft;
+}
+
+/// Lokum dancing on his own clock (for the result panels), still when
+/// visual effects are off.
+class DancingLokum extends StatefulWidget {
+  const DancingLokum({super.key, required this.outfit, this.size = 70, this.pose = LokumPose.dance, this.moving = true});
+
+  final LokumOutfit outfit;
+  final double size;
+  final LokumPose pose;
+  final bool moving;
+
+  @override
+  State<DancingLokum> createState() => _DancingLokumState();
+}
+
+class _DancingLokumState extends State<DancingLokum> with SingleTickerProviderStateMixin {
+  late final AnimationController _beat = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.moving) _beat.repeat();
+  }
+
+  @override
+  void didUpdateWidget(DancingLokum old) {
+    super.didUpdateWidget(old);
+    if (widget.moving && !_beat.isAnimating) _beat.repeat();
+    if (!widget.moving) _beat.stop();
+  }
+
+  @override
+  void dispose() {
+    _beat.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _beat,
+    builder: (context, _) => SugarMascotView(pose: widget.pose, outfit: widget.outfit, size: widget.size, beat: _beat.value, hop: widget.pose == LokumPose.dance ? (_beat.value * 2) % 1 : 0),
+  );
 }

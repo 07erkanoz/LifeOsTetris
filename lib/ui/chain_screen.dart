@@ -10,10 +10,13 @@ import '../core/chain/chain_game.dart';
 import '../game/chain/chain_controller.dart';
 import '../game/chain/chain_painter.dart';
 import '../game/render/background_painter.dart';
+import '../game/sugar/sugar_art.dart' show LokumPose;
 import '../l10n/strings.dart';
 import '../platform/orientation_lock.dart';
 import '../settings/settings.dart';
 import '../theme/palette.dart';
+import 'lokum_wardrobe.dart';
+import 'sugar_widgets.dart' show DancingLokum;
 import 'widgets.dart';
 
 const _chainColors = [Color(0xFFFF33EE), Color(0xFF3F6BFF), Color(0xFF1FE85A)];
@@ -227,7 +230,21 @@ class _Play extends StatelessWidget {
         const SizedBox(height: 10),
         Expanded(child: _Board(c: c)),
         const SizedBox(height: 8),
-        _RaiseButton(c: c),
+        // Lokum stands in the free corner left of the button, when there
+        // is room for him.
+        LayoutBuilder(
+          builder: (context, box) => SizedBox(
+            width: box.maxWidth,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                _RaiseButton(c: c),
+                if (box.maxWidth >= 340) Positioned(left: 4, bottom: -4, child: _ChainLokum(c: c)),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -329,6 +346,29 @@ class _Board extends StatelessWidget {
       },
     );
   }
+}
+
+/// Lokum by the button: he cheers chains and frets near the top, without
+/// words, so nothing on the board is covered.
+class _ChainLokum extends StatelessWidget {
+  const _ChainLokum({required this.c});
+
+  final ChainController c;
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    child: ValueListenableBuilder(
+      valueListenable: c.frame,
+      builder: (context, _, _) => LokumView(
+        key: const ValueKey('chain-lokum'),
+        outfit: c.outfit,
+        pose: c.lokum.pose,
+        hop: c.lokum.hop(c.clock),
+        beat: (c.clock / 0.9) % 1,
+        size: 46,
+      ),
+    ),
+  );
 }
 
 /// Hold to lift the stack faster (points for every row).
@@ -547,6 +587,9 @@ class _OverPanel extends StatelessWidget {
     final g = c.game;
     return _Panel(
       children: [
+        Center(
+          child: DancingLokum(outfit: c.outfit, size: 56, pose: c.newRecord ? LokumPose.dance : LokumPose.sad, moving: c.newRecord && c.settings.effects),
+        ),
         Text(g.timeUp ? s.timeUp : s.gameOver, textAlign: TextAlign.center, style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: p.text)),
         if (c.newRecord) ...[
           const SizedBox(height: 6),

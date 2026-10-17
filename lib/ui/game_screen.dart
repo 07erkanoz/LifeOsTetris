@@ -20,7 +20,7 @@ import '../game/blocks/blocks_controller.dart';
 import '../game/chain/chain_sprites.dart' show chainColors, paintChainCube;
 import '../game/game_controller.dart';
 import '../game/motivation.dart';
-import '../game/sugar/sugar_art.dart' show LokumPose, paintCandy, paintLokum, paintSparkle, paintSugarLabel;
+import '../game/sugar/sugar_art.dart' show LokumOutfit, LokumPose, paintCandy, paintLokum, paintSparkle, paintSugarLabel;
 import '../l10n/voice_lines.dart';
 import '../l10n/strings.dart';
 import '../platform/display_mode.dart';
@@ -35,8 +35,10 @@ import '../theme/palette.dart';
 import 'about_page.dart';
 import 'blocks_screen.dart';
 import 'chain_screen.dart';
+import 'lokum_wardrobe.dart';
 import 'sugar_map_screen.dart';
 import 'sugar_screen.dart';
+import 'sugar_widgets.dart' show DancingLokum, SugarMascotView;
 import 'board_view.dart';
 import 'power_bar.dart';
 import 'theme_picker.dart';
@@ -778,41 +780,55 @@ class _DesktopLayout extends StatelessWidget {
         children: [
           SizedBox(
             width: side,
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: LayoutBuilder(
+              // Lokum stands under the cards when the column has room left.
+              builder: (context, box) => Column(
                 children: [
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(4, 6, 0, 16),
-                    child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: LogoTitle(fontSize: 26)),
-                  ),
-                  _HoldCard(c: c, cell: 22, size: const Size(120, 52)),
-                  if (game.powersEnabled) ...[const SizedBox(height: 16), PowerBar(c: c, vertical: true)],
-                  const SizedBox(height: 16),
-                  GlassCard(
-                    glow: c.fx.levelPulse,
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CardLabel(hud.label),
-                        const SizedBox(height: 4),
-                        _ScoreText(c: c, size: 38, text: hud.value),
-                        const SizedBox(height: 8),
-                        if (c.mode.isChallenge || c.mode == GameMode.chaos)
-                          for (final (label, value) in hud.stats) stat(label, value)
-                        else ...[stat(s.level, '${game.level}'), stat(s.lines, '${game.lines}'), stat(s.time, formatTime(c.playTime))],
-                        stat(
-                          s.best,
-                          c.mode.recordsTime
-                              ? (settings.bestTime(c.mode) == null ? '—' : s.clock(settings.bestTime(c.mode)!))
-                              : s.score(settings.bestScore(c.mode)),
-                          accent: true,
-                        ),
-                        stat(s.mode, s.modeName(c.mode)),
-                      ],
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.fromLTRB(4, 6, 0, 16),
+                            child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: LogoTitle(fontSize: 26)),
+                          ),
+                          _HoldCard(c: c, cell: 22, size: const Size(120, 52)),
+                          if (game.powersEnabled) ...[const SizedBox(height: 16), PowerBar(c: c, vertical: true)],
+                          const SizedBox(height: 16),
+                          GlassCard(
+                            glow: c.fx.levelPulse,
+                            padding: const EdgeInsets.all(18),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CardLabel(hud.label),
+                                const SizedBox(height: 4),
+                                _ScoreText(c: c, size: 38, text: hud.value),
+                                const SizedBox(height: 8),
+                                if (c.mode.isChallenge || c.mode == GameMode.chaos)
+                                  for (final (label, value) in hud.stats) stat(label, value)
+                                else ...[
+                                  stat(s.level, '${game.level}'),
+                                  stat(s.lines, '${game.lines}'),
+                                  stat(s.time, formatTime(c.playTime)),
+                                ],
+                                stat(
+                                  s.best,
+                                  c.mode.recordsTime
+                                      ? (settings.bestTime(c.mode) == null ? '—' : s.clock(settings.bestTime(c.mode)!))
+                                      : s.score(settings.bestScore(c.mode)),
+                                  accent: true,
+                                ),
+                                stat(s.mode, s.modeName(c.mode)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
+                  if (box.maxHeight >= (game.powersEnabled ? 900 : 680)) _SideLokum(c: c),
                 ],
               ),
             ),
@@ -1166,6 +1182,55 @@ class _ThemeSheet extends StatelessWidget {
   }
 }
 
+/// Lokum under the left column on wide screens: he reacts to quads, levels
+/// and records with a short line above his head.
+class _SideLokum extends StatelessWidget {
+  const _SideLokum({required this.c});
+
+  final GameController c;
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+    child: SizedBox(
+      key: const ValueKey('side-lokum'),
+      height: 170,
+      child: ValueListenableBuilder(
+        valueListenable: c.frame,
+        builder: (context, _, _) {
+          final line = c.lokum.line;
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (line != null)
+                Container(
+                  margin: const EdgeInsets.only(left: 40, bottom: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: const [BoxShadow(color: Color(0x55000000), offset: Offset(0, 3))],
+                  ),
+                  child: Text(
+                    line,
+                    style: const TextStyle(
+                      fontFamily: 'Baloo2',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF7A2A9E),
+                      height: 1.1,
+                    ),
+                  ),
+                ),
+              LokumView(outfit: c.outfit, pose: c.lokum.pose, hop: c.lokum.hop(c.playTime), beat: (c.playTime / 0.9) % 1, size: 80),
+            ],
+          );
+        },
+      ),
+    ),
+  );
+}
+
 class _PauseOverlay extends StatelessWidget {
   const _PauseOverlay({super.key, required this.c});
 
@@ -1176,6 +1241,15 @@ class _PauseOverlay extends StatelessWidget {
     final p = GamePalette.of(context);
     final s = AppStrings.of(context);
     final buttons = [
+      Center(
+        child: SugarMascotView(
+          pose: LokumPose.happy,
+          line: s.lokum('pause', c.playTime.floor()),
+          outfit: c.outfit,
+          size: 52,
+          bubbleLeft: false,
+        ),
+      ),
       Text(
         s.paused,
         textAlign: TextAlign.center,
@@ -1265,9 +1339,18 @@ class _GameOverOverlay extends StatelessWidget {
       _ => game.won ? s.challengeDone : s.challengeFailed,
     };
     final bestTime = c.settings.bestTime(c.mode);
+    final happy = game.won || c.newRecord;
     return _OverlayShell(
       landscapeTail: 4,
       children: [
+        Center(
+          child: DancingLokum(
+            outfit: c.outfit,
+            size: 56,
+            pose: happy ? LokumPose.dance : LokumPose.sad,
+            moving: happy && c.settings.effects,
+          ),
+        ),
         if (c.mode.isChallenge) ...[Center(child: CardLabel(s.modeName(c.mode).toUpperCase())), const SizedBox(height: 6)],
         Text(
           title,

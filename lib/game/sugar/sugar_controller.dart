@@ -114,6 +114,19 @@ class SugarController extends ChangeNotifier {
   (Cell, Cell)? hint;
   double _idle = 0;
 
+  /// When Lokum dived into the board for a sugar rush (board time).
+  double? diveStart;
+  static const double diveLength = 1.1;
+
+  /// Lokum is in the board, gobbling a row, not in his corner.
+  bool get diving => diveStart != null && now - diveStart! < diveLength;
+
+  /// The row Lokum gobbles on his dive.
+  int diveRow = 4;
+
+  /// What Lokum wears.
+  LokumOutfit get outfit => LokumOutfit.worn(settings.lokumOutfit, settings.totalSugarStars);
+
   bool get started => game.status != SugarStatus.ready;
   bool get busy => game.status == SugarStatus.resolving || now < _waitUntil;
   bool get canPlay => game.status == SugarStatus.idle && !paused && !busy;
@@ -164,6 +177,7 @@ class SugarController extends ChangeNotifier {
     armed = null;
     chest = const {};
     selected = hint = null;
+    diveStart = null;
     _overAge = -1;
     _playTime = 0;
     _idle = 0;
@@ -250,14 +264,19 @@ class SugarController extends ChangeNotifier {
       }
       if (game.status == SugarStatus.idle && now >= _waitUntil) {
         _idle += dt;
-        if (_idle > 6 && hint == null) hint = game.findMove();
+        if (_idle > 6 && hint == null) {
+          hint = game.findMove();
+          // Lokum points the way.
+          if (hint != null) say('hint', LokumPose.point, hold: 2.6);
+        }
+        if (_idle > 16 && mascot.pose != LokumPose.sleepy && mascot.line == null) say('sleepy', LokumPose.sleepy, priority: 0, hold: 3);
       }
       motions.removeWhere((_, m) => m.done(now));
       ghosts.removeWhere((g) => now > g.start + SugarGhost.life);
       if (mascot.line != null && now > mascot.lineUntil) {
         mascot.line = null;
         mascot.priority = 0;
-        if (mascot.pose != LokumPose.happy && !game.isOver) {
+        if (mascot.pose != LokumPose.happy && mascot.pose != LokumPose.sleepy && !game.isOver) {
           mascot
             ..pose = LokumPose.happy
             ..changed = now;
@@ -294,6 +313,13 @@ class SugarController extends ChangeNotifier {
   void _touched() {
     _idle = 0;
     hint = null;
+    if (mascot.pose == LokumPose.sleepy || mascot.pose == LokumPose.point) {
+      mascot
+        ..pose = LokumPose.happy
+        ..line = null
+        ..priority = 0
+        ..changed = now;
+    }
   }
 
   /// A tap on cell ([x], [y]).
@@ -485,7 +511,7 @@ class SugarController extends ChangeNotifier {
           final low = e.bombs.map((b) => b.$3).fold(99, min);
           if (low <= 3) {
             audio.play(Sfx.bump, volume: 0.6);
-            if (!_warnedBomb || low <= 1) say('bomb', LokumPose.wow, priority: 3);
+            if (!_warnedBomb || low <= 1) say('bomb', LokumPose.scared, priority: 3);
             _warnedBomb = true;
           }
         case SugarBombExploded():
@@ -500,7 +526,10 @@ class SugarController extends ChangeNotifier {
           fx.confetti();
           audio.play(Sfx.perfect);
           if (settings.vibration) haptics.celebrate();
-          say('rush', LokumPose.cheer, priority: 2);
+          say('rush', LokumPose.chomp, priority: 2);
+          // Lokum dives in and gobbles a row on the way.
+          diveStart = now;
+          diveRow = 2 + Random(game.score).nextInt(SugarGame.size - 4);
           _wait(0.9);
         case SugarStarReached():
           fx.starPulse[e.star - 1] = 1;
@@ -552,14 +581,14 @@ class SugarController extends ChangeNotifier {
       newBest = before > 0 && game.score > before;
       fx.confetti(count: 80);
       audio.play(Sfx.levelup);
-      say('win', LokumPose.cheer, priority: 5, hold: 99);
+      say('win', LokumPose.dance, priority: 5, hold: 99);
       if (settings.vibration) haptics.celebrate();
     } else {
       // A loss counts towards play time only; the level stays as it was.
       settings.recordSugarLevel(level.number, stars: 0, score: game.score, seconds: _playTime);
       audio.play(Sfx.gameover);
       audio.duck = 0.4;
-      say('lose', LokumPose.wow, priority: 5, hold: 99);
+      say('lose', LokumPose.sad, priority: 5, hold: 99);
       if (settings.vibration) haptics.heavy();
     }
     notifyListeners();

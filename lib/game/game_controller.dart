@@ -10,6 +10,8 @@ import '../core/tetris_game.dart';
 import '../settings/settings.dart';
 import '../l10n/strings.dart';
 import 'fx/effects.dart';
+import 'lokum_mood.dart';
+import 'sugar/sugar_art.dart' show LokumOutfit, LokumPose;
 import '../l10n/voice_lines.dart';
 import 'motivation.dart';
 import 'play_history.dart';
@@ -61,6 +63,12 @@ class GameController extends ChangeNotifier {
 
   GameMode mode = GameMode.classic;
   bool newRecord = false;
+
+  /// Lokum beside the board on wide screens, on [playTime]'s clock.
+  final LokumMood lokum = LokumMood();
+
+  /// What Lokum wears.
+  LokumOutfit get outfit => LokumOutfit.worn(settings.lokumOutfit, settings.totalSugarStars);
 
   /// Seconds of active play in the current game.
   double playTime = 0;
@@ -114,6 +122,7 @@ class GameController extends ChangeNotifier {
     );
     newRecord = false;
     endNote = null;
+    lokum.reset();
     playTime = 0;
     _lastSave = 0;
     settings.savedGame = null;
@@ -258,6 +267,7 @@ class GameController extends ChangeNotifier {
       if (playTime - _lastSave >= _saveEvery) saveProgress();
     }
     _process(game.drainEvents());
+    lokum.settle(playTime, keep: game.status == GameStatus.over);
     if (game.isRunning) motivation.update(dt, game);
     final shown = motivation.current;
     if (shown != null && shown.id != _lastMotivationId) {
@@ -328,11 +338,31 @@ class GameController extends ChangeNotifier {
       motivation.onEvent(e, game);
       _sound(e);
       _haptic(e);
+      _lokumReacts(e);
       if (e is GameOver) {
         settings.savedGame = null;
         _recordFinished(e.won);
         audio.duck = 0.4;
+        final happy = e.won || newRecord;
+        lokum.say(_strings, happy ? 'record' : 'over', happy ? LokumPose.dance : LokumPose.sad, playTime, priority: 5, hold: 99);
       }
+    }
+  }
+
+  void _lokumReacts(GameEvent e) {
+    switch (e) {
+      case LinesCleared(:final count, :final perfectClear):
+        if (perfectClear) {
+          lokum.say(_strings, 'great', LokumPose.dance, playTime, priority: 3);
+        } else if (count >= 4) {
+          lokum.say(_strings, 'quad', LokumPose.wow, playTime, priority: 2);
+        } else if (count >= 2) {
+          lokum.say(_strings, null, LokumPose.cheer, playTime);
+        }
+      case LevelUp():
+        lokum.say(_strings, 'level', LokumPose.wink, playTime);
+      default:
+        break;
     }
   }
 

@@ -8,6 +8,8 @@ import '../../audio/haptics.dart';
 import '../../core/chain/chain_game.dart';
 import '../../l10n/strings.dart';
 import '../../settings/settings.dart';
+import '../lokum_mood.dart';
+import '../sugar/sugar_art.dart';
 import 'chain_fx.dart';
 
 /// Runs a Zincir Küpler game: time, input, sound, haptics and records.
@@ -35,7 +37,16 @@ class ChainController extends ChangeNotifier {
   bool newRecord = false;
   double _overAge = -1;
 
-  set strings(AppStrings value) => fx.strings = value;
+  AppStrings _strings = AppStrings.tr;
+  set strings(AppStrings value) => fx.strings = _strings = value;
+
+  /// Lokum cheering by the Yükselt button, on the game's own clock.
+  final LokumMood lokum = LokumMood();
+  double clock = 0;
+  bool _warnedDanger = false;
+
+  /// What Lokum wears.
+  LokumOutfit get outfit => LokumOutfit.worn(settings.lokumOutfit, settings.totalSugarStars);
 
   bool get started => game.status != ChainStatus.ready;
   bool get playing => game.status == ChainStatus.playing;
@@ -99,6 +110,8 @@ class ChainController extends ChangeNotifier {
     newRecord = false;
     _overAge = -1;
     _grab = null;
+    lokum.reset();
+    _warnedDanger = false;
     final last = mode == ChainMode.timeAttack ? 'chainTime' : 'chainEndless';
     if (settings.lastPlay != last) settings.lastPlay = last;
     audio.startMusic();
@@ -148,6 +161,16 @@ class ChainController extends ChangeNotifier {
       _followGrab();
     }
     if (_overAge >= 0) _overAge += dt;
+    if (running || game.isOver) clock += dt;
+    lokum.settle(clock, keep: game.isOver);
+    if (running) {
+      if (game.grace > 0 && !_warnedDanger) {
+        _warnedDanger = true;
+        lokum.say(_strings, 'danger', LokumPose.scared, clock, priority: 3);
+      } else if (game.grace <= 0) {
+        _warnedDanger = false;
+      }
+    }
     fx.danger = game.grace > 0 ? 1 : 0;
     fx.update(running || game.isOver ? dt : 0);
     _process(game.drainEvents());
@@ -255,6 +278,7 @@ class ChainController extends ChangeNotifier {
           final size = e.combo >= 7 ? 4 : (e.combo >= 5 ? 3 : (e.combo == 4 ? 2 : 1));
           audio.play(Sfx.values.byName('clear$size'));
           if (e.chain >= 2) audio.playCombo(e.chain - 1);
+          if (e.chain >= 2) lokum.say(_strings, 'chain', e.chain >= 3 ? LokumPose.wow : LokumPose.cheer, clock, priority: 2);
           if (settings.vibration) e.chain >= 3 || e.combo >= 6 ? haptics.celebrate() : haptics.medium();
         case ChainPopped():
           if (e.index % 2 == 0) audio.play(Sfx.soft, volume: 0.35);
@@ -270,6 +294,7 @@ class ChainController extends ChangeNotifier {
           if (settings.vibration) haptics.medium();
         case ChainLevelUp():
           audio.play(Sfx.levelup, volume: 0.7);
+          lokum.say(_strings, 'level', LokumPose.wink, clock);
         case ChainGameOver():
           _overAge = 0;
           game.raising = false;
@@ -277,6 +302,7 @@ class ChainController extends ChangeNotifier {
           audio.duck = 0.4;
           if (settings.vibration) haptics.heavy();
           newRecord = settings.recordChainGame(mode: mode, difficulty: difficulty, score: game.score, seconds: game.time);
+          lokum.say(_strings, newRecord ? 'record' : 'over', newRecord ? LokumPose.dance : LokumPose.sad, clock, priority: 5, hold: 99);
           if (settings.savedChain != null) settings.savedChain = null;
         default:
           break;

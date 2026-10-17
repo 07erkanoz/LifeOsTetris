@@ -19,11 +19,14 @@ Future<void> pumpFor(WidgetTester tester, int frames, [int ms = 33]) async {
   }
 }
 
-Future<Settings> openSugar(WidgetTester tester, {Settings? settings}) async {
+/// Opens the Şeker map; the first chapter's story card counts as seen
+/// unless [story].
+Future<Settings> openSugar(WidgetTester tester, {Settings? settings, bool story = false}) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   settings ??= Settings.memory()..language = AppLanguage.tr;
+  if (!story) settings.markStorySeen(0);
   await tester.pumpWidget(KuplerApp(settings: settings, audio: AudioService(enabled: false)));
   await tester.pump(const Duration(milliseconds: 100));
   await tester.tap(find.byKey(const ValueKey('change-mode')));
@@ -212,6 +215,29 @@ void main() {
     expect(settings.sugarBoosters(SugarBooster.rainbow), rainbows - 1);
     expect(c.game.board.expand((r) => r).where((p) => p?.isPrism ?? false), isNotEmpty);
     expect(c.armed, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a chapter opens with its story card, once', (tester) async {
+    final settings = await openSugar(tester, story: true);
+    await tester.tap(find.byKey(const ValueKey('sugar-continue')));
+    await pumpFor(tester, 20, 40);
+    expect(find.byKey(const ValueKey('story-card')), findsOneWidget);
+    expect(find.text('Eminönü'), findsWidgets);
+    expect(find.textContaining('1777'), findsOneWidget, reason: 'it opens with history');
+    expect(find.byKey(const ValueKey('sugar-play')), findsNothing);
+    // History, Ekşi Limon, Lokum: three taps.
+    for (var i = 0; i < 2; i++) {
+      await tester.tap(find.byKey(const ValueKey('story-card')));
+      await pumpFor(tester, 10, 40);
+      expect(find.byKey(const ValueKey('story-card')), findsOneWidget);
+    }
+    await tester.tap(find.byKey(const ValueKey('story-card')));
+    await pumpFor(tester, 10, 40);
+    expect(find.byKey(const ValueKey('story-card')), findsNothing);
+    expect(find.byKey(const ValueKey('sugar-play')), findsOneWidget);
+    expect(settings.storySeen(0), isTrue);
+    expect(settings.storySeen(1), isFalse);
     expect(tester.takeException(), isNull);
   });
 

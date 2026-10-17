@@ -74,6 +74,8 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
       onHopDone: () => _hop = 0,
       onLokum: () => _nextTip(tips.length),
       onAction: () => tip.run(context, c),
+      outfit: c.settings.outfit,
+      onWardrobe: () => showLokumWardrobe(context, c.settings),
     );
     final resume = _resumeButtons(context);
     final play = _LobbyPlayCard(mode: last, clock: _clock, settings: c.settings, onTap: () => _launch(context, c, last));
@@ -504,7 +506,16 @@ class _LobbyHeader extends StatelessWidget {
 
 /// Lokum and his speech bubble with the suggestion and its button.
 class _LobbyHero extends StatelessWidget {
-  const _LobbyHero({required this.tip, required this.clock, required this.hop, required this.onHopDone, required this.onLokum, required this.onAction});
+  const _LobbyHero({
+    required this.tip,
+    required this.clock,
+    required this.hop,
+    required this.onHopDone,
+    required this.onLokum,
+    required this.onAction,
+    required this.outfit,
+    required this.onWardrobe,
+  });
 
   final _LobbyTip tip;
   final Animation<double> clock;
@@ -512,6 +523,8 @@ class _LobbyHero extends StatelessWidget {
   final VoidCallback onHopDone;
   final VoidCallback onLokum;
   final VoidCallback onAction;
+  final LokumOutfit outfit;
+  final VoidCallback onWardrobe;
 
   @override
   Widget build(BuildContext context) {
@@ -557,27 +570,77 @@ class _LobbyHero extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        GestureDetector(
-          key: const ValueKey('lokum'),
-          onTap: onLokum,
-          child: SizedBox(
-            width: 104,
-            height: 118,
-            child: TweenAnimationBuilder<double>(
-              key: ValueKey('hop-${tip.keyName}'),
-              tween: Tween(begin: hop, end: 0),
-              duration: const Duration(milliseconds: 520),
-              curve: Curves.easeOut,
-              onEnd: onHopDone,
-              builder: (context, jump, _) => CustomPaint(
-                painter: _LokumPainter(pose: tip.pose, palette: p, clock: clock, jump: jump, dpr: MediaQuery.devicePixelRatioOf(context)),
+        SizedBox(
+          width: 104,
+          height: 118,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  key: const ValueKey('lokum'),
+                  onTap: onLokum,
+                  child: TweenAnimationBuilder<double>(
+                    key: ValueKey('hop-${tip.keyName}'),
+                    tween: Tween(begin: hop, end: 0),
+                    duration: const Duration(milliseconds: 520),
+                    curve: Curves.easeOut,
+                    onEnd: onHopDone,
+                    builder: (context, jump, _) => CustomPaint(
+                      painter: _LokumPainter(pose: tip.pose, outfit: outfit, palette: p, clock: clock, jump: jump, dpr: MediaQuery.devicePixelRatioOf(context)),
+                    ),
+                  ),
+                ),
               ),
-            ),
+              // His wardrobe, a tap away.
+              Positioned(left: -2, bottom: 0, child: _WardrobeButton(onTap: onWardrobe)),
+            ],
           ),
         ),
         const SizedBox(width: 8),
         Expanded(child: bubble),
       ],
+    );
+  }
+}
+
+/// The little hanger by Lokum's feet that opens his wardrobe.
+class _WardrobeButton extends StatelessWidget {
+  const _WardrobeButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = GamePalette.of(context);
+    final pixel = p.skin == GameSkin.pixel;
+    final neon = isNeon(p);
+    final fill = neon ? neonCyan : (pixel ? const Color(0xFFFFD23F) : Colors.white);
+    return Tooltip(
+      message: AppStrings.of(context).wardrobeShort,
+      child: Semantics(
+        button: true,
+        label: AppStrings.of(context).wardrobeShort,
+        child: GestureDetector(
+          key: const ValueKey('wardrobe-open'),
+          onTap: onTap,
+          child: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: fill,
+              shape: pixel ? BoxShape.rectangle : BoxShape.circle,
+              border: Border.all(color: neon ? Colors.white : const Color(0xFFFF4FA3), width: 2),
+              boxShadow: [
+                if (neon) BoxShadow(color: neonCyan.withValues(alpha: 0.6), blurRadius: 10),
+                if (pixel) const BoxShadow(color: Color(0xFF0A0A22), offset: Offset(2, 2)),
+                if (!neon && !pixel) const BoxShadow(color: Color(0x55000000), offset: Offset(0, 2), blurRadius: 3),
+              ],
+            ),
+            child: Icon(Icons.checkroom_rounded, size: 20, color: neon || pixel ? const Color(0xFF1B1B3A) : const Color(0xFFFF4FA3)),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1172,9 +1235,10 @@ class _LobbySprites {
 /// on the toy skins, see-through and lit with a neon rim on neon, 8-bit on
 /// pixel. He bobs with the clock and jumps when tapped.
 class _LokumPainter extends CustomPainter {
-  _LokumPainter({required this.pose, required this.palette, required this.clock, required this.jump, required this.dpr}) : super(repaint: clock);
+  _LokumPainter({required this.pose, required this.outfit, required this.palette, required this.clock, required this.jump, required this.dpr}) : super(repaint: clock);
 
   final LokumPose pose;
+  final LokumOutfit outfit;
   final GamePalette palette;
   final Animation<double> clock;
   final double jump;
@@ -1186,7 +1250,7 @@ class _LokumPainter extends CustomPainter {
     final pixel = palette.skin == GameSkin.pixel;
     final neon = isNeon(palette);
     final key =
-        '$size@$dpr/${pose.name}/${pixel
+        '$size@$dpr/${pose.name}/${outfit.name}/${pixel
             ? 'p'
             : neon
             ? 'n'
@@ -1212,7 +1276,7 @@ class _LokumPainter extends CustomPainter {
           ),
       );
       canvas.saveLayer(Offset.zero & Size(w, h), Paint()..color = Colors.white.withValues(alpha: 0.9));
-      paintLokum(canvas, c, size, pose: pose);
+      paintLokum(canvas, c, size, pose: pose, outfit: outfit);
       canvas.drawCircle(
         c + Offset(0, size * 0.12),
         size * 0.4,
@@ -1238,7 +1302,7 @@ class _LokumPainter extends CustomPainter {
           ..color = const Color(0xFFFFB3F2),
       );
     } else {
-      paintLokum(canvas, c, size, pose: pose);
+      paintLokum(canvas, c, size, pose: pose, outfit: outfit);
     }
     final image = recorder.endRecording().toImageSync(max(1, (w * scale).ceil()), max(1, (h * scale).ceil()));
     return _cache[key] = image;
@@ -1260,5 +1324,5 @@ class _LokumPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_LokumPainter old) => old.pose != pose || old.palette != palette || old.jump != jump || old.dpr != dpr;
+  bool shouldRepaint(_LokumPainter old) => old.pose != pose || old.outfit != outfit || old.palette != palette || old.jump != jump || old.dpr != dpr;
 }

@@ -15,6 +15,8 @@ import '../l10n/strings.dart';
 import '../platform/orientation_lock.dart';
 import '../settings/settings.dart';
 import 'game_screen.dart' show showSettingsDialog;
+import 'lokum_wardrobe.dart';
+import 'story_card.dart';
 import 'sugar_widgets.dart';
 
 String _thousands(int n) {
@@ -106,6 +108,9 @@ class _SugarScreenState extends State<SugarScreen> with SingleTickerProviderStat
     super.dispose();
   }
 
+  /// A chapter's first level opens with its story card, once.
+  bool get _storyDue => !c.started && (c.level.number - 1) % SugarLevels.perChapter == 0 && !c.settings.storySeen(SugarLevels.chapterOf(c.level.number));
+
   void _back() {
     if (c.started && !c.game.isOver && !c.paused) {
       c.togglePause();
@@ -162,7 +167,14 @@ class _SugarScreenState extends State<SugarScreen> with SingleTickerProviderStat
                   builder: (context, _) => Stack(
                     children: [
                       _Play(c: c, onBack: _back),
-                      if (!c.started)
+                      if (_storyDue)
+                        StoryCard(
+                          chapter: SugarLevels.chapterOf(c.level.number),
+                          outfit: c.settings.outfit,
+                          moving: c.settings.effects,
+                          onDone: () => setState(() => c.settings.markStorySeen(SugarLevels.chapterOf(c.level.number))),
+                        )
+                      else if (!c.started)
                         _StartPanel(c: c, onBack: _leave)
                       else if (c.paused)
                         _PausePanel(c: c, onMenu: _leave, onHome: _home)
@@ -285,7 +297,17 @@ class _Mascot extends StatelessWidget {
     valueListenable: c.frame,
     builder: (context, _, _) {
       final t = (c.now - c.mascot.changed) / 0.4;
-      return SugarMascotView(key: const ValueKey('sugar-mascot'), pose: c.mascot.pose, line: c.mascot.line, hop: t >= 0 && t < 1 ? t : 0, size: size);
+      // Out of his corner while he dives into the board.
+      if (c.diving) return SizedBox(width: size * 1.25, height: size * 1.3);
+      return SugarMascotView(
+        key: const ValueKey('sugar-mascot'),
+        pose: c.mascot.pose,
+        line: c.mascot.line,
+        hop: t >= 0 && t < 1 ? t : 0,
+        size: size,
+        outfit: c.settings.outfit,
+        beat: (c.now / 0.9) % 1,
+      );
     },
   );
 }
@@ -772,7 +794,7 @@ class _WonPanel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SugarMascotView(pose: LokumPose.cheer, size: 70),
+            DancingLokum(outfit: c.settings.outfit, size: 70, moving: c.settings.effects),
             CandyText(s.sugarWon, size: 32, colors: const [Color(0xFFFFF6B0), Color(0xFFFFC21A), Color(0xFFFF6A00)], outline: const Color(0xFF6A0E4A)),
             const SizedBox(height: 8),
             TweenAnimationBuilder<double>(
@@ -876,7 +898,7 @@ class _LostPanel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SugarMascotView(pose: LokumPose.wow, size: 64),
+            SugarMascotView(pose: LokumPose.sad, size: 64, outfit: c.settings.outfit),
             CandyText(c.lostToBomb ? s.sugarBombLost : s.sugarLost, size: 32, outline: const Color(0xFF8A1550)),
             const SizedBox(height: 10),
             Wrap(

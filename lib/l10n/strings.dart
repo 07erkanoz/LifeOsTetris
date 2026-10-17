@@ -222,6 +222,26 @@ class AppStrings {
   String get tipBeatBest => _t('Rekorunu geçebilir misin?', 'Can you beat your best?');
   String get tipPlay => _t('Oyna', 'Play');
   String get tipTapMe => _t('Bana dokun, bir fikrim daha var!', 'Tap me for another idea!');
+  // Lokum's wardrobe.
+  String get wardrobeTitle => _t("LOKUM'UN DOLABI", "LOKUM'S WARDROBE");
+  String get wardrobeShort => _t('Dolap', 'Wardrobe');
+  String get wardrobeHint => _t("Şeker Küpler'de yıldız topla, yeni kostümler açılsın. Lokum seçtiğini her yerde giyer.", 'Collect stars in Şeker Küpler to unlock outfits. Lokum wears your pick everywhere.');
+  String get outfitWorn => _t('GİYİLİ', 'WEARING');
+  String get close => _t('Kapat', 'Close');
+  String get outfitWear => _t('Giy', 'Wear');
+  String starsCount(int n) => _t('$n yıldız', '$n stars');
+  String outfitName(String name) => switch (name) {
+    'fez' => _t('Fes', 'Fez'),
+    'tulip' => _t('Lale', 'Tulip'),
+    'nazar' => _t('Nazar boncuğu', 'Evil-eye bead'),
+    'moustache' => _t('Pala bıyık', 'Grand moustache'),
+    'simit' => _t('Simitçi tablası', 'Simit tray'),
+    'kalpak' => _t('Kalpak', 'Kalpak'),
+    'janissary' => _t('Yeniçeri börkü', 'Janissary börk'),
+    'sultan' => _t('Padişah kavuğu', "Sultan's turban"),
+    _ => _t('Kostümsüz', 'No outfit'),
+  };
+  String outfitUnlocked(String name) => _t('Yeni kostüm: ${outfitName(name)}!', 'New outfit: ${outfitName(name)}!');
   String get badgeContinue => _t('DEVAM', 'CONTINUE');
   String bestLine(String score) => _t('Rekor $score', 'Best $score');
   String starsLine(int got, int all) => _t('$got / $all yıldız', '$got / $all stars');
@@ -355,14 +375,79 @@ class AppStrings {
   String get sugarBoss => _t('BOSS', 'BOSS');
   String get sugarHard => _t('ZOR', 'HARD');
   String get sugarAllDone => _t('Tüm seviyeler bitti! Yıldızları topla.', 'All levels done! Go for the stars.');
-  String sugarChapter(int n) => switch (n) {
-    0 => _t('BÖLÜM 1 · Şeker Kasabası', 'CHAPTER 1 · Candy Town'),
-    1 => _t('BÖLÜM 2 · Buzlu Vadi', 'CHAPTER 2 · Frosty Valley'),
-    2 => _t('BÖLÜM 3 · Zincir Kalesi', 'CHAPTER 3 · Chain Castle'),
-    3 => _t('BÖLÜM 4 · Kutu Fabrikası', 'CHAPTER 4 · Box Factory'),
-    4 => _t('BÖLÜM 5 · Bomba Kanyonu', 'CHAPTER 5 · Bomb Canyon'),
-    _ => _t('BÖLÜM 6 · Gökkuşağı Adası', 'CHAPTER 6 · Rainbow Island'),
+  String sugarChapter(int n) => '${chapterLabel(n)} · ${chapterPlace(n)}';
+  String chapterLabel(int n) => _t('BÖLÜM ${n + 1}', 'CHAPTER ${n + 1}');
+
+  /// Where in İstanbul chapter [n] (0-based) is set.
+  String chapterPlace(int n) => switch (n) {
+    0 => 'Eminönü',
+    1 => _t('Kız Kulesi', "Maiden's Tower"),
+    2 => _t('Rumeli Hisarı', 'Rumeli Fortress'),
+    3 => _t('Kapalıçarşı', 'Grand Bazaar'),
+    4 => 'Galata',
+    _ => _t('Adalar', "Princes' Islands"),
   };
+
+  /// The story card of chapter [n]: when and where, what happened there
+  /// (history), then Ekşi Limon's move and Lokum's answer.
+  ({String when, String history, String limon, String lokum}) chapterStory(int n) => switch (n) {
+    0 => (
+      when: _t('1777 · Bahçekapı', '1777 · Bahçekapı'),
+      history: _t(
+        "Mısır Çarşısı'nın birkaç adım ötesinde açılan bir şekerci dükkânı, lokumu İstanbul'un simgesi yaptı. Bu gece o dükkânın iki yüz yıllık tarif defteri çalındı.",
+        'A few steps from the Spice Bazaar, a confectioner opened a shop that made lokum the symbol of İstanbul. Tonight its two-hundred-year-old book of recipes was stolen.',
+      ),
+      limon: _t("Defter artık bende. İstanbul'un tatlısını sayfa sayfa ekşiteceğim; ilk durak bu çarşı.", "The book is mine now. I'll sour İstanbul's sweets page by page, starting with this bazaar."),
+      lokum: _t('Bu çarşının her köşesini bilirim. Şekerleri kurtaralım, izini kaybetmeden.', 'I know every corner of this bazaar. Save the sweets and we keep on his trail.'),
+    ),
+    1 => (
+      when: _t('1621 · Üsküdar', '1621 · Üsküdar'),
+      history: _t(
+        "O kış Boğaz dondu; kaynaklar, halkın Üsküdar'dan karşı kıyıya buzun üstünde yürüyerek geçtiğini yazar. Efsaneye göre Kız Kulesi, kehanetten saklanan bir prensesin sığınağıydı.",
+        "That winter the Bosphorus froze; chroniclers write that people walked across the ice from Üsküdar. Legend says the Maiden's Tower once hid a princess from a prophecy.",
+      ),
+      limon: _t('Buz bu şehrin tarihini bir kez yazdı, bir kez daha yazacak. Kuleye giden her yolu donduruyorum.', "Ice wrote this city's history once and it will again. I'm freezing every way to the tower."),
+      lokum: _t("1621'in buzu da çözülmüştü. Buzlu kareleri kır, kuleye ulaşalım.", "The ice of 1621 melted too. Crack the icy squares and we'll reach the tower."),
+    ),
+    2 => (
+      when: _t('1452 · Rumeli Hisarı', '1452 · Rumeli Fortress'),
+      history: _t(
+        "II. Mehmed, Boğaz'ı denetlemek için hisarı yaklaşık dört ayda yükseltti. Ertesi bahar Bizans, Haliç'in ağzını dev bir demir zincirle kapattı.",
+        'Mehmed II raised the fortress in about four months to command the Bosphorus. The next spring Byzantium closed the Golden Horn with a great iron chain.',
+      ),
+      limon: _t('Zincirin hikâyesini ben de bilirim. Şekerleri tek tek bağladım; hiçbiri yerinden kıpırdamayacak.', "I know the story of the chain too. I've bound the sweets one by one; not one will move."),
+      lokum: _t('O zincir de aşılmıştı: gemiler bir gecede karadan yürütüldü. Zincirleri kır, yol açılsın.', 'That chain was beaten too: ships were hauled overland in a single night. Break the chains and clear the way.'),
+    ),
+    3 => (
+      when: _t('1461 · Kapalıçarşı', '1461 · Grand Bazaar'),
+      history: _t(
+        'Çarşının kalbi Cevahir Bedesteni, fetihten kısa süre sonra yapıldı. Mücevherler ve değerli kumaşlar burada korunur, kapılar her akşam kilitlenirdi.',
+        'The heart of the bazaar, the Cevahir Bedesten, was built soon after the conquest. Jewels and fine cloth were kept here and the gates were locked every evening.',
+      ),
+      limon: _t('Şekerleri bedestenin sandıklarına kilitledim. Bu labirentte kimse yolunu bulamaz.', "I've locked the sweets in the bedesten's chests. Nobody finds their way in this maze."),
+      lokum: _t('Kutunun yanında eşleştir, kilit çözülür. Defterin bir sayfası da burada olmalı.', 'Match beside a box and the lock gives way. A page of the book must be here too.'),
+    ),
+    4 => (
+      when: _t('1348 · Galata', '1348 · Galata'),
+      history: _t(
+        'Cenevizlilerin yaptığı kule, Osmanlı döneminde yangın gözcülerinin yeri oldu. Şehirde duman görülünce kuleden işaret verilir, mahalleler uyarılırdı.',
+        'Built by the Genoese, the tower became the post of fire watchmen in Ottoman times. When smoke rose over the city a signal went out from the top.',
+      ),
+      limon: _t("Galata'nın her köşesine saatli bombalar kurdum. Gözcüler bile yetişemez.", 'I set time bombs all over Galata. Not even the watchmen will keep up.'),
+      lokum: _t('Gözcü gibi düşün: önce sayısı en az olanı söndür. Süre bitmeden!', 'Think like a watchman: put out the lowest count first. Before time runs out!'),
+    ),
+    _ => (
+      when: _t('1072 · Kınalıada', '1072 · Kınalıada'),
+      history: _t(
+        "Tahttan indirilen Bizans imparatoru IV. Romanos Diogenes buraya sürgün edildi. Adaların 'Prens Adaları' diye anılması, böyle sürgünlerin yeri olmalarından gelir.",
+        "Deposed Byzantine emperor Romanos IV Diogenes was exiled here. The islands are called the Princes' Islands because they were where such exiles were sent.",
+      ),
+      limon: _t('Ben sürgüne gitmem, kaçarım. Adaların gökkuşağını da yanıma alıyorum!', "I don't get exiled, I escape. And I'm taking the islands' rainbow with me!"),
+      lokum: _t('Renkleri gökkuşağı toplarıyla geri alacağız. Defterin son sayfaları onda; peşini bırakmak yok.', "We'll win the colours back with rainbow balls. He has the book's last pages; we don't let go."),
+    ),
+  };
+  String get storyNext => _t('Devam ›', 'Next ›');
+  String get storyTap => _t('Oyuna başla ›', 'Play ›');
   String get sugarRush => _t('ŞEKER\nÇILGINLIĞI!', 'SUGAR\nRUSH!');
   String get sugarRushMeter => _t('ŞEKER ÇILGINLIĞI', 'SUGAR RUSH');
   String get sugarLucky => _t('ŞANSLI ŞEKER!', 'LUCKY SWEET!');
@@ -386,6 +471,15 @@ class AppStrings {
       'finale' => [_t('Şölen zamanı!', 'Party time!'), _t('Hepsi patlasın!', 'Pop them all!')],
       'win' => [_t('Yaşasın!', 'Hooray!'), _t('Sen bir şampiyonsun!', "You're a champ!")],
       'lose' => [_t('Bir daha deneyelim!', "Let's try again!"), _t('Az kalmıştı!', 'So close!')],
+      'hint' => [_t('Şunu dene!', 'Try this one!'), _t('Şuraya bak!', 'Look here!')],
+      'sleepy' => [_t('Hıı... uyudum mu?', 'Zzz... did I nod off?'), _t('Sıra sende!', 'Your move!')],
+      'chain' => [_t('Zincir!', 'Chain!'), _t('Harika zincir!', 'Great chain!'), _t('Devam, devam!', 'Keep it going!')],
+      'danger' => [_t('Dikkat, tavan!', 'Mind the top!'), _t('Hızlı ol!', 'Quick!')],
+      'quad' => [_t('Dörtlü!', 'A quad!'), _t('Dört sıra birden!', 'Four at once!')],
+      'level' => [_t('Hızlanıyoruz!', 'Speeding up!'), _t('Yeni seviye!', 'New level!')],
+      'over' => [_t('Bir daha?', 'Again?'), _t('Az kaldı, tekrar!', 'So close, once more!')],
+      'record' => [_t('Yeni rekor!', 'New best!'), _t('Sen bir şampiyonsun!', "You're a champ!")],
+      'pause' => [_t('Mola! Bir çay içelim mi?', 'A break! Tea, anyone?'), _t('Dinlen biraz.', 'Have a rest.')],
       _ => [''],
     };
     return lines[i % lines.length];

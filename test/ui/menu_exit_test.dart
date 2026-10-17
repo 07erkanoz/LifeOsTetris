@@ -19,7 +19,9 @@ Future<Settings> pumpHome(WidgetTester tester) async {
   tester.view.physicalSize = const Size(390, 844);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  final settings = Settings.memory()..language = AppLanguage.tr;
+  final settings = Settings.memory()
+    ..language = AppLanguage.tr
+    ..markStorySeen(0);
   await tester.pumpWidget(KuplerApp(settings: settings, audio: AudioService(enabled: false)));
   await pumpFor(tester, 4);
   return settings;

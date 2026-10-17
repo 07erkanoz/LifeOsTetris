@@ -61,6 +61,8 @@ class Settings extends ChangeNotifier {
   final Map<int, int> _sugarBest = {};
   final Map<SugarBooster, int> _sugarBoosters = {for (final b in SugarBooster.values) b: b.starting};
   String? _savedSugar;
+  String? _lokumOutfit;
+  final Set<int> _storiesSeen = {};
   PlayHistory _history = PlayHistory();
   LineMemory _lineMemory = LineMemory();
 
@@ -126,6 +128,8 @@ class Settings extends ChangeNotifier {
         s._sugarBoosters[b] = prefs.getInt('sugarBooster_${b.name}') ?? b.starting;
       }
       s._savedSugar = prefs.getString('savedSugar');
+      s._lokumOutfit = prefs.getString('lokumOutfit');
+      s._storiesSeen.addAll((prefs.getString('storiesSeen') ?? '').split(',').map(int.tryParse).whereType<int>());
       s._gamesPlayed = prefs.getInt('gamesPlayed') ?? 0;
       s._totalLines = prefs.getInt('totalLines') ?? 0;
       s._totalSeconds = prefs.getInt('totalSeconds') ?? 0;
@@ -186,6 +190,17 @@ class Settings extends ChangeNotifier {
     _savedGame = v;
     v == null ? _prefs?.remove('savedGame') : _prefs?.setString('savedGame', v);
     if (changed) notifyListeners();
+  }
+
+  /// What Lokum wears everywhere (a LokumOutfit name), or null.
+  String? get lokumOutfit => _lokumOutfit;
+  set lokumOutfit(String? v) => _set(() => _lokumOutfit = v, () => v == null ? _prefs?.remove('lokumOutfit') : _prefs?.setString('lokumOutfit', v));
+
+  /// Whether the story card of Şeker Küpler chapter [chapter] was shown.
+  bool storySeen(int chapter) => _storiesSeen.contains(chapter);
+  void markStorySeen(int chapter) {
+    if (!_storiesSeen.add(chapter)) return;
+    _prefs?.setString('storiesSeen', (_storiesSeen.toList()..sort()).join(','));
   }
 
   /// A Zincir Küpler game left half way (JSON), to continue later.
