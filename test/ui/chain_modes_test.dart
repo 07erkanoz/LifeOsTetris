@@ -28,6 +28,8 @@ Future<Settings> open(WidgetTester tester, String mode, {Settings? settings}) as
   await tester.pump(const Duration(milliseconds: 100));
   await tester.tap(find.byKey(const ValueKey('change-mode')));
   await pumpFor(tester, 10, 40);
+  await tester.tap(find.byKey(const ValueKey('game-chain')));
+  await pumpFor(tester, 10, 40);
   await tester.ensureVisible(find.byKey(ValueKey('mode-$mode'), skipOffstage: false));
   await tester.pump(const Duration(milliseconds: 40));
   await tester.tap(find.byKey(ValueKey('mode-$mode')));

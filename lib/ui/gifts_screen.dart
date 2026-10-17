@@ -9,6 +9,7 @@ import '../core/sugar/sugar_levels.dart';
 import '../game/chain/chain_sprites.dart';
 import '../game/sugar/istanbul_art.dart';
 import '../game/sugar/sugar_art.dart';
+import '../game/tower/tower_art.dart';
 import '../l10n/strings.dart';
 import '../settings/settings.dart';
 import 'gift_art.dart';
@@ -536,6 +537,7 @@ class _Collection extends StatelessWidget {
       ChainCubeStyle.cini => settings.unlocked(Unlock.cubesCini),
     };
     const scenes = [null, Unlock.sceneGalata, Unlock.sceneSnow, Unlock.sceneIslands, Unlock.sceneCamlica];
+    final look = FloorLook.parse(settings.towerLook);
     return CandyPanel(
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
       child: Column(
@@ -587,6 +589,26 @@ class _Collection extends StatelessWidget {
                       borderRadius: BorderRadius.circular(8),
                       child: AspectRatio(aspectRatio: 1.6, child: SugarBackdrop(scene: sugarSceneIndex(scenes[i]?.name))),
                     ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(s.towerLookLabel, style: _style(16, _ink)),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              for (final l in FloorLook.values) ...[
+                if (l.index > 0) const SizedBox(width: 6),
+                Expanded(
+                  child: _Choice(
+                    key: ValueKey('floor-${l.name}'),
+                    label: s.floorLookName(l.name),
+                    chosen: look == l || (l == FloorLook.lokum && look.unlock != null && !settings.unlocked(look.unlock!)),
+                    locked: l.unlock != null && !settings.unlocked(l.unlock!),
+                    onTap: () => settings.towerLook = l.name,
+                    picture: GiftPicture(size: const Size(56, 48), paint: (canvas, size) => paintFloorStack(canvas, Offset(size.width / 2, size.height * 0.3), l, scale: 0.5)),
                   ),
                 ),
               ],
@@ -755,6 +777,8 @@ void _tryUnlock(Settings settings, Unlock u) {
       settings.sugarScene = u.name;
     case Unlock.outfitTulipCrown || Unlock.outfitCaptain || Unlock.outfitApron || Unlock.outfitSimitNecklace || Unlock.outfitGuide || Unlock.outfitLemonCrown:
       settings.lokumOutfit = LokumOutfit.values.firstWhere((o) => o.gift == u.name).name;
+    case Unlock.floorCini || Unlock.floorMarble || Unlock.floorGlass || Unlock.floorGold:
+      settings.towerLook = FloorLook.values.firstWhere((l) => l.unlock == u).name;
     case Unlock.shuffle || Unlock.freeze:
       break;
   }
@@ -785,6 +809,10 @@ class _UnlockPicture extends StatelessWidget {
     ),
     Unlock.shuffle => const SugarBoosterIcon(SugarBooster.shuffle, size: 110),
     Unlock.freeze => const Icon(Icons.hourglass_bottom_rounded, size: 100, color: Color(0xFF3A6CF0)),
+    Unlock.floorCini || Unlock.floorMarble || Unlock.floorGlass || Unlock.floorGold => GiftPicture(
+      size: const Size(150, 140),
+      paint: (canvas, size) => paintFloorStack(canvas, Offset(size.width / 2, size.height * 0.36), FloorLook.values.firstWhere((l) => l.unlock == unlock), scale: 1.4),
+    ),
     _ => LokumView(outfit: LokumOutfit.values.firstWhere((o) => o.gift == unlock.name, orElse: () => LokumOutfit.none), pose: LokumPose.cheer, size: 110),
   };
 }

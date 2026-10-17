@@ -307,6 +307,10 @@ class AppStrings {
     'outfitApron' => _t('Kahveci önlüğü', "Coffee maker's apron"),
     'outfitGuide' => _t('Rehber şapkası', "Guide's hat"),
     'outfitLemonCrown' => _t('Altın Limon tacı', 'Golden lemon crown'),
+    'floorCini' => _t('Çini katlar', 'Tile floors'),
+    'floorMarble' => _t('Mermer katlar', 'Marble floors'),
+    'floorGlass' => _t('Cam katlar', 'Glass floors'),
+    'floorGold' => _t('Altın katlar', 'Gold floors'),
     _ => _t('Simit kolye', 'Simit necklace'),
   };
   String unlockText(String u) => switch (u) {
@@ -315,11 +319,20 @@ class AppStrings {
     'sceneGalata' || 'sceneSnow' || 'sceneIslands' || 'sceneCamlica' => _t('Şeker tahtasının arkasında yeni bir İstanbul manzarası.', 'A new Istanbul scene behind the Sugar Blocks board.'),
     'shuffle' => _t("Şeker'de takıldığında tahtayı karıştırır.", 'Shuffles the Sugar Blocks board when you are stuck.'),
     'freeze' => _t("Zincir'de yükselişi birkaç saniye durdurur.", 'Holds the Chain Blocks stack for a few seconds.'),
+    'floorCini' || 'floorMarble' || 'floorGlass' || 'floorGold' => _t("Kule Küpler'de katların yeni görünümü.", 'A new look for the floors of Tower Blocks.'),
     _ => _t("Lokum'un dolabında yeni bir kostüm.", "A new outfit in Lokum's wardrobe."),
   };
   String get collectionTitle => _t('Koleksiyon', 'Collection');
   String get cubeLook => _t('Zincir küpleri', 'Chain Blocks cubes');
   String get sugarSceneLabel => _t('Şeker manzarası', 'Sugar Blocks scene');
+  String get towerLookLabel => _t('Kule katları', 'Tower floors');
+  String floorLookName(String l) => switch (l) {
+    'cini' => _t('Çini', 'Tile'),
+    'marble' => _t('Mermer', 'Marble'),
+    'glass' => _t('Cam', 'Glass'),
+    'gold' => _t('Altın', 'Gold'),
+    _ => _t('Lokum', 'Lokum'),
+  };
   String cubeStyleName(String s) => switch (s) {
     'lokum' => _t('Lokum', 'Lokum'),
     'cini' => _t('Çini', 'Tile'),
@@ -455,6 +468,70 @@ class AppStrings {
   String get adventureSubtitle => _t('Bölümleri bitir, resmi tamamla', 'Finish chapters, complete the picture');
   String get bombTitle => _t('Bomba', 'Bombs');
   String get bombSubtitle => _t('Patlamadan önce satırını temizle', 'Clear their rows before they blow');
+  // ------------------------------------------------------- kule küpler
+  String get towerTitle => _t('Kule Küpler', 'Tower Blocks');
+  String get towerGroup => _t('KULE', 'TOWER');
+  String get towerBlurb => _t('Lokum katları diz, kuleyi yükselt', 'Stack lokum floors, raise the tower');
+  String get towerClimbTitle => _t('Tırmanış', 'The Climb');
+  String get towerClimbSubtitle => _t('Bulutları aş, yıldızlara uzan', 'Past the clouds, up to the stars');
+  String get towerWindTitle => _t('Rüzgâr', 'Wind');
+  String get towerWindSubtitle => _t('Kat esintiyle hızlanıp yavaşlar', 'The floor speeds up and slows in the gusts');
+  String get towerDailyTitle => _t('Günün Kulesi', "Today's Tower");
+  String get towerDailySubtitle => _t('Herkese aynı kule, üç deneme', 'The same tower for all, three tries');
+  String get towerBuildTitle => _t("İstanbul'u İnşa Et", 'Build Istanbul');
+  String get towerBuildSubtitle => _t('Her kat bir kuleyi yükseltir', 'Every floor raises a landmark');
+  String get towerFloorWord => _t('KAT', 'FLOOR');
+  String get towerPerfect => _t('MÜKEMMEL!', 'PERFECT!');
+  String get towerGrew => _t('Kat genişledi!', 'Floor grew!');
+  String towerFloorShout(int n) => _t('$n. KAT!', 'FLOOR $n!');
+  String towerStreak(int n) => _t('MÜKEMMEL ×$n', 'PERFECT ×$n');
+  String towerNextChest(int n) => _t('Sıradaki sandık: $n. kat', 'Next chest: floor $n');
+  String get towerTapHint => _t('Dokun, katı bırak', 'Tap to drop the floor');
+  String floorsLine(int n) => _t('${score(n)} kat', n == 1 ? '1 floor' : '${score(n)} floors');
+  String towerChestTitle(int n) => _t('$n. kat sandığı', 'Floor $n chest');
+  String get towerOverTitle => _t('Kule durdu!', 'The tower stopped!');
+  String get towerRevive => _t('Devam et (1 hak)', 'Keep going (once)');
+  String towerToBuild(int n, String landmark) => _t('$landmark için +${score(n)} kat', '+${score(n)} floors for $landmark');
+  String towerTriesLeft(int n) => _t('Bugün $n deneme kaldı', n == 1 ? '1 try left today' : '$n tries left today');
+  String get towerNoTries => _t('Bugünlük bitti, yarın yeni kule', "That's all for today; a new tower tomorrow");
+  String get towerBuildIntro => _t('Her oyunda koyduğun katlar buraya eklenir.', 'Every floor of every run is added here.');
+  String towerLeft(int n) => _t('$n kat kaldı', n == 1 ? '1 floor to go' : '$n floors to go');
+  String get towerAllDone => _t('Bütün İstanbul kuruldu!', 'All of Istanbul is built!');
+  String get landmarksLabel => _t('KULELER', 'LANDMARKS');
+  String totalFloors(int n) => _t('Toplam ${score(n)} kat', 'All told ${score(n)} floors');
+  String landmarkDone(String name) => _t('$name tamamlandı!', '$name is finished!');
+  String get towerPlay => _t('KULEYE ÇIK', 'CLIMB');
+  String landmarkName(String l) => switch (l) {
+    'galata' => _t('Galata Kulesi', 'Galata Tower'),
+    'maidens' => _t('Kız Kulesi', "Maiden's Tower"),
+    'rumeli' => _t('Rumeli Hisarı', 'Rumeli Fortress'),
+    'beyazit' => _t('Beyazıt Kulesi', 'Beyazıt Tower'),
+    'dolmabahce' => _t('Dolmabahçe Saat Kulesi', 'Dolmabahçe Clock Tower'),
+    'haydarpasa' => _t('Haydarpaşa Garı', 'Haydarpaşa Station'),
+    'selimiye' => _t('Selimiye Kışlası', 'Selimiye Barracks'),
+    _ => _t('Çamlıca Kulesi', 'Çamlıca Tower'),
+  };
+  String landmarkPart(String l, int i) => (switch (l) {
+    'galata' => _t('Taban|Gövde|Seyir terası|Külah|Alem', 'Base|Body|Viewing gallery|Cone roof|Finial'),
+    'maidens' => _t('Ada ve rıhtım|Taş gövde|Balkon|Kubbe|Fener ve bayrak', 'Islet and quay|Stone body|Balcony|Dome|Lantern and flag'),
+    'rumeli' => _t('Surlar|Küçük kule|Büyük kule|Burçlar|Külahlar', 'Walls|Small tower|Great tower|Battlements|Cone roofs'),
+    'beyazit' => _t('Kaide|Taş gövde|Üst gövde|Gözetleme köşkü|Külah', 'Plinth|Stone body|Upper body|Watch room|Cone roof'),
+    'dolmabahce' => _t('Kaide|Gövde|Saat katı|Kubbe|Alem', 'Plinth|Body|Clock floor|Dome|Finial'),
+    'haydarpasa' => _t('Rıhtım|Bina|Sol kule|Sağ kule|Çatılar', 'Quay|Building|Left tower|Right tower|Roofs'),
+    'selimiye' => _t('Avlu|Ana bina|Köşe kuleleri|Çatılar|Bayrak', 'Courtyard|Main building|Corner towers|Roofs|Flag'),
+    _ => _t('Tepe|Gövde|Seyir katı|Üst gövde|Anten', 'Hill|Shaft|Viewing deck|Upper shaft|Antenna'),
+  }).split('|')[i];
+
+  String get mainModeTag => _t('ANA MOD', 'MAIN MODE');
+  String get moreModesLabel => _t('DİĞER MODLAR', 'MORE MODES');
+  String get calmLabel => _t('SAKİN', 'CALM');
+  String linesTag(int n) => _t('$n satır', '$n lines');
+  String modeCount(int n) => _t('$n mod', n == 1 ? '1 mode' : '$n modes');
+  String lastPlayedShort(String mode) => _t('Son: $mode', 'Last: $mode');
+  String get sugarBlurb => _t("Eşleştir, patlat, İstanbul'u gez", 'Match, pop and tour Istanbul');
+  String get chainBlurb => _t('Kaydır, zincir kur, rakibini yen', 'Swap, chain and beat your rival');
+  String get puzzleBlurb => _t('Parçaları yerleştir, satır temizle', 'Place pieces, clear lines');
+  String get classicBlurb => _t('Düşen bloklar, klasik kurallar', 'Falling blocks, classic rules');
 
   // ------------------------------------------------------- zincir küpler
   /// The app's name and what it is.

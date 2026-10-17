@@ -46,9 +46,9 @@ void main() {
     final settings = await pumpHome(tester);
     await tester.tap(find.byKey(const ValueKey('change-mode')));
     await pumpFor(tester, 10);
-    await tester.ensureVisible(find.byKey(const ValueKey('mode-sugar'), skipOffstage: false));
+    await tester.ensureVisible(find.byKey(const ValueKey('game-sugar'), skipOffstage: false));
     await tester.pump(const Duration(milliseconds: 40));
-    await tester.tap(find.byKey(const ValueKey('mode-sugar')));
+    await tester.tap(find.byKey(const ValueKey('game-sugar')));
     await pumpFor(tester, 12);
 
     // The map has its own settings button.

@@ -8,6 +8,8 @@ import '../core/chain/chain_game.dart';
 import '../core/rewards.dart';
 import '../core/sugar/sugar_game.dart' show SugarColor;
 import '../core/sugar/sugar_levels.dart';
+import '../core/tower/tower_game.dart';
+import '../core/tower/tower_landmarks.dart';
 import '../core/scoring.dart';
 import '../game/play_history.dart';
 import '../l10n/strings.dart';
@@ -59,6 +61,13 @@ class Settings extends ChangeNotifier {
   final Map<int, int> _missionStars = {};
   final Map<int, int> _puzzleStars = {};
   final Map<int, int> _rivalWins = {};
+  final Map<TowerMode, int> _towerBest = {};
+  int _towerTotal = 0;
+  int _towerLandmarks = 0;
+  String _towerLook = 'lokum';
+  String? _towerDay;
+  int _towerDayTries = 0;
+  int _towerDayBest = 0;
   ChainDifficulty _chainDifficulty = ChainDifficulty.easy;
   final Map<int, int> _blockStars = {};
   final Map<int, int> _adventureStars = {};
@@ -143,6 +152,16 @@ class Settings extends ChangeNotifier {
       _readStars(prefs.getString('missionStars'), s._missionStars);
       _readStars(prefs.getString('puzzleStars'), s._puzzleStars);
       _readStars(prefs.getString('rivalWins'), s._rivalWins);
+      for (final m in TowerMode.values) {
+        final best = prefs.getInt('towerBest_${m.name}');
+        if (best != null) s._towerBest[m] = best;
+      }
+      s._towerTotal = prefs.getInt('towerTotal') ?? 0;
+      s._towerLandmarks = prefs.getInt('towerLandmarks') ?? 0;
+      s._towerLook = prefs.getString('towerLook') ?? 'lokum';
+      s._towerDay = prefs.getString('towerDay');
+      s._towerDayTries = prefs.getInt('towerDayTries') ?? 0;
+      s._towerDayBest = prefs.getInt('towerDayBest') ?? 0;
       _readStars(prefs.getString('blockStars'), s._blockStars);
       _readStars(prefs.getString('adventureStars'), s._adventureStars);
       _readStars(prefs.getString('sugarStars'), s._sugarStars);
@@ -676,6 +695,75 @@ class Settings extends ChangeNotifier {
     final first = rivalWins(rival) == 0;
     _set(() => _rivalWins[rival] = rivalWins(rival) + 1, () => _prefs?.setString('rivalWins', _writeStars(_rivalWins)));
     return first;
+  }
+
+  // ------------------------------------------------------- kule küpler
+
+  /// Kule Küpler's highest tower in [mode], in floors.
+  int towerBest(TowerMode mode) => _towerBest[mode] ?? 0;
+
+  /// Floors laid in every Kule Küpler run: İstanbul'u İnşa Et.
+  int get towerTotal => _towerTotal;
+
+  BuildProgress get towerBuild => BuildProgress(_towerTotal);
+
+  /// The floor look picked: lokum, or one the chests opened.
+  String get towerLook => _towerLook;
+  set towerLook(String v) => _set(() => _towerLook = v, () => _prefs?.setString('towerLook', v));
+
+  /// Tries left at the day's tower of [now], and its best so far.
+  int towerTriesLeft(DateTime now) => _towerDay == dayKey(now) ? max(0, TowerGame.dailyTries - _towerDayTries) : TowerGame.dailyTries;
+  int towerDayBest(DateTime now) => _towerDay == dayKey(now) ? _towerDayBest : 0;
+
+  /// Records a finished Kule Küpler run of [floors] floors; true for a new
+  /// best. The floors go towards İstanbul'u İnşa Et.
+  bool recordTowerRun({required TowerMode mode, required int floors, required double seconds}) {
+    final record = floors > 0 && floors > towerBest(mode);
+    final today = dayKey(clock());
+    _set(
+      () {
+        if (record) _towerBest[mode] = floors;
+        _towerTotal += floors;
+        if (mode == TowerMode.daily) {
+          if (_towerDay != today) {
+            _towerDay = today;
+            _towerDayTries = 0;
+            _towerDayBest = 0;
+          }
+          _towerDayTries++;
+          _towerDayBest = max(_towerDayBest, floors);
+        }
+        _history.markPlayed(clock());
+        _gamesPlayed++;
+        _totalSeconds += seconds.round();
+      },
+      () {
+        if (record) _prefs?.setInt('towerBest_${mode.name}', floors);
+        _prefs?.setInt('towerTotal', _towerTotal);
+        if (mode == TowerMode.daily) {
+          _prefs?.setString('towerDay', today);
+          _prefs?.setInt('towerDayTries', _towerDayTries);
+          _prefs?.setInt('towerDayBest', _towerDayBest);
+        }
+        _prefs?.setString('playHistory', _history.encode());
+        _prefs?.setInt('gamesPlayed', _gamesPlayed);
+        _prefs?.setInt('totalSeconds', _totalSeconds);
+      },
+    );
+    return record;
+  }
+
+  /// Landmarks of İstanbul'u İnşa Et finished but not yet rewarded: their
+  /// prizes, given now.
+  List<(Landmark, Gift)> claimLandmarks() {
+    final done = towerBuild.done;
+    if (done <= _towerLandmarks) return const [];
+    final prizes = [for (var i = _towerLandmarks; i < done; i++) (Landmark.values[i], Rewards.landmarkPrize(i))];
+    for (final (_, g) in prizes) {
+      applyGift(g);
+    }
+    _set(() => _towerLandmarks = done, () => _prefs?.setInt('towerLandmarks', done));
+    return prizes;
   }
 
   /// Highest score across all modes.

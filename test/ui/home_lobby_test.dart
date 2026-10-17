@@ -10,6 +10,7 @@ import 'package:lifeos_kupler/settings/settings.dart';
 import 'package:lifeos_kupler/theme/palette.dart';
 import 'package:lifeos_kupler/game/chain/chain_controller.dart';
 import 'package:lifeos_kupler/ui/chain_screen.dart';
+import 'package:lifeos_kupler/ui/tower_screen.dart';
 import 'package:lifeos_kupler/ui/sugar_screen.dart';
 
 Future<void> pumpFor(WidgetTester tester, int frames, [int ms = 33]) async {
@@ -64,12 +65,12 @@ void main() {
     expect(find.byKey(const ValueKey('tip-daily')), findsOneWidget, reason: 'today\'s puzzle is not solved');
     await tester.tap(find.byKey(const ValueKey('lokum')));
     await pumpFor(tester, 10);
-    expect(find.byKey(const ValueKey('tip-chainEndless')), findsOneWidget);
+    expect(find.byKey(const ValueKey('tip-towerClimb')), findsOneWidget);
     expect(find.text('Bunu hiç denemedin!'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('tip-action')));
     await pumpFor(tester, 15, 40);
-    expect(find.byType(ChainScreen), findsOneWidget);
+    expect(find.byType(TowerScreen), findsOneWidget);
   });
 
   testWidgets('a Şeker Küpler level left half way comes first, on the bubble and the cards', (tester) async {

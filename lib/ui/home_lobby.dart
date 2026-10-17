@@ -409,6 +409,11 @@ bool _played(Settings s, _PlayMode m) {
     _PlayMode.adventure => s.adventureSolved > 0,
     _PlayMode.bomb => s.bombBest > 0,
     _PlayMode.sugar => s.totalSugarStars > 0 || s.savedSugar != null,
+    _PlayMode.chainMissions => s.totalMissionStars > 0,
+    _PlayMode.chainPuzzles => s.puzzlesSolved > 0,
+    _PlayMode.chainVersus => ChainRival.values.any((r) => s.rivalWins(r.index) > 0),
+    _PlayMode.towerClimb || _PlayMode.towerWind || _PlayMode.towerDaily => s.towerBest(m.towerMode!) > 0,
+    _PlayMode.towerBuild => s.towerTotal > 0,
     _ => false,
   };
 }
@@ -470,6 +475,7 @@ List<_LobbyTip> _lobbyTips(GameController c, AppStrings s) {
     tips.add(_LobbyTip(title: '${s.tipDidYouKnow} ${p.title}, ${p.when}', line: p.fact, button: s.tipSeeCard, pose: LokumPose.wink, card: card, keyName: 'tip-card'));
   }
   for (final m in const [
+    _PlayMode.towerClimb,
     _PlayMode.chainEndless,
     _PlayMode.sugar,
     _PlayMode.adventure,
@@ -505,6 +511,7 @@ List<_LobbyTip> _lobbyTips(GameController c, AppStrings s) {
 /// rest; never the one already on the play card.
 List<_PlayMode> _lobbyCards(Settings s, _PlayMode last) {
   const all = [
+    _PlayMode.towerClimb,
     _PlayMode.sugar,
     _PlayMode.chainEndless,
     _PlayMode.blocksLevels,
@@ -1020,6 +1027,7 @@ String _cardTitle(_PlayMode m, AppStrings s) => switch (m) {
   _PlayMode.blocksLevels => s.puzzleTitle,
   _PlayMode.blocksEndless => '${s.puzzleTitle} · ${s.endlessMode}',
   _PlayMode.normal || _PlayMode.relaxed => s.classicTitle,
+  _PlayMode.towerClimb => s.towerTitle,
   _ => m.title(s),
 };
 
@@ -1030,6 +1038,7 @@ const _modeTones = {
   _ModeGroup.chain: [Color(0xFFFF33EE), Color(0xFF7C3AED)],
   _ModeGroup.sugar: [Color(0xFFFF4D8D), Color(0xFFFF9A1F)],
   _ModeGroup.challenges: [Color(0xFFF59E0B), Color(0xFFEF4444)],
+  _ModeGroup.tower: [Color(0xFFFF8FB8), Color(0xFFFFAA5E)],
 };
 
 ({String? badge, List<Color> badgeColors, String line, double? progress}) _cardInfo(_PlayMode m, Settings settings, AppStrings s) {
@@ -1054,6 +1063,30 @@ const _modeTones = {
     case _PlayMode.adventure:
       if (settings.totalAdventureStars > 0) line = s.starsLine(settings.totalAdventureStars, Adventure.count * 3);
       progress = settings.adventureSolved / Adventure.count;
+    case _PlayMode.chainMissions:
+      if (settings.totalMissionStars > 0) line = s.starsLine(settings.totalMissionStars, ChainMissions.count * 3);
+      progress = settings.totalMissionStars / (ChainMissions.count * 3);
+    case _PlayMode.chainPuzzles:
+      final record = m.record(settings, s);
+      if (record != null) line = record;
+      progress = settings.puzzlesSolved / ChainPuzzles.count;
+    case _PlayMode.towerClimb || _PlayMode.towerWind:
+      final best = settings.towerBest(m.towerMode!);
+      if (best > 0) line = s.bestLine(s.floorsLine(best));
+      progress = best > 0 ? best / TowerGame.milestoneAfter(best) : null;
+    case _PlayMode.towerDaily:
+      final today = settings.clock();
+      line = settings.towerTriesLeft(today) > 0 ? s.towerTriesLeft(settings.towerTriesLeft(today)) : s.towerNoTries;
+    case _PlayMode.towerBuild:
+      final build = settings.towerBuild;
+      final landmark = build.current;
+      if (landmark != null) {
+        line = '${s.landmarkName(landmark.name)} · ${s.score(build.into(landmark))} / ${s.score(landmark.floors)}';
+        progress = build.fraction(landmark);
+      } else {
+        line = s.towerAllDone;
+        progress = 1;
+      }
     default:
       final record = m.record(settings, s);
       if (record != null) line = s.bestLine(record);
@@ -1094,7 +1127,7 @@ class _Badge extends StatelessWidget {
 
 // ------------------------------------------------------------ live scenes
 
-enum _Scene { power, blocks, puzzle, chain, sugar }
+enum _Scene { power, blocks, puzzle, chain, sugar, ferry, versus, chainPuzzle, relaxed, target, chaos, sprint, dig, bombs, adventure, tower, towerWind, towerBuild }
 
 _Scene _sceneOf(_PlayMode m) => switch (m.group) {
   _ModeGroup.superGroup => _Scene.power,
@@ -1102,13 +1135,35 @@ _Scene _sceneOf(_PlayMode m) => switch (m.group) {
   _ModeGroup.puzzle => _Scene.puzzle,
   _ModeGroup.chain => _Scene.chain,
   _ModeGroup.sugar => _Scene.sugar,
+  _ModeGroup.tower => _Scene.tower,
+};
+
+/// The scene that shows [m] itself on a game's page, where its modes sit
+/// side by side.
+_Scene _modeSceneOf(_PlayMode m) => switch (m) {
+  _PlayMode.chainMissions => _Scene.ferry,
+  _PlayMode.chainVersus => _Scene.versus,
+  _PlayMode.chainPuzzles => _Scene.chainPuzzle,
+  _PlayMode.relaxed => _Scene.relaxed,
+  _PlayMode.target => _Scene.target,
+  _PlayMode.chaos => _Scene.chaos,
+  _PlayMode.sprint || _PlayMode.ultra => _Scene.sprint,
+  _PlayMode.dig => _Scene.dig,
+  _PlayMode.bomb => _Scene.bombs,
+  _PlayMode.adventure => _Scene.adventure,
+  _PlayMode.towerWind => _Scene.towerWind,
+  _PlayMode.towerBuild => _Scene.towerBuild,
+  _ => _sceneOf(m),
 };
 
 class _ModeScene extends StatelessWidget {
-  const _ModeScene({required this.mode, required this.clock});
+  const _ModeScene({required this.mode, required this.clock, this.scene});
 
   final _PlayMode mode;
   final Animation<double> clock;
+
+  /// Shown instead of the scene of [mode]'s game.
+  final _Scene? scene;
 
   @override
   Widget build(BuildContext context) {
@@ -1119,7 +1174,7 @@ class _ModeScene extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(p.skin == GameSkin.pixel ? 2 : 16),
         child: CustomPaint(
-          painter: _ScenePainter(scene: _sceneOf(mode), palette: p, clock: clock, offset: offset, dpr: MediaQuery.devicePixelRatioOf(context)),
+          painter: _ScenePainter(scene: scene ?? _sceneOf(mode), palette: p, clock: clock, offset: offset, dpr: MediaQuery.devicePixelRatioOf(context)),
         ),
       ),
     );
@@ -1147,6 +1202,16 @@ class _ScenePainter extends CustomPainter {
       r,
       Paint()..shader = ui.Gradient.linear(r.topCenter, r.bottomCenter, sugar ? const [Color(0xFF5B1FA8), Color(0xFF3A1270)] : [p.wellTop, p.wellBottom]),
     );
+    // The challenges each get a tint of their own.
+    final tint = switch (scene) {
+      _Scene.relaxed => const Color(0xFF22C55E),
+      _Scene.target => const Color(0xFFF59E0B),
+      _Scene.chaos => const Color(0xFFA855F7),
+      _Scene.sprint => const Color(0xFF06B6D4),
+      _Scene.dig => const Color(0xFF9CA3AF),
+      _ => null,
+    };
+    if (tint != null) canvas.drawRect(r, Paint()..shader = ui.Gradient.linear(r.topCenter, r.bottomCenter, [tint.withValues(alpha: 0.28), tint.withValues(alpha: 0.04)]));
     switch (scene) {
       case _Scene.power || _Scene.blocks:
         _falling(canvas, r, t, power: scene == _Scene.power);
@@ -1156,6 +1221,233 @@ class _ScenePainter extends CustomPainter {
         _chain(canvas, r, t);
       case _Scene.sugar:
         _sugar(canvas, r, t);
+      case _Scene.ferry:
+        _ferry(canvas, r, t);
+      case _Scene.versus:
+        _versus(canvas, r, t);
+      case _Scene.chainPuzzle:
+        _chainPuzzle(canvas, r, t);
+      case _Scene.relaxed || _Scene.target || _Scene.chaos || _Scene.sprint || _Scene.dig:
+        _challenge(canvas, r, t);
+      case _Scene.bombs || _Scene.adventure:
+        _puzzleSpecial(canvas, r, t);
+      case _Scene.tower || _Scene.towerWind:
+        _tower(canvas, r, t);
+      case _Scene.towerBuild:
+        _towerBuild(canvas, r, t);
+    }
+  }
+
+  /// A short lokum tower on its sky, the next floor sliding over it.
+  void _tower(Canvas canvas, Rect r, double t) {
+    final wind = scene == _Scene.towerWind;
+    canvas.drawRect(r, Paint()..shader = ui.Gradient.linear(r.topCenter, r.bottomCenter, [towerSkyAt(wind ? 190 : 140), towerSkyAt(wind ? 120 : 30)]));
+    const n = 6;
+    final h = r.height / (n + 4.2);
+    final u = h / 0.46;
+    final a = min(u * 0.95, r.width / 3.8);
+    final base = Offset(r.center.dx, r.bottom - h * 0.6);
+    for (var i = 0; i < n; i++) {
+      final c = base + towerU * (sin(i * 1.7) * a * 0.05) - Offset(0, (i + 1) * h);
+      if (i > 0) paintFloorShadow(canvas, c, a, a, h, alpha: 0.7);
+      paintTowerFloor(canvas, c, a, a, h, flavor: i, seed: i);
+    }
+    final top = base - Offset(0, n * h);
+    final slide = sin(t * pi * 2) * (wind ? 1.3 + 0.3 * sin(t * pi * 6) : 1.2);
+    final slab = top - Offset(0, h * 1.7) - towerV * (a * slide);
+    paintTowerFloor(canvas, slab, a, a, h, flavor: n, seed: 9);
+    if (wind) {
+      final line = Paint()
+        ..color = Colors.white.withValues(alpha: 0.6)
+        ..strokeWidth = max(1.5, h * 0.12)
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+      for (var i = 0; i < 3; i++) {
+        final y = r.top + r.height * (0.2 + i * 0.12);
+        final x = r.left + ((t + i * 0.3) % 1) * r.width;
+        canvas.drawPath(
+          Path()
+            ..moveTo(x - r.width * 0.25, y)
+            ..cubicTo(x - r.width * 0.15, y - h * 0.5, x - r.width * 0.08, y + h * 0.5, x, y),
+          line,
+        );
+      }
+    }
+  }
+
+  /// Kız Kulesi rising part by part on the Bosphorus at dusk.
+  void _towerBuild(Canvas canvas, Rect r, double t) {
+    canvas.save();
+    canvas.translate(r.left, r.top);
+    final size = r.size;
+    paintDusk(canvas, Offset.zero & size);
+    final horizon = size.height * 0.8;
+    paintSkyline(canvas, size.width, horizon, size.height * 0.7, const Color(0xFF4A2A6A));
+    paintBosphorus(canvas, Rect.fromLTWH(0, horizon, size.width, size.height - horizon), ferryAt: 0.15, tower: 0);
+    final k = min(size.width / 330, size.height * 0.78 / 420);
+    paintLandmark(canvas, Landmark.maidens, Offset(size.width / 2, horizon + 4), k, done: 3, rising: 0.25 + 0.6 * t, time: t * 6);
+    canvas.restore();
+  }
+
+  /// The Bosphorus at dusk, the ferry on its way and the piers along it.
+  void _ferry(Canvas canvas, Rect r, double t) {
+    canvas.save();
+    canvas.translate(r.left, r.top);
+    final size = r.size;
+    paintDusk(canvas, Offset.zero & size);
+    final horizon = size.height * 0.52;
+    paintSkyline(canvas, size.width, horizon, size.height, const Color(0xFF3A1E5A));
+    paintBosphorus(canvas, Rect.fromLTWH(0, horizon, size.width, size.height - horizon), ferryAt: 0.1 + 0.8 * t);
+    final s = size.height / 100;
+    final dash = Paint()
+      ..color = Colors.white.withValues(alpha: 0.7)
+      ..strokeWidth = max(1.5, 2.2 * s)
+      ..strokeCap = StrokeCap.round;
+    final pts = [for (var i = 0; i < 6; i++) Offset(size.width * (0.08 + i * 0.168), size.height * (0.88 - (i.isOdd ? 0.09 : 0)))];
+    for (var i = 0; i < pts.length - 1; i++) {
+      for (var k = 0.0; k < 1; k += 0.2) {
+        canvas.drawLine(Offset.lerp(pts[i], pts[i + 1], k)!, Offset.lerp(pts[i], pts[i + 1], k + 0.09)!, dash);
+      }
+    }
+    final ink = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = max(1.2, 1.8 * s)
+      ..color = const Color(0xFF1A0E26);
+    for (var i = 0; i < pts.length; i++) {
+      if (i == 4) canvas.drawCircle(pts[i], (9 + 3 * sin(t * pi * 4)) * s, Paint()..color = const Color(0xFFFF5FB8).withValues(alpha: 0.35));
+      final dot = Paint()..color = i < 4 ? const Color(0xFFFACC15) : (i == 4 ? const Color(0xFFFF5FB8) : const Color(0xFF6B5F92));
+      canvas.drawCircle(pts[i], 6 * s, dot);
+      canvas.drawCircle(pts[i], 6 * s, ink);
+    }
+    canvas.restore();
+  }
+
+  /// Two small boards, Ekşi Limon between them, a slab on its way across.
+  void _versus(Canvas canvas, Rect r, double t) {
+    canvas.drawRect(r, Paint()..shader = ui.Gradient.linear(r.topCenter, r.bottomCenter, const [Color(0xFF3A2160), Color(0xFF1A1030)]));
+    final s = min(r.width * 0.36 / 4, r.height * 0.78 / 4).floorToDouble();
+    final art = _LobbySprites.of(s, dpr, palette.skin == GameSkin.pixel);
+    const colors = [ChainColor.magenta, ChainColor.blue, ChainColor.green, ChainColor.yellow, ChainColor.orange];
+    for (final (side, x0) in [(0, r.left + s * 0.3), (1, r.right - s * 4.3)]) {
+      for (var y = 0; y < 4; y++) {
+        for (var x = 0; x < 4; x++) {
+          if (y == 3 && (x + side) % 3 == 0) continue;
+          art.draw(canvas, art.pyramid(colors[(x * 3 + y * 2 + side) % colors.length]), Offset(x0 + x * s, r.bottom - (y + 1) * s - 2));
+        }
+      }
+    }
+    // The slab falls on the rival's board.
+    final k = Curves.easeIn.transform(t);
+    paintGarbageSlab(canvas, Rect.fromLTWH(r.right - s * 4.3, r.top + 2 + (r.height - 6.2 * s) * k, s * 4, s * 0.9));
+    paintEksiLimon(canvas, Offset(r.center.dx, r.top + r.height * 0.4), r.height * 0.4, laugh: t > 0.5);
+    paintSugarLabel(
+      canvas,
+      'VS',
+      Offset(r.center.dx, r.bottom - r.height * 0.14),
+      r.height * 0.2,
+      Paint()..shader = ui.Gradient.linear(Offset(0, r.bottom - r.height * 0.24), Offset(0, r.bottom - r.height * 0.04), const [Color(0xFFFFF6B0), Color(0xFFFF8A10)]),
+      outline: const Color(0xFF3A0F2A),
+      stroke: 0.2,
+    );
+  }
+
+  /// A set board: a glowing pair shows the swap that clears it.
+  void _chainPuzzle(Canvas canvas, Rect r, double t) {
+    final s = min(r.width / 6, r.height / 3.6).floorToDouble();
+    final x0 = r.left + (r.width - 6 * s) / 2;
+    final art = _LobbySprites.of(s, dpr, palette.skin == GameSkin.pixel);
+    const rows = ['mbgyob', 'ygmyby', 'bo..gb'];
+    const codes = {'y': ChainColor.yellow, 'm': ChainColor.magenta, 'b': ChainColor.blue, 'g': ChainColor.green, 'o': ChainColor.orange};
+    final swap = Curves.easeInOut.transform(((t - 0.35) / 0.3).clamp(0.0, 1.0));
+    for (var y = 0; y < rows.length; y++) {
+      for (var x = 0; x < 6; x++) {
+        final c = codes[rows[y][x]];
+        if (c == null) continue;
+        var at = Offset(x0 + x * s, r.bottom - (y + 1) * s);
+        if (y == 1 && (x == 2 || x == 3)) at += Offset((x == 2 ? 1 : -1) * s * swap, 0);
+        art.draw(canvas, art.pyramid(c), at);
+      }
+    }
+    final hint = Rect.fromLTWH(x0 + 2 * s, r.bottom - 2 * s, 2 * s, s).inflate(2);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(hint, Radius.circular(s * 0.25)),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = max(2, s * 0.09)
+        ..color = const Color(0xFFFFF3A0).withValues(alpha: 0.5 + 0.5 * sin(t * pi * 6).abs()),
+    );
+    if (t > 0.7) paintSparkle(canvas, hint.center - Offset(0, s * 0.8), s * 0.4, const Color(0xFFFFE066), opacity: (1 - t) / 0.3);
+  }
+
+  /// A challenge's well: the stack and what makes the challenge its own.
+  void _challenge(Canvas canvas, Rect r, double t) {
+    // Small scenes (a row of a game's page) get bigger blocks.
+    final s = (r.height / (r.height < 90 ? 4.2 : 6)).floorToDouble();
+    final cols = max(4, (r.width / s).floor());
+    final x0 = r.left + (r.width - cols * s) / 2;
+    final sprites = BlockSprites.of(s, dpr, palette);
+    final rows = switch (scene) {
+      _Scene.dig => const ['gggg.ggggg', 'gg.ggggggg', 'g.ggggg.gg'],
+      _Scene.sprint => const ['x...xx..x.', 'xxxxxxx.xx', 'xx.xxxxxxx'],
+      _ => const ['.x...x..x.', 'xx.xxxx.xx', 'xxx.xxx.xx'],
+    };
+    for (var y = 0; y < rows.length; y++) {
+      for (var x = 0; x < cols; x++) {
+        final ch = rows[y][x % rows[y].length];
+        if (ch == '.') continue;
+        final image = ch == 'g' ? sprites.gray : sprites.block(_pieces[(x * 3 + y) % _pieces.length], BlockSprites.variantAt(x, y));
+        sprites.draw(canvas, image, x0 + x * s, r.bottom - (rows.length - y) * s);
+        if (scene == _Scene.target && (x * 5 + y * 3) % 7 == 1) paintGoldStar(canvas, Offset(x0 + (x + 0.5) * s, r.bottom - (rows.length - y - 0.5) * s), s * 0.3);
+      }
+    }
+    final fall = Curves.easeIn.transform(min(1, t / 0.9));
+    final y = r.top - s + (r.height - (rows.length + 1) * s) * fall;
+    final mid = x0 + (cols ~/ 2 - 1) * s;
+    switch (scene) {
+      case _Scene.dig:
+        sprites.draw(canvas, sprites.block(PieceType.drill), mid, y);
+      case _Scene.chaos:
+        // A piece tumbling in, and sparks.
+        for (final dx in const [-1, 0, 1]) {
+          sprites.draw(canvas, sprites.block(PieceType.t), mid + dx * s, y, rotation: t * pi * 2);
+        }
+        paintSparkle(canvas, Offset(r.left + s, r.top + s), s * 0.4, const Color(0xFFFF9AD8), opacity: (sin(t * pi * 4) + 1) / 2);
+      case _Scene.sprint:
+        final line = Paint()
+          ..color = Colors.white.withValues(alpha: 0.5)
+          ..strokeWidth = max(1.5, s * 0.1)
+          ..strokeCap = StrokeCap.round;
+        for (var i = 0; i < 3; i++) {
+          canvas.drawLine(Offset(mid - s * (2.2 + i * 0.4), y + s * (0.2 + i * 0.3)), Offset(mid - s * 0.4, y + s * (0.2 + i * 0.3)), line);
+        }
+        sprites.draw(canvas, sprites.block(PieceType.i), mid, y);
+      default:
+        for (final (dx, dy) in const [(0, 0), (1, 0), (0, 1), (1, 1)]) {
+          sprites.draw(canvas, sprites.block(PieceType.o), mid + dx * s, y + dy * s - s);
+        }
+    }
+  }
+
+  /// The block puzzle with a bomb ticking, or with the jewels of the
+  /// adventure's picture.
+  void _puzzleSpecial(Canvas canvas, Rect r, double t) {
+    const n = 6;
+    final s = (min(r.width, r.height) / (n + 0.6)).floorToDouble();
+    final o = Offset(r.center.dx - n * s / 2, r.center.dy - n * s / 2);
+    final sprites = BlockSprites.of(s, dpr, palette);
+    final slot = Paint()..color = palette.text.withValues(alpha: 0.07);
+    for (var y = 0; y < n; y++) {
+      for (var x = 0; x < n; x++) {
+        canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(o.dx + x * s, o.dy + y * s, s, s).deflate(1), Radius.circular(s * 0.18)), slot);
+        if (y < 2 || (x * 3 + y * 5) % 4 == 0) continue;
+        final image = scene == _Scene.adventure ? sprites.jewel(x + y) : sprites.block(_pieces[(x + y) % 5 + 1]);
+        sprites.draw(canvas, image, o.dx + x * s, o.dy + y * s);
+      }
+    }
+    if (scene == _Scene.bombs) {
+      sprites.draw(canvas, sprites.block(PieceType.bomb), o.dx + 3 * s, o.dy + s, scale: 1 + 0.12 * sin(t * pi * 8).abs());
+    } else {
+      paintSparkle(canvas, o + Offset(s * 4.5, s * 1.2), s * 0.45, const Color(0xFFFFE066), opacity: (sin(t * pi * 2) + 1) / 2);
     }
   }
 

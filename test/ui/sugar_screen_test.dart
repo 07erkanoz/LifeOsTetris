@@ -32,9 +32,9 @@ Future<Settings> openSugar(WidgetTester tester, {Settings? settings, bool story 
   await tester.pump(const Duration(milliseconds: 100));
   await tester.tap(find.byKey(const ValueKey('change-mode')));
   await pumpFor(tester, 10, 40);
-  await tester.ensureVisible(find.byKey(const ValueKey('mode-sugar'), skipOffstage: false));
+  await tester.ensureVisible(find.byKey(const ValueKey('game-sugar'), skipOffstage: false));
   await tester.pump(const Duration(milliseconds: 40));
-  await tester.tap(find.byKey(const ValueKey('mode-sugar')));
+  await tester.tap(find.byKey(const ValueKey('game-sugar')));
   await pumpFor(tester, 10, 40);
   return settings;
 }

@@ -47,6 +47,12 @@ Future<GameController> playNormal(WidgetTester tester, VisualTheme theme) async 
   for (var i = 0; i < 10; i++) {
     await tester.pump(const Duration(milliseconds: 40));
   }
+  await tester.ensureVisible(find.byKey(const ValueKey('game-classic'), skipOffstage: false));
+  await tester.pump(const Duration(milliseconds: 40));
+  await tester.tap(find.byKey(const ValueKey('game-classic')));
+  for (var i = 0; i < 10; i++) {
+    await tester.pump(const Duration(milliseconds: 40));
+  }
   await tester.ensureVisible(find.byKey(const ValueKey('mode-normal'), skipOffstage: false));
   await tester.pump(const Duration(milliseconds: 40));
   await tester.tap(find.byKey(const ValueKey('mode-normal')));

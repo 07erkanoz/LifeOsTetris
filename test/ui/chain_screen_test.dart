@@ -24,6 +24,8 @@ Future<Settings> openChain(WidgetTester tester, String mode, {AppLanguage langua
   await tester.pump(const Duration(milliseconds: 100));
   await tester.tap(find.byKey(const ValueKey('change-mode')));
   await pumpFor(tester, 10, 40);
+  await tester.tap(find.byKey(const ValueKey('game-chain')));
+  await pumpFor(tester, 10, 40);
   final card = find.byKey(ValueKey('mode-$mode'));
   await tester.ensureVisible(find.byKey(ValueKey('mode-$mode'), skipOffstage: false));
   await tester.pump(const Duration(milliseconds: 40));

@@ -21,12 +21,32 @@ import 'package:lifeos_kupler/ui/widgets.dart';
 
 Settings settings(WidgetTester tester) => (tester.widget(find.byType(KuplerApp)) as KuplerApp).settings;
 
-/// Opens the modes page from the home screen and picks [name].
+
+/// The card on the games page that leads to [mode].
+String gameOf(String mode) => switch (mode) {
+  'sugar' => 'sugar',
+  'superMode' => 'superGame',
+  'blocksLevels' || 'blocksEndless' || 'adventure' || 'bomb' => 'puzzle',
+  _ when mode.startsWith('chain') => 'chain',
+  _ when mode.startsWith('tower') => 'tower',
+  _ => 'classic',
+};
+
+/// Opens the games page from the home screen, then [name]'s game and [name].
 Future<void> startMode(WidgetTester tester, String name) async {
   await tester.tap(find.byKey(const ValueKey('change-mode')));
   for (var i = 0; i < 10; i++) {
     await tester.pump(const Duration(milliseconds: 40));
   }
+  final game = find.byKey(ValueKey('game-${gameOf(name)}'));
+  await tester.ensureVisible(find.byKey(ValueKey('game-${gameOf(name)}'), skipOffstage: false));
+  await tester.pump(const Duration(milliseconds: 40));
+  await tester.tap(game);
+  for (var i = 0; i < 10; i++) {
+    await tester.pump(const Duration(milliseconds: 40));
+  }
+  // A game of one mode starts at once.
+  if (name == 'sugar' || name == 'superMode') return;
   final card = find.byKey(ValueKey('mode-$name'));
   // Cards far down the modes page count as offstage until scrolled to.
   await tester.ensureVisible(find.byKey(ValueKey('mode-$name'), skipOffstage: false));

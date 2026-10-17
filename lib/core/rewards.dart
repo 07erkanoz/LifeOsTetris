@@ -35,7 +35,13 @@ enum Unlock {
   outfitGuide,
 
   /// The golden lemon crown, for beating Ekşi Limon at his best.
-  outfitLemonCrown;
+  outfitLemonCrown,
+
+  /// Kule Küpler floor looks, from the tower's milestone chests.
+  floorCini,
+  floorMarble,
+  floorGlass,
+  floorGold;
 
   static Unlock? parse(String name) {
     for (final u in values) {
@@ -191,6 +197,30 @@ abstract final class Rewards {
 
   /// A whole pack of Zincir puzzles solved.
   static Gift puzzlePackPrize(int pack) => Gift(boosters: const {SugarBooster.hammer: 2, SugarBooster.rainbow: 2}, freezes: 1 + pack);
+
+  // ------------------------------------------------------ Kule Küpler --
+
+  /// The floor look the chest at [height] opens the first time it is
+  /// reached.
+  static const Map<int, Unlock> towerLooks = {100: Unlock.floorCini, 200: Unlock.floorMarble, 300: Unlock.floorGlass, 500: Unlock.floorGold};
+
+  /// The tier of the tower's chest at [height].
+  static ChestTier towerTier(int height) => height >= 300
+      ? ChestTier.gold
+      : height >= 100
+      ? ChestTier.silver
+      : ChestTier.bronze;
+
+  /// The chest at [height]; [unlock] when its floor look is new.
+  static Gift towerChest(int height, {Unlock? unlock}) => switch (towerTier(height)) {
+    ChestTier.bronze => Gift(boosters: const {SugarBooster.hammer: 1}, unlock: unlock),
+    ChestTier.silver => Gift(boosters: const {SugarBooster.hammer: 1, SugarBooster.moves: 1}, freezes: 1, unlock: unlock),
+    ChestTier.gold => Gift(boosters: const {SugarBooster.hammer: 2, SugarBooster.rainbow: 1, SugarBooster.moves: 1}, freezes: 1, unlock: unlock, postcard: unlock == null),
+  };
+
+  /// A landmark of İstanbul'u İnşa Et finished.
+  static Gift landmarkPrize(int landmark) =>
+      Gift(boosters: const {SugarBooster.hammer: 3, SugarBooster.rainbow: 2, SugarBooster.moves: 2}, freezes: 2 + landmark ~/ 2, postcard: true);
 
   /// What completing set [i] gives; the last set to be completed also
   /// opens the guide's hat.
