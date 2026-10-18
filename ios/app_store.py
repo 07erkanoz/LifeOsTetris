@@ -499,10 +499,17 @@ def status():
         testers = call('GET', f'/v1/betaGroups/{g["id"]}/betaTesters?limit=200')['data']
         kind = 'internal' if a.get('isInternalGroup') else 'external'
         print(f'  {a["name"]} ({kind}, {len(testers)} testers)  public link: {a.get("publicLink") or "-"}')
-    v = editable_version(app)
-    if v:
+    print('\nApp Store versions:')
+    for v in call('GET', f'/v1/apps/{app["id"]}/appStoreVersions?filter[platform]=IOS&limit=20')['data']:
         a = v['attributes']
-        print(f'\nApp Store version {a["versionString"]}: {a.get("appVersionState") or a.get("appStoreState")}')
+        print(f'  {a["versionString"]}: {a.get("appVersionState")} / {a.get("appStoreState")}')
+    print('\nReview submissions:')
+    try:
+        for s in call('GET', f'/v1/reviewSubmissions?filter[app]={app["id"]}&limit=10')['data']:
+            a = s['attributes']
+            print(f'  {a.get("submittedDate") or "-"}  {a.get("state")}')
+    except ApiError as e:
+        print(f'  {e}')
 
 
 if __name__ == '__main__':
