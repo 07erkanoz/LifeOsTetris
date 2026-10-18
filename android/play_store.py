@@ -209,6 +209,12 @@ def status():
             releases = t.get('releases') or []
             line = ', '.join(f'{r.get("name", "?")} {r.get("versionCodes", [])} {r.get("status")}' for r in releases) or 'no release'
             print(f'  {t["track"]}: {line}')
+            if t['track'] not in ('production',):
+                try:
+                    groups = call('GET', edit.url(f'/testers/{t["track"]}')).get('googleGroups') or []
+                    print(f'    testers: {", ".join(groups) or "no Google Group (an email list, or none)"}')
+                except ApiError as e:
+                    print(f'    testers: {e}')
         for loc, play in LANGUAGES.items():
             try:
                 l = call('GET', edit.url(f'/listings/{play}'))
