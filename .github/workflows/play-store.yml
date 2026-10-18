@@ -11,13 +11,16 @@ on:
         description: 'status, listing or release'
         default: status
       track:
-        description: 'Release track: internal, alpha (closed test), beta (open test) or production'
+        description: 'Release track: internal, alpha (closed test), beta (open test) or production; several with commas (internal,alpha)'
         default: internal
       status:
         description: 'Release status: completed, or draft while the app is a draft'
         default: completed
       notes:
         description: 'Release notes (optional)'
+        default: ''
+      notes_en:
+        description: 'English release notes (optional; the notes otherwise)'
         default: ''
   push:
     branches: [main]
@@ -66,13 +69,13 @@ jobs:
           TRACK: ${{ inputs.track || 'internal' }}
           STATUS: ${{ inputs.status || 'completed' }}
           NOTES: ${{ inputs.notes }}
+          NOTES_EN: ${{ inputs.notes_en }}
         run: |
           case "$COMMAND" in
             release)
-              if [ -n "$NOTES" ]; then
-                python3 android/play_store.py release aab/Lokum-Google-Play.aab --track "$TRACK" --status "$STATUS" --notes "$NOTES"
-              else
-                python3 android/play_store.py release aab/Lokum-Google-Play.aab --track "$TRACK" --status "$STATUS"
-              fi ;;
+              set -- --track "$TRACK" --status "$STATUS"
+              [ -n "$NOTES" ] && set -- "$@" --notes "$NOTES"
+              [ -n "$NOTES_EN" ] && set -- "$@" --notes-en "$NOTES_EN"
+              python3 android/play_store.py release aab/Lokum-Google-Play.aab "$@" ;;
             *) python3 android/play_store.py "$COMMAND" ;;
           esac

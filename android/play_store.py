@@ -4,10 +4,12 @@
   status                         the tracks and their releases
   listing                        texts, video, icon, feature graphic and
                                  screenshots of every language
-  release AAB [--track T] [--status S] [--notes TEXT]
+  release AAB [--track T] [--status S] [--notes TEXT] [--notes-en TEXT]
                                  uploads the app bundle and puts it on track T
-                                 (internal by default) with status S
-                                 (completed; draft while the app is a draft)
+                                 (internal by default; several at once with
+                                 commas, "internal,alpha": a bundle uploads
+                                 only once) with status S (completed; draft
+                                 while the app is a draft)
 
 Needs PLAY_SERVICE_ACCOUNT_JSON: the service account key (a GitHub secret),
 whose account has access to the app in Play Console. Every step reports on
@@ -182,17 +184,19 @@ def listing():
     finish()
 
 
-def release(aab, track='internal', status='completed', notes=None):
+def release(aab, track='internal', status='completed', notes=None, notes_en=None):
     edit = Edit()
     try:
         bundle = call('POST', edit.upload_url('/bundles'), data=pathlib.Path(aab).read_bytes(), content_type='application/octet-stream')
         code = bundle['versionCode']
         print(f'✓ App bundle: version code {code}', flush=True)
-        text = notes or 'Yeni test sürümü.'
         rel = {'versionCodes': [str(code)], 'status': status,
-               'releaseNotes': [{'language': 'tr-TR', 'text': text}, {'language': 'en-US', 'text': notes or 'A new test build.'}]}
-        call('PUT', edit.url(f'/tracks/{track}'), {'track': track, 'releases': [rel]})
-        print(f'✓ Track {track}: {code} ({status})', flush=True)
+               'releaseNotes': [{'language': 'tr-TR', 'text': notes or 'Yeni test sürümü.'}, {'language': 'en-US', 'text': notes_en or notes or 'A new test build.'}]}
+        # The same upload on every track asked for: Play takes a version
+        # code only once.
+        for t in [t.strip() for t in track.split(',') if t.strip()]:
+            call('PUT', edit.url(f'/tracks/{t}'), {'track': t, 'releases': [rel]})
+            print(f'✓ Track {t}: {code} ({status})', flush=True)
         edit.commit()
         print('✓ Commit', flush=True)
     except ApiError as e:
@@ -235,4 +239,4 @@ if __name__ == '__main__':
         listing()
     else:
         opts = {k.lstrip('-'): v for k, v in zip(args[2::2], args[3::2])}
-        release(args[1], track=opts.get('track', 'internal'), status=opts.get('status', 'completed'), notes=opts.get('notes'))
+        release(args[1], track=opts.get('track', 'internal'), status=opts.get('status', 'completed'), notes=opts.get('notes'), notes_en=opts.get('notes-en'))
