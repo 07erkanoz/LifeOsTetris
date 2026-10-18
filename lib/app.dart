@@ -38,7 +38,8 @@ class KuplerApp extends StatelessWidget {
         darkTheme: buildTheme(GamePalette.dark),
         builder: (context, child) {
           final dark = Theme.of(context).brightness == Brightness.dark;
-          return AnnotatedRegion<SystemUiOverlayStyle>(
+          return DesktopScale(
+            child: AnnotatedRegion<SystemUiOverlayStyle>(
             value: (dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark).copyWith(
               statusBarColor: Colors.transparent,
               systemNavigationBarColor: Colors.transparent,
@@ -63,6 +64,7 @@ class KuplerApp extends StatelessWidget {
                 ),
               ),
             ),
+          ),
           );
         },
         home: GameScreen(settings: settings, audio: audio, haptics: haptics),
@@ -70,6 +72,45 @@ class KuplerApp extends StatelessWidget {
     );
     // Frame times in a corner, only in builds made for measuring.
     return FpsOverlay.enabled ? FpsOverlay(child: app) : app;
+  }
+}
+
+/// A big desktop window draws the whole app larger, laid out as if on a
+/// screen of about [base]: on a 1920×1080 window the cards, the text and the
+/// boards fill it instead of floating small in the middle. Sprites are drawn
+/// for the real pixels (the device pixel ratio grows with the scale).
+class DesktopScale extends StatelessWidget {
+  const DesktopScale({super.key, required this.child});
+
+  final Widget child;
+
+  static const Size base = Size(1366, 800);
+
+  static bool get _desktop =>
+      !kIsWeb && (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.macOS);
+
+  /// How much larger to draw on a window of [size] (1: as it is).
+  static double factorFor(Size size) => (size.width / base.width < size.height / base.height ? size.width / base.width : size.height / base.height).clamp(1.0, 2.0);
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_desktop) return child;
+    final mq = MediaQuery.of(context);
+    final k = factorFor(mq.size);
+    if (k < 1.05) return child;
+    final inner = mq.size / k;
+    return MediaQuery(
+      data: mq.copyWith(
+        size: inner,
+        devicePixelRatio: mq.devicePixelRatio * k,
+        padding: mq.padding / k,
+        viewPadding: mq.viewPadding / k,
+        viewInsets: mq.viewInsets / k,
+      ),
+      child: SizedBox.expand(
+        child: FittedBox(alignment: Alignment.topLeft, child: SizedBox.fromSize(size: inner, child: child)),
+      ),
+    );
   }
 }
 

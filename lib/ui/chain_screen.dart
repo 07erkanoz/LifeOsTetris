@@ -14,8 +14,9 @@ import '../game/sugar/istanbul_art.dart' show paintEksiLimon;
 import '../core/rewards.dart';
 import '../game/chain/chain_controller.dart';
 import '../game/chain/chain_painter.dart';
+import '../game/chain/chain_sprites.dart' show chainColors, paintChainCube;
 import '../game/render/background_painter.dart';
-import '../game/sugar/sugar_art.dart' show LokumPose;
+import '../game/sugar/sugar_art.dart' show LokumOutfit, LokumPose;
 import '../l10n/strings.dart';
 import '../platform/orientation_lock.dart';
 import '../settings/settings.dart';
@@ -233,8 +234,12 @@ class _Play extends StatelessWidget {
       ChainMode.timeAttack => '${s.chainTitle} · ${s.chainTimeTitle}',
       _ => '${s.chainTitle} · ${s.chainEndlessTitle}',
     };
-    return Column(
-      children: [
+    // On a wide window the bar and the board keep together in the middle.
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: Column(
+          children: [
         Row(
           children: [
             GlassIconButton(
@@ -292,7 +297,9 @@ class _Play extends StatelessWidget {
             ),
           ),
         ),
-      ],
+          ],
+        ),
+      ),
     );
   }
 }
@@ -426,15 +433,147 @@ class _Board extends StatelessWidget {
             onPointerMove: (e) => c.touchMove(local(e.localPosition), geometry.cell),
             onPointerUp: (_) => c.touchUp(),
             onPointerCancel: (_) => c.touchUp(),
-            child: CustomPaint(
-              size: geometry.canvas,
-              painter: ChainBoardPainter(c: c, palette: palette, geometry: geometry, dpr: dpr),
+            child: Stack(
+              children: [
+                CustomPaint(
+                  size: geometry.canvas,
+                  painter: ChainBoardPainter(c: c, palette: palette, geometry: geometry, dpr: dpr),
+                ),
+                if (c.lesson != null && !c.game.isOver)
+                  Positioned(
+                    left: 12,
+                    right: 12,
+                    top: geometry.canvas.height * 0.18,
+                    child: IgnorePointer(child: _LessonBubble(key: ValueKey('chain-lesson-${c.lesson}'), text: AppStrings.of(context).chainLesson(c.lesson!), outfit: c.outfit)),
+                  ),
+              ],
             ),
           ),
         );
       },
     );
   }
+}
+
+/// The first mission's lesson: Lokum's words over the empty board, popping
+/// in at each step.
+class _LessonBubble extends StatelessWidget {
+  const _LessonBubble({super.key, required this.text, required this.outfit});
+
+  final String text;
+  final LokumOutfit outfit;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+    tween: Tween(begin: 0.6, end: 1),
+    duration: const Duration(milliseconds: 380),
+    curve: Curves.easeOutBack,
+    builder: (context, k, child) => Transform.scale(scale: k, child: child),
+    child: Container(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [BoxShadow(color: Color(0x66000000), offset: Offset(0, 4), blurRadius: 6)],
+      ),
+      child: Row(
+        children: [
+          LokumView(outfit: outfit, pose: LokumPose.happy, size: 40),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text, style: const TextStyle(fontFamily: 'Baloo2', fontSize: 16, height: 1.15, fontWeight: FontWeight.w800, color: Color(0xFF7A2A9E))),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+/// Before a chain mission: a chain in three small pictures.
+class _ChainHowTo extends StatelessWidget {
+  const _ChainHowTo();
+
+  static const _steps = [
+    (['..Y...', 'BBBYYG', 'MGOGBM'], {(0, 1), (1, 1), (2, 1)}, false),
+    (['..Y...', '...YYG', 'MGOGBM'], <(int, int)>{}, true),
+    (['......', '..YYYG', 'MGOGBM'], {(2, 1), (3, 1), (4, 1)}, false),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final p = GamePalette.of(context);
+    final s = AppStrings.of(context);
+    final labels = [s.chainHowStep1, s.chainHowStep2, s.chainHowStep3];
+    return Container(
+      key: const ValueKey('chain-how-to'),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      decoration: BoxDecoration(color: p.glass, borderRadius: BorderRadius.circular(18), border: Border.all(color: p.glassBorder, width: 1.5)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(s.chainHowTitle, textAlign: TextAlign.center, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: p.text)),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final (i, (rows, glow, fall)) in _steps.indexed) ...[
+                if (i > 0) Padding(padding: const EdgeInsets.only(top: 22), child: Icon(Icons.chevron_right_rounded, color: p.muted)),
+                Expanded(
+                  child: Column(
+                    children: [
+                      AspectRatio(aspectRatio: 2, child: CustomPaint(painter: _HowToPainter(rows, glow, fall))),
+                      const SizedBox(height: 4),
+                      Text(labels[i], textAlign: TextAlign.center, style: TextStyle(fontSize: 12.5, height: 1.15, fontWeight: FontWeight.w800, color: p.text)),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HowToPainter extends CustomPainter {
+  _HowToPainter(this.rows, this.glow, this.fall);
+
+  final List<String> rows;
+  final Set<(int, int)> glow;
+  final bool fall;
+
+  static const _map = {'Y': ChainColor.yellow, 'M': ChainColor.magenta, 'B': ChainColor.blue, 'G': ChainColor.green, 'O': ChainColor.orange};
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = min(size.width / 6, size.height / rows.length);
+    final o = Offset((size.width - 6 * s) / 2, size.height - rows.length * s);
+    canvas.drawRRect(RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(s * 0.4)), Paint()..color = const Color(0xFF120E1E));
+    for (var y = 0; y < rows.length; y++) {
+      for (var x = 0; x < 6; x++) {
+        final ch = rows[y][x];
+        if (ch == '.') continue;
+        final cell = Rect.fromLTWH(o.dx + x * s, o.dy + y * s, s, s);
+        if (glow.contains((x, y))) canvas.drawCircle(cell.center, s * 0.75, Paint()..color = Colors.white.withValues(alpha: 0.35));
+        paintChainCube(canvas, cell.deflate(s * 0.05), chainColors[_map[ch]!]!);
+      }
+    }
+    if (fall) {
+      // The yellow on top drops into the gap.
+      final c = Offset(o.dx + 2.5 * s, o.dy + 0.5 * s);
+      final paint = Paint()
+        ..color = const Color(0xFFFFE066)
+        ..strokeWidth = s * 0.14
+        ..strokeCap = StrokeCap.round;
+      canvas.drawLine(c + Offset(0, s * 0.45), c + Offset(0, s * 1.2), paint);
+      canvas.drawLine(c + Offset(-s * 0.22, s * 0.95), c + Offset(0, s * 1.2), paint);
+      canvas.drawLine(c + Offset(s * 0.22, s * 0.95), c + Offset(0, s * 1.2), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_HowToPainter old) => false;
 }
 
 /// Lokum by the button: he cheers chains and frets near the top, without
@@ -670,8 +809,8 @@ class _StartPanel extends StatelessWidget {
           const SizedBox(height: 10),
           if (p != null) how(Icons.extension_rounded, s.puzzleHow) else ...[
             how(Icons.swap_horiz_rounded, s.chainHowSwap),
-            how(Icons.link_rounded, s.chainHowChain),
-            if (m!.kind == MissionKind.garbage) how(Icons.view_stream_rounded, s.chainHowGarbage),
+            if (m!.kind == MissionKind.chain && m.number > 1) ...[const SizedBox(height: 6), const _ChainHowTo(), const SizedBox(height: 6)] else how(Icons.link_rounded, s.chainHowChain),
+            if (m.kind == MissionKind.garbage) how(Icons.view_stream_rounded, s.chainHowGarbage),
             how(Icons.warning_amber_rounded, s.chainHowTop),
           ],
           if (m != null && c.settings.missionStars(m.number) > 0) ...[

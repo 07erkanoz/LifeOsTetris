@@ -1,12 +1,17 @@
 import 'sugar_game.dart';
 
-/// The Şeker Küpler levels: twelve chapters of ten. Every fifth level opens
-/// a chest; the tenth of a chapter is its boss. Each chapter brings something
-/// new: ice, chains, candy boxes, timed bombs, all of them; then chocolate,
-/// pomegranates, conveyor belts, cakes, doors, and Ekşi Limon himself.
+/// The Şeker Küpler levels: eighteen chapters of ten. Every fifth level
+/// opens a chest; the tenth of a chapter is its boss. Each chapter brings
+/// something new: ice, chains, candy boxes, timed bombs, all of them; then
+/// chocolate, pomegranates, conveyor belts, cakes, doors, and Ekşi Limon
+/// himself. The second season, up the Bosphorus, brings fog, tunnels,
+/// gulls, jam, lanterns and Acı Biber.
 class SugarLevels {
   static const int perChapter = 10;
-  static const int chapters = 12;
+  static const int chapters = 18;
+
+  /// The first chapter of the second season (0-based).
+  static const int secondSeason = 12;
   static int get count => all.length;
   static int chapterOf(int level) => ((level - 1) ~/ perChapter).clamp(0, chapters - 1);
   static bool chestAt(int level) => level % 5 == 0;
@@ -22,6 +27,13 @@ class SugarLevels {
   static SugarGoal Function() _cake(int n) => () => SugarGoal.cake(n);
   static SugarGoal Function() _door(int n) => () => SugarGoal.door(n);
   static SugarGoal Function() _limon(int n) => () => SugarGoal.limon(n);
+  static SugarGoal Function() _fog(int n) => () => SugarGoal.fog(n);
+  static SugarGoal Function() _gull(int n) => () => SugarGoal.gull(n);
+  static SugarGoal Function() _lantern(int n) => () => SugarGoal.lantern(n);
+  static SugarGoal Function() _pepper(int n) => () => SugarGoal.pepper(n);
+
+  /// Jam over every cell of [layout] that holds sweets (all but tunnels).
+  static SugarGoal Function() _jam(List<String> layout) => () => SugarGoal.jam(layout.join().split('').where((c) => c != 'X').length);
 
   static const _r = SugarColor.red, _o = SugarColor.orange, _y = SugarColor.yellow, _g = SugarColor.green, _b = SugarColor.blue;
 
@@ -169,6 +181,79 @@ class SugarLevels {
     _l(118, 26, 5, _everything, [_cake(1), _door(2), _choco(4), _fruit(1)], [10000, 26500, 43500], hard: true),
     _l(119, 22, 5, _doorsFruit, [_door(2), _fruit(3)], [8000, 15500, 22500]),
     _l(120, 34, 5, _open, [_limon(420)], [15000, 20000, 32500], boss: true, hint: 'limon', limonEvery: 4),
+    // ======================================== the second season: Boğaz Turu
+
+    // ------------------------------------------------------ 13 · Salacak --
+    _l(121, 14, 5, _fogMiddle, [_fog(8)], [12000, 15500, 20000], hint: 'fog'),
+    _l(122, 16, 5, _fogBottom, [_fog(16)], [5000, 12000, 19000]),
+    _l(123, 16, 5, _fogCross, [_fog(14), _color(_r, 30)], [5500, 10000, 13500]),
+    _l(124, 22, 5, _fogIce, [_fog(8), _ice(16)], [8000, 14500, 17500]),
+    _l(125, 14, 5, _fogChains, [_fog(8)], [11500, 15000, 18500]),
+    _l(126, 14, 5, _fogBoxes, [_fog(8), _box(4)], [9000, 15000, 15500]),
+    _l(127, 16, 5, _fogFrame, [_fog(22)], [7500, 10500, 11500]),
+    _l(128, 20, 5, _fogMiddle, [_fog(8), _color(_b, 40)], [7000, 17500, 21000], hard: true),
+    _l(129, 20, 5, _fogBottom, [_fog(16)], [9500, 16500, 20500], bombEvery: 5, bombTimer: 10),
+    _l(130, 14, 5, _fogFortress, [_fog(18), _ice(12)], [5000, 10000, 12500], boss: true),
+
+    // -------------------------------------------------- 14 · Haydarpaşa --
+    _l(131, 20, 5, _tunnelMiddle, [_ice(16)], [5000, 15500, 19500], hint: 'tunnel'),
+    _l(132, 18, 5, _tunnelSides, [_color(_y, 30), _color(_g, 30)], [6000, 9500, 10000]),
+    _l(133, 14, 5, _tunnelFog, [_fog(8)], [5500, 12500, 15000]),
+    _l(134, 24, 5, _tunnelTwo, [_ice(12), _color(_r, 25)], [6500, 12500, 18500]),
+    _l(135, 14, 5, _tunnelBoxes, [_box(8)], [12000, 17000, 18000]),
+    _l(136, 22, 5, _tunnelChains, [_color(_b, 35)], [6500, 10500, 14000]),
+    _l(137, 20, 5, _tunnelFruit, [_fruit(3)], [8500, 12000, 19500]),
+    _l(138, 18, 5, _tunnelThick, [_ice(16)], [8000, 11000, 14000], hard: true),
+    _l(139, 22, 5, _tunnelSides, [_color(_o, 35)], [6500, 9500, 16500], bombEvery: 5, bombTimer: 10),
+    _l(140, 22, 5, _tunnelMaze, [_fog(8), _ice(16), _box(2)], [8500, 11500, 15500], boss: true),
+
+    // ------------------------------------------------------ 15 · Karaköy --
+    _l(141, 14, 5, _gullsTwo, [_gull(8)], [5000, 8000, 9000], hint: 'gull', gullEvery: 3),
+    _l(142, 16, 5, _iceBottom, [_gull(8), _ice(16)], [7500, 10000, 13500], gullEvery: 3),
+    _l(143, 14, 5, _gullsFog, [_gull(6), _fog(8)], [5000, 9000, 11500], gullEvery: 4),
+    _l(144, 18, 5, _boxRing, [_gull(8), _box(12)], [6500, 14000, 16500], gullEvery: 4),
+    _l(145, 16, 5, _gullsTunnel, [_gull(10)], [3000, 6000, 7500], gullEvery: 3),
+    _l(146, 18, 5, _open, [_gull(10), _color(_r, 30)], [5500, 9000, 10500], gullEvery: 3, gullCount: 3),
+    _l(147, 20, 5, _chainBand, [_gull(10)], [5500, 8500, 13000], gullEvery: 3),
+    _l(148, 14, 5, _gullsFog, [_gull(12), _fog(8)], [4000, 10000, 13000], hard: true, gullEvery: 3, gullCount: 3),
+    _l(149, 14, 5, _gullsTwo, [_gull(10)], [4000, 6500, 9000], gullEvery: 3, bombEvery: 5, bombTimer: 10),
+    _l(150, 16, 5, _gullsFortress, [_gull(14), _ice(16)], [8000, 12500, 15500], boss: true, gullEvery: 3, gullCount: 3),
+
+    // ---------------------------------------------------- 16 · Kuzguncuk --
+    _l(151, 28, 5, _jamMiddle, [_jam(_jamMiddle)], [8000, 11000, 13500], hint: 'jam'),
+    _l(152, 28, 5, _jamCorners, [_jam(_jamCorners)], [8500, 14500, 23000]),
+    _l(153, 32, 5, _jamTunnel, [_jam(_jamTunnel)], [6500, 11500, 23500]),
+    _l(154, 34, 5, _jamFog, [_jam(_jamFog), _fog(8)], [8000, 13500, 23000]),
+    _l(155, 36, 5, _jamChains, [_jam(_jamChains)], [11000, 17500, 35500]),
+    _l(156, 28, 5, _jamBoxes, [_jam(_jamBoxes), _box(8)], [10000, 15500, 16500]),
+    _l(157, 38, 5, _jamIce, [_jam(_jamIce), _ice(16)], [11000, 23500, 37000]),
+    _l(158, 30, 5, _jamCorners, [_jam(_jamCorners)], [8500, 18500, 21500], hard: true, gullEvery: 4),
+    _l(159, 38, 5, _jamMiddle, [_jam(_jamMiddle)], [14500, 24000, 28500], bombEvery: 5, bombTimer: 10),
+    _l(160, 42, 5, _jamFortress, [_jam(_jamFortress), _box(8)], [11500, 16500, 46000], boss: true),
+
+    // --------------------------------------------------- 17 · Dolmabahçe --
+    _l(161, 14, 5, _lanternsTwo, [_lantern(2)], [6000, 10500, 15500], hint: 'lantern'),
+    _l(162, 14, 5, _lanternsFour, [_lantern(4)], [4500, 7000, 9500]),
+    _l(163, 16, 5, _lanternsIce, [_lantern(4), _ice(8)], [6000, 7500, 10500]),
+    _l(164, 14, 5, _lanternsFog, [_lantern(2), _fog(8)], [6000, 11000, 14500]),
+    _l(165, 18, 5, _lanternsTunnel, [_lantern(4)], [5000, 9500, 15500]),
+    _l(166, 30, 5, _lanternsJam, [_lantern(2), _jam(_lanternsJam)], [11000, 19000, 22000]),
+    _l(167, 16, 5, _lanternsFour, [_lantern(4), _gull(6)], [4500, 7000, 12500], gullEvery: 4),
+    _l(168, 14, 5, _lanternsSix, [_lantern(6)], [5500, 9500, 12000], hard: true),
+    _l(169, 16, 5, _lanternsFour, [_lantern(4)], [4500, 7500, 13500], bombEvery: 5, bombTimer: 10),
+    _l(170, 18, 5, _lanternsFortress, [_lantern(6), _box(4), _ice(8)], [9000, 13500, 15500], boss: true),
+
+    // ---------------------------------------------- 18 · Anadolu Kavağı --
+    _l(171, 26, 5, _open, [_pepper(315)], [8500, 14500, 24000], hint: 'pepper', pepperEvery: 6, bombTimer: 14),
+    _l(172, 26, 5, _fogMiddle, [_pepper(315), _fog(8)], [10000, 16000, 21500], pepperEvery: 6, bombTimer: 12),
+    _l(173, 28, 5, _tunnelSides, [_pepper(264)], [7500, 18000, 26000], pepperEvery: 6, bombTimer: 12),
+    _l(174, 24, 5, _gullsTwo, [_pepper(330), _gull(6)], [13000, 19000, 26000], pepperEvery: 6, bombTimer: 12, gullEvery: 4),
+    _l(175, 26, 5, _lanternsTwo, [_pepper(345), _lantern(2)], [13000, 34500, 38500], pepperEvery: 6, bombTimer: 12),
+    _l(176, 26, 5, _jamMiddle, [_pepper(288), _jam(_jamMiddle)], [9000, 16000, 24000], pepperEvery: 6, bombTimer: 12),
+    _l(177, 30, 5, _fogIce, [_pepper(288), _ice(16)], [11500, 20000, 27000], pepperEvery: 6, bombTimer: 12),
+    _l(178, 30, 5, _tunnelMaze, [_pepper(300), _box(2)], [12500, 18500, 23500], hard: true, pepperEvery: 6, bombTimer: 12),
+    _l(179, 28, 5, _lanternsFour, [_pepper(390), _lantern(4)], [13500, 18500, 21500], pepperEvery: 6, bombTimer: 12),
+    _l(180, 40, 5, _open, [_pepper(570)], [17000, 24500, 36000], boss: true, pepperEvery: 6, bombTimer: 12),
   ];
 
   static SugarLevel _l(
@@ -185,6 +270,9 @@ class SugarLevels {
     int bombEvery = 0,
     Map<int, int> belts = const {},
     int limonEvery = 0,
+    int gullEvery = 0,
+    int gullCount = 2,
+    int pepperEvery = 0,
   }) {
     assert(layout.length == SugarGame.size && layout.every((r) => r.length == SugarGame.size));
     // Earlier chapters are luckier: more specials from the sky, more free
@@ -202,12 +290,15 @@ class SugarLevels {
       hint: hint,
       bombTimer: bombTimer,
       bombEvery: bombEvery,
-      luck: const [18, 14, 12, 10, 9, 8, 9, 9, 8, 8, 8, 8][ch],
+      luck: const [18, 14, 12, 10, 9, 8, 9, 9, 8, 8, 8, 8, 10, 9, 9, 8, 8, 8][ch],
       gifts: n <= 5 ? 2 : (ch <= 1 || boss || hint != null ? 1 : 0),
-      rush: const [70, 80, 90, 95, 100, 105, 100, 100, 105, 105, 105, 110][ch],
-      calm: const [40, 48, 52, 55, 58, 58, 56, 56, 58, 58, 58, 58][ch],
+      rush: const [70, 80, 90, 95, 100, 105, 100, 100, 105, 105, 105, 110, 100, 105, 105, 105, 110, 110][ch],
+      calm: const [40, 48, 52, 55, 58, 58, 56, 56, 58, 58, 58, 58, 55, 56, 56, 58, 58, 58][ch],
       belts: belts,
       limonEvery: limonEvery,
+      gullEvery: gullEvery,
+      gullCount: gullCount,
+      pepperEvery: pepperEvery,
     );
   }
 
@@ -305,6 +396,55 @@ class SugarLevels {
 
   // Çamlıca: a bit of everything.
   static const _everything = ['...N....', '.1....2.', '........', '...Ww...', '...ww...', '........', 'HH....HH', '........'];
+
+  // The second season: 'F' fog · 'X' tunnel · 'G' gull · 'J' jam · 'Q' lantern.
+
+  // Salacak: morning fog.
+  static const _fogMiddle = ['........', '........', '..FFFF..', '..FFFF..', '........', '........', '........', '........'];
+  static const _fogBottom = ['........', '........', '........', '........', '........', '........', 'FFFFFFFF', 'FFFFFFFF'];
+  static const _fogCross = ['........', '...FF...', '...FF...', '.FFFFFF.', '...FF...', '...FF...', '........', '........'];
+  static const _fogIce = ['........', '........', '..FFFF..', '..FFFF..', '........', '........', 'iiiiiiii', 'iiiiiiii'];
+  static const _fogChains = ['........', '.c....c.', '..FFFF..', '..FFFF..', '........', '.c....c.', '........', '........'];
+  static const _fogBoxes = ['........', '........', '.k.FF.k.', '.k.FF.k.', '...FF...', '...FF...', '........', '........'];
+  static const _fogFrame = ['FFF..FFF', 'F......F', 'F......F', '........', '........', 'F......F', 'F......F', 'FFFFFFFF'];
+  static const _fogFortress = ['........', '.FFFFFF.', '.FiiiiF.', '.Fi..iF.', '.Fi..iF.', '.FiiiiF.', '.FF..FF.', '........'];
+
+  // Haydarpaşa: tunnels the sweets fall through.
+  static const _tunnelMiddle = ['........', '........', '........', '..XXXX..', '........', '........', 'iiiiiiii', 'iiiiiiii'];
+  static const _tunnelSides = ['........', '........', 'XX....XX', 'XX....XX', '........', '........', '........', '........'];
+  static const _tunnelFog = ['........', '........', '...XX...', '...XX...', '........', '.FF..FF.', '.FF..FF.', '........'];
+  static const _tunnelTwo = ['........', '.XX.....', '........', '.....XX.', '........', '........', 'iiiiiiii', 'iiii....'];
+  static const _tunnelBoxes = ['........', '........', '..XXXX..', '........', '.kk..kk.', '.kk..kk.', '........', '........'];
+  static const _tunnelChains = ['........', '........', 'X......X', 'X.cccc.X', 'X......X', '........', '........', '........'];
+  static const _tunnelFruit = ['..N..N..', '........', '.XX..XX.', '........', '........', '........', '........', '........'];
+  static const _tunnelThick = ['........', '........', '...XX...', '...XX...', '........', 'IIIIIIII', 'IIIIIIII', '........'];
+  static const _tunnelMaze = ['........', 'XX....XX', '...kk...', '.FF..FF.', '.FF..FF.', '...XX...', 'iiiiiiii', 'iiiiiiii'];
+
+  // Karaköy: gulls by the pier.
+  static const _gullsTwo = ['........', '........', '..G..G..', '........', '........', '........', '........', '........'];
+  static const _gullsFog = ['........', '..G..G..', '........', '........', '........', '.FF..FF.', '.FF..FF.', '........'];
+  static const _gullsTunnel = ['........', '.G....G.', '........', '..XXXX..', '........', '........', '........', '........'];
+  static const _gullsFortress = ['........', '.G....G.', '..iiii..', '.ii..ii.', '.ii..ii.', '..iiii..', '.G....G.', '........'];
+
+  // Kuzguncuk: jam to spread over the board.
+  static const _jamMiddle = ['........', '........', '........', '...JJ...', '...JJ...', '........', '........', '........'];
+  static const _jamCorners = ['J......J', '........', '........', '........', '........', '........', '........', 'J......J'];
+  static const _jamTunnel = ['........', '........', '..XXXX..', '........', '........', '...JJ...', '........', '........'];
+  static const _jamFog = ['........', '........', '..FFFF..', '..FFFF..', '........', '........', '...JJ...', '........'];
+  static const _jamChains = ['........', '.cc..cc.', '........', '...JJ...', '........', '........', '.cc..cc.', '........'];
+  static const _jamBoxes = ['........', '........', '.kk..kk.', '...JJ...', '........', '.kk..kk.', '........', '........'];
+  static const _jamIce = ['........', '........', '...JJ...', '........', '........', 'iiiiiiii', 'iiiiiiii', '........'];
+  static const _jamFortress = ['J......J', '.kk..kk.', '........', '..XXXX..', '........', '........', '.kk..kk.', 'J......J'];
+
+  // Dolmabahçe: lanterns to light.
+  static const _lanternsTwo = ['........', '........', '........', '..Q..Q..', '........', '........', '........', '........'];
+  static const _lanternsFour = ['........', '........', '.Q....Q.', '........', '........', '.Q....Q.', '........', '........'];
+  static const _lanternsIce = ['........', '........', '.Q....Q.', '..iiii..', '..iiii..', '.Q....Q.', '........', '........'];
+  static const _lanternsFog = ['........', '........', '..Q..Q..', '........', '........', '.FF..FF.', '.FF..FF.', '........'];
+  static const _lanternsTunnel = ['........', '........', '.Q....Q.', '...XX...', '........', '.Q....Q.', '........', '........'];
+  static const _lanternsJam = ['........', '........', '..Q..Q..', '........', '...JJ...', '........', '........', '........'];
+  static const _lanternsSix = ['........', '.Q....Q.', '........', '...QQ...', '........', '........', '.Q....Q.', '........'];
+  static const _lanternsFortress = ['........', '.Q....Q.', '..iiii..', '.k.QQ.k.', '.k....k.', '..iiii..', '.Q....Q.', '........'];
 }
 
 /// Helpers a player can spend in a level: smash one sweet, turn one into a
@@ -333,4 +473,5 @@ enum SugarBooster {
     2 => {moves: 1, hammer: 1, rainbow: 1},
     _ => {hammer: 2, rainbow: 1, moves: 1},
   };
+
 }

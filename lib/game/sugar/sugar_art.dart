@@ -1328,3 +1328,108 @@ class SugarSprites {
     _images.clear();
   }
 }
+
+// ------------------------------------------------------ the second season --
+
+/// Morning fog over a cell: soft white puffs, a hint of the sweet beneath.
+void paintFog(Canvas canvas, Rect cell, {double drift = 0}) {
+  final s = cell.width, c = cell.center;
+  canvas.drawRRect(RRect.fromRectAndRadius(cell.deflate(s * 0.02), Radius.circular(s * 0.22)), Paint()..color = const Color(0xFFE8EEF8).withValues(alpha: 0.82));
+  final puff = Paint()
+    ..color = Colors.white
+    ..maskFilter = MaskFilter.blur(BlurStyle.normal, s * 0.06);
+  for (final (dx, dy, r) in const [(-0.2, 0.06, 0.26), (0.16, -0.12, 0.28), (0.04, 0.2, 0.24), (0.24, 0.14, 0.2), (-0.18, -0.18, 0.18)]) {
+    canvas.drawCircle(c + Offset((dx + drift * 0.04) * s, dy * s), r * s, puff);
+  }
+  canvas.drawRRect(RRect.fromRectAndRadius(cell.deflate(s * 0.04), Radius.circular(s * 0.2)), Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = s * 0.04
+    ..color = Colors.white.withValues(alpha: 0.9));
+}
+
+/// A gull sitting on a cell, wings folded, an eye on the sweets.
+void paintGull(Canvas canvas, Rect cell, {double flap = 0}) {
+  final s = cell.width, c = cell.center + Offset(0, s * 0.06);
+  canvas.drawOval(Rect.fromCenter(center: c + Offset(0, s * 0.34), width: s * 0.6, height: s * 0.12), Paint()..color = Colors.black.withValues(alpha: 0.25));
+  final white = Paint()..shader = ui.Gradient.linear(c - Offset(0, s * 0.3), c + Offset(0, s * 0.3), const [Colors.white, Color(0xFFD8DEE8)]);
+  canvas.drawOval(Rect.fromCenter(center: c + Offset(s * 0.04, s * 0.08), width: s * 0.66, height: s * 0.42), white);
+  canvas.drawCircle(c + Offset(-s * 0.2, -s * 0.14), s * 0.17, white);
+  // The grey wing, lifting a little now and then.
+  final wing = Path()
+    ..moveTo(c.dx - s * 0.06, c.dy - s * 0.02)
+    ..quadraticBezierTo(c.dx + s * 0.22, c.dy - s * (0.2 + 0.18 * flap), c.dx + s * 0.4, c.dy + s * 0.02)
+    ..quadraticBezierTo(c.dx + s * 0.18, c.dy + s * 0.14, c.dx - s * 0.06, c.dy - s * 0.02)
+    ..close();
+  canvas.drawPath(wing, Paint()..color = const Color(0xFF9AA6B8));
+  canvas.drawPath(Path()..addPolygon([c + Offset(-s * 0.34, -s * 0.15), c + Offset(-s * 0.5, -s * 0.1), c + Offset(-s * 0.34, -s * 0.08)], true), Paint()..color = const Color(0xFFFFB020));
+  canvas.drawCircle(c + Offset(-s * 0.24, -s * 0.17), s * 0.035, Paint()..color = const Color(0xFF1A1020));
+  final ink = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = s * 0.03
+    ..color = const Color(0xFF5A6478);
+  canvas.drawOval(Rect.fromCenter(center: c + Offset(s * 0.04, s * 0.08), width: s * 0.66, height: s * 0.42), ink);
+  for (final dx in [-0.06, 0.12]) {
+    canvas.drawLine(c + Offset(dx * s, s * 0.28), c + Offset(dx * s, s * 0.38), Paint()
+      ..strokeWidth = s * 0.04
+      ..color = const Color(0xFFFFB020));
+  }
+}
+
+/// Rose jam under a cell: glossy, with a few drips.
+void paintJam(Canvas canvas, Rect cell) {
+  final s = cell.width;
+  final r = RRect.fromRectAndRadius(cell.deflate(s * 0.02), Radius.circular(s * 0.2));
+  canvas.drawRRect(r, Paint()..shader = ui.Gradient.linear(cell.topLeft, cell.bottomRight, const [Color(0xDDFF5A8A), Color(0xDDC0164E)]));
+  canvas.drawRRect(r, Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = s * 0.04
+    ..color = const Color(0xFFFF9AB8));
+  for (final (dx, dy, k) in const [(0.22, 0.2, 0.07), (0.7, 0.26, 0.05), (0.4, 0.78, 0.06)]) {
+    canvas.drawCircle(cell.topLeft + Offset(dx * s, dy * s), k * s, Paint()..color = Colors.white.withValues(alpha: 0.55));
+  }
+}
+
+/// A palace garden lantern: dark until three hits light it; [left] hits to
+/// go, shown as three little lamps under it.
+void paintLantern(Canvas canvas, Rect cell, int left, {double glow = 0}) {
+  final s = cell.width, c = cell.center;
+  final lit = 3 - left;
+  if (glow > 0) canvas.drawCircle(c, s * 0.7, Paint()..shader = ui.Gradient.radial(c, s * 0.7, [Color.fromRGBO(255, 224, 122, 0.8 * glow), const Color(0x00FFE07A)]));
+  final body = Rect.fromCenter(center: c + Offset(0, s * 0.02), width: s * 0.5, height: s * 0.6);
+  canvas.drawRRect(RRect.fromRectAndRadius(body, Radius.circular(s * 0.12)), Paint()
+    ..shader = ui.Gradient.linear(body.topCenter, body.bottomCenter, lit >= 2 ? const [Color(0xFFFFE07A), Color(0xFFE09A20)] : const [Color(0xFF6A5A8A), Color(0xFF3A2A5A)]));
+  canvas.drawRRect(RRect.fromRectAndRadius(body, Radius.circular(s * 0.12)), Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = s * 0.06
+    ..color = const Color(0xFF8A5A10));
+  canvas.drawLine(body.topCenter + Offset(0, s * 0.12), body.bottomCenter - Offset(0, s * 0.12), Paint()
+    ..strokeWidth = s * 0.04
+    ..color = const Color(0xFF8A5A10));
+  canvas.drawRect(Rect.fromCenter(center: body.topCenter - Offset(0, s * 0.05), width: s * 0.34, height: s * 0.1), Paint()..color = const Color(0xFF8A5A10));
+  for (var i = 0; i < 3; i++) {
+    canvas.drawCircle(body.bottomCenter + Offset((i - 1) * s * 0.17, s * 0.13), s * 0.055, Paint()..color = i < lit ? const Color(0xFFFFE07A) : Colors.white.withValues(alpha: 0.35));
+  }
+}
+
+/// A tunnel cell: a dark mouth with a ring, arrows pointing down through it.
+void paintTunnel(Canvas canvas, Rect cell, {required bool top, required bool bottom, double t = 0}) {
+  final s = cell.width;
+  canvas.drawRect(cell, Paint()..shader = ui.Gradient.linear(cell.centerLeft, cell.centerRight, const [Color(0xFF1A0A30), Color(0xFF3A1A60), Color(0xFF1A0A30)], const [0, 0.5, 1]));
+  final arrow = Paint()
+    ..color = const Color(0xFF7AC8FF).withValues(alpha: 0.7)
+    ..strokeWidth = s * 0.06
+    ..strokeCap = StrokeCap.round;
+  final y = cell.top + s * ((0.25 + t) % 1);
+  canvas.drawLine(Offset(cell.center.dx, y - s * 0.18), Offset(cell.center.dx, y + s * 0.12), arrow);
+  canvas.drawLine(Offset(cell.center.dx - s * 0.12, y), Offset(cell.center.dx, y + s * 0.12), arrow);
+  canvas.drawLine(Offset(cell.center.dx + s * 0.12, y), Offset(cell.center.dx, y + s * 0.12), arrow);
+  for (final (on, edge) in [(top, cell.top), (bottom, cell.bottom)]) {
+    if (!on) continue;
+    final mouth = Rect.fromCenter(center: Offset(cell.center.dx, edge), width: s * 0.94, height: s * 0.34);
+    canvas.drawOval(mouth, Paint()..color = const Color(0xFF0A0418));
+    canvas.drawOval(mouth, Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = s * 0.07
+      ..color = edge == cell.top ? const Color(0xFF8A6AF0) : const Color(0xFF2AC0E0));
+  }
+}

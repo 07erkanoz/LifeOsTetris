@@ -6,7 +6,7 @@ import '../audio/audio_service.dart';
 import '../core/chain/chain_game.dart' show ChainColor;
 import '../core/rewards.dart';
 import '../core/sugar/sugar_levels.dart';
-import '../game/chain/chain_sprites.dart';
+import '../game/chain/chain_sprites.dart' hide paintSparkle;
 import '../game/sugar/istanbul_art.dart';
 import '../game/sugar/sugar_art.dart';
 import '../game/tower/tower_art.dart';
@@ -146,6 +146,8 @@ class _Daily extends StatelessWidget {
     final ready = settings.dailyGiftReady;
     // The calendar shows the day to take now as today; taken days before it.
     final today = ready ? settings.giftDay : (settings.giftDay + Rewards.dailyDays - 1) % Rewards.dailyDays;
+    final now = settings.clock();
+    final left = DateTime(now.year, now.month, now.day + 1).difference(now);
     return CandyPanel(
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
       child: Column(
@@ -164,7 +166,7 @@ class _Daily extends StatelessWidget {
                     SizedBox(
                       width: d == Rewards.dailyDays - 1 ? w * 2 + gap : w,
                       height: 104,
-                      child: _DayTile(day: d, gift: Rewards.daily(d), taken: d < today || (!ready && d == today), today: ready && d == today),
+                      child: _DayTile(day: d, gift: Rewards.daily(d), taken: d < today || (!ready && d == today), today: ready && d == today, next: d == today + 1),
                     ),
                 ],
               );
@@ -172,20 +174,34 @@ class _Daily extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (ready)
-            CandyButton(
-              key: const ValueKey('gift-daily'),
-              label: s.giftTake,
-              colors: sugarGreen,
-              ink: const Color(0xFF0E6A32),
-              height: 52,
-              width: double.infinity,
-              onTap: () {
-                final gift = settings.claimDailyGift();
-                if (gift != null) showGiftPopup(context, settings, gift, title: s.dailyGiftTitle, audio: audio);
-              },
+            _Breathe(
+              child: CandyButton(
+                key: const ValueKey('gift-daily'),
+                label: s.giftTakeToday,
+                colors: sugarGreen,
+                ink: const Color(0xFF0E6A32),
+                height: 52,
+                width: double.infinity,
+                onTap: () {
+                  final gift = settings.claimDailyGift();
+                  if (gift != null) showGiftPopup(context, settings, gift, title: s.dailyGiftTitle, audio: audio);
+                },
+              ),
             )
           else
-            Text(s.giftTomorrow, style: _style(15, _muted)),
+            Container(
+              key: const ValueKey('gift-next'),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(color: const Color(0xFFF3E6FA), borderRadius: BorderRadius.circular(22)),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.schedule_rounded, size: 22, color: Color(0xFFE0247A)),
+                  const SizedBox(width: 8),
+                  Flexible(child: Text(s.giftNextIn(left.inHours, left.inMinutes % 60), style: _style(15, _ink))),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -193,20 +209,25 @@ class _Daily extends StatelessWidget {
 }
 
 class _DayTile extends StatelessWidget {
-  const _DayTile({required this.day, required this.gift, required this.taken, required this.today});
+  const _DayTile({required this.day, required this.gift, required this.taken, required this.today, this.next = false});
 
   final int day;
   final Gift gift;
   final bool taken;
   final bool today;
 
+  /// The day after the one to take (or taken) now.
+  final bool next;
+
   @override
   Widget build(BuildContext context) {
     final s = AppStrings.of(context);
     final big = day == Rewards.dailyDays - 1;
-    return Container(
+    final later = !taken && !today && !next;
+    final tile = Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
+        boxShadow: today ? const [BoxShadow(color: Color(0x99FFC21A), blurRadius: 16, spreadRadius: 1)] : null,
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
@@ -216,17 +237,25 @@ class _DayTile extends StatelessWidget {
               ? const [Color(0xFFE6F9EE), Color(0xFFC9F0D8)]
               : big
               ? const [Color(0xFFFFE9F5), Color(0xFFFFC6E6)]
+              : later
+              ? const [Color(0xFFF4ECF8), Color(0xFFEADFF0)]
               : const [Colors.white, Color(0xFFFFEAF6)],
         ),
-        border: Border.all(color: today ? const Color(0xFFFFB000) : Colors.white, width: today ? 3 : 2),
+        border: Border.all(color: today ? const Color(0xFFFFB000) : (next ? const Color(0xFFFF9AD8) : Colors.white), width: today ? 3 : 2),
       ),
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(s.giftDayLabel(day), style: _style(13, today ? const Color(0xFF8A4A00) : _muted)),
+          Text(s.giftDayLabel(day), style: _style(13, today ? const Color(0xFF8A4A00) : (later ? const Color(0xFFB8A8D0) : _muted))),
           Expanded(
-            child: big
+            child: today && !big
+                // Today's gift waits in a present that hops.
+                ? _Breathe(
+                    hop: true,
+                    child: GiftPicture(size: const Size(52, 50), paint: (c, size) => paintPresent(c, size.center(const Offset(0, 2)), 46, tilt: -0.1)),
+                  )
+                : big
                 ? Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -235,18 +264,142 @@ class _DayTile extends StatelessWidget {
                       Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: Text(s.giftBigChest, style: _style(14, _ink)))),
                     ],
                   )
-                : Center(child: _GiftItems(gift, size: 24)),
+                : Center(child: Opacity(opacity: taken ? 0.4 : (later ? 0.6 : 1), child: _GiftItems(gift, size: 24))),
           ),
           SizedBox(
-            height: 16,
-            child: taken
-                ? const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF1FB85A))
-                : today
-                ? Text(s.giftToday, style: _style(12, const Color(0xFFE0247A)))
+            height: 18,
+            child: today
+                ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(color: const Color(0xFFE0247A), borderRadius: BorderRadius.circular(9)),
+                    child: Text(s.giftToday, style: _style(11.5, Colors.white)),
+                  )
+                : next
+                ? Text(s.giftTomorrowShort, style: _style(12, const Color(0xFFE0247A)))
+                : later && !big
+                ? const Icon(Icons.lock_rounded, size: 14, color: Color(0xFFB8A8D0))
                 : null,
           ),
         ],
       ),
+    );
+    if (!taken) return tile;
+    // Taken: a green ALINDI ribbon across it and a tick in the corner.
+    return Stack(
+      children: [
+        Positioned.fill(child: tile),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Center(
+                child: Transform.rotate(
+                  angle: -0.42,
+                  child: OverflowBox(
+                    maxWidth: 400,
+                    child: Container(
+                      width: 260,
+                      height: 20,
+                      color: const Color(0xFF1FB85A),
+                      alignment: Alignment.center,
+                      child: Text(s.giftTaken, style: _style(11.5, Colors.white)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const Positioned(right: 5, bottom: 5, child: Icon(Icons.check_circle_rounded, size: 18, color: Color(0xFF1FB85A))),
+      ],
+    );
+  }
+}
+
+/// Keeps something alive: a gentle breath (or a hop) on its own clock; still
+/// when the system asks for less motion.
+class _Breathe extends StatefulWidget {
+  const _Breathe({required this.child, this.hop = false});
+
+  final Widget child;
+  final bool hop;
+
+  @override
+  State<_Breathe> createState() => _BreatheState();
+}
+
+class _BreatheState extends State<_Breathe> with SingleTickerProviderStateMixin {
+  late final AnimationController _t = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat();
+
+  @override
+  void dispose() {
+    _t.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaQuery.disableAnimationsOf(context)) return widget.child;
+    return AnimatedBuilder(
+      animation: _t,
+      child: widget.child,
+      builder: (context, child) {
+        final v = sin(_t.value * 2 * pi);
+        if (widget.hop) {
+          // Up, a squash on landing.
+          final up = max(0.0, v);
+          return Transform.translate(offset: Offset(0, -6 * up), child: Transform.rotate(angle: 0.06 * sin(_t.value * 4 * pi), child: child));
+        }
+        return Transform.scale(scale: 1 + 0.025 * v, child: child);
+      },
+    );
+  }
+}
+
+/// A full jar: it wobbles and shines with light turning behind it.
+class _FullJar extends StatefulWidget {
+  const _FullJar();
+
+  @override
+  State<_FullJar> createState() => _FullJarState();
+}
+
+class _FullJarState extends State<_FullJar> with SingleTickerProviderStateMixin {
+  late final AnimationController _t = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400))..repeat();
+
+  @override
+  void dispose() {
+    _t.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final still = MediaQuery.disableAnimationsOf(context);
+    return AnimatedBuilder(
+      animation: _t,
+      builder: (context, _) {
+        final t = still ? 0.2 : _t.value;
+        return GiftPicture(
+          size: const Size(170, 130),
+          repaintKey: t,
+          paint: (canvas, size) {
+            final c = size.center(const Offset(0, 4));
+            paintRays(canvas, c, 82, turn: t * 2 * pi / 12 * 2);
+            canvas.save();
+            canvas.translate(c.dx, c.dy + 50);
+            // A wobble now and then, as if the sweets inside push.
+            final wobble = t < 0.35 ? sin(t / 0.35 * pi * 4) * 0.09 * (1 - t / 0.35) : 0.0;
+            canvas.rotate(wobble);
+            paintJar(canvas, const Offset(0, -50), 112, 1, shine: true);
+            canvas.restore();
+            for (final (dx, dy, k, ph) in [(-62.0, -40.0, 8.0, 0.0), (60.0, -50.0, 10.0, 0.33), (66.0, 26.0, 6.0, 0.66), (-56.0, 36.0, 7.0, 0.5)]) {
+              final tw = 0.5 + 0.5 * sin((t + ph) * 2 * pi * 2);
+              paintSparkle(canvas, c + Offset(dx, dy), k * (0.6 + 0.6 * tw), dx < 0 ? Colors.white : const Color(0xFFFFE066));
+            }
+          },
+        );
+      },
     );
   }
 }
@@ -296,12 +449,27 @@ class _Jar extends StatelessWidget {
       child: Column(
         children: [
           _Title(s.jarTitle, hint: s.jarHint),
-          GiftPicture(size: const Size(120, 120), repaintKey: (fill, full), paint: (c, size) => paintJar(c, size.center(Offset.zero), 112, fill, shine: full)),
+          if (full) const _FullJar() else GiftPicture(size: const Size(120, 120), repaintKey: fill, paint: (c, size) => paintJar(c, size.center(Offset.zero), 112, fill)),
           const SizedBox(height: 8),
           _Bar(value: fill),
           const SizedBox(height: 4),
-          Text(full ? s.jarFull : '${min(settings.jarCount, settings.jarCapacity)} / ${settings.jarCapacity}', style: _style(16, full ? const Color(0xFF8A4A00) : _ink)),
+          Text(full ? s.jarFullAsk : '${min(settings.jarCount, settings.jarCapacity)} / ${settings.jarCapacity}', textAlign: TextAlign.center, style: _style(16, full ? const Color(0xFF8A4A00) : _ink)),
           const SizedBox(height: 8),
+          if (full)
+            _Breathe(
+              child: CandyButton(
+                key: const ValueKey('gift-jar'),
+                label: s.jarOpenFull,
+                height: 46,
+                textSize: 19,
+                width: double.infinity,
+                onTap: () {
+                  final gift = settings.openJar();
+                  if (gift != null) showGiftPopup(context, settings, gift, title: s.jarFull, audio: audio);
+                },
+              ),
+            )
+          else
           CandyButton(
             key: const ValueKey('gift-jar'),
             label: s.jarOpen,
@@ -703,14 +871,11 @@ Future<void> showGiftPopup(BuildContext context, Settings settings, Gift gift, {
                     CandyText(s.unlockName(unlock.name), size: 22, color: _ink, stroke: 0),
                     Text(s.unlockText(unlock.name), textAlign: TextAlign.center, style: _style(14.5, _muted, weight: FontWeight.w700)),
                   ] else
-                    GiftPicture(
-                      size: const Size(150, 120),
-                      paint: (c, size) => paintChest(c, size.center(const Offset(0, 14)), 110, chest == null ? chestGold : chestTone(chest), open: true, glow: true),
-                    ),
+                    _Reveal(chest: chest),
                   const SizedBox(height: 12),
                   Text(s.giftGot, style: _style(14, _muted)),
                   const SizedBox(height: 4),
-                  _GiftItems(gift, size: 40),
+                  _PopIn(delay: 0.55, child: _GiftItems(gift, size: 40)),
                   if (gift.freezes > 0)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
@@ -765,6 +930,97 @@ Future<void> showGiftPopup(BuildContext context, Settings settings, Gift gift, {
 }
 
 bool _tryable(Unlock u) => u != Unlock.shuffle && u != Unlock.freeze;
+
+/// Opening a gift: the chest shakes, bursts open with light and confetti.
+class _Reveal extends StatefulWidget {
+  const _Reveal({this.chest});
+
+  final ChestTier? chest;
+
+  @override
+  State<_Reveal> createState() => _RevealState();
+}
+
+class _RevealState extends State<_Reveal> with TickerProviderStateMixin {
+  late final AnimationController _open = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))..forward();
+  late final AnimationController _spin = AnimationController(vsync: this, duration: const Duration(seconds: 6))..repeat();
+
+  @override
+  void dispose() {
+    _open.dispose();
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final still = MediaQuery.disableAnimationsOf(context);
+    final tone = widget.chest == null ? chestGold : chestTone(widget.chest!);
+    return AnimatedBuilder(
+      animation: Listenable.merge([_open, _spin]),
+      builder: (context, _) {
+        final t = still ? 1.0 : _open.value;
+        final spin = still ? 0.0 : _spin.value;
+        return GiftPicture(
+          size: const Size(200, 140),
+          repaintKey: (t, spin),
+          paint: (canvas, size) {
+            final c = size.center(const Offset(0, 14));
+            if (t < 0.45) {
+              // It shakes, harder and harder.
+              final k = t / 0.45;
+              canvas.save();
+              canvas.translate(c.dx, c.dy);
+              canvas.rotate(sin(k * pi * 10) * 0.12 * k);
+              paintChest(canvas, Offset.zero, 110, tone, glow: true);
+              canvas.restore();
+              return;
+            }
+            final k = ((t - 0.45) / 0.55).clamp(0.0, 1.0);
+            paintRays(canvas, c - const Offset(0, 10), 70 + 40 * k, turn: spin * 2 * pi, n: 14, color: Color.fromRGBO(255, 240, 160, 0.5 * k));
+            paintChest(canvas, c, 110, tone, open: true, glow: true);
+            // Confetti flying out, then drifting.
+            final rnd = Random(7);
+            const colors = [Color(0xFFFF5FB8), Color(0xFFFFE066), Color(0xFF6BF0A0), Color(0xFF7AC8FF)];
+            for (var i = 0; i < 18; i++) {
+              final a = -pi / 2 + (rnd.nextDouble() - 0.5) * pi * 1.4;
+              final d = (40 + rnd.nextDouble() * 50) * Curves.easeOut.transform(k);
+              final p = c + Offset(cos(a) * d, sin(a) * d + 30 * k * k);
+              canvas.save();
+              canvas.translate(p.dx, p.dy);
+              canvas.rotate(a + k * 6);
+              canvas.drawRect(const Rect.fromLTWH(-4, -2, 8, 4), Paint()..color = colors[i % 4].withValues(alpha: 1 - k * 0.4));
+              canvas.restore();
+            }
+          },
+        );
+      },
+    );
+  }
+}
+
+/// [child] pops in [delay] seconds after it is shown.
+class _PopIn extends StatelessWidget {
+  const _PopIn({required this.child, this.delay = 0});
+
+  final Widget child;
+  final double delay;
+
+  @override
+  Widget build(BuildContext context) {
+    if (MediaQuery.disableAnimationsOf(context)) return child;
+    final total = delay + 0.4;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: (total * 1000).round()),
+      child: child,
+      builder: (context, v, child) {
+        final k = ((v * total - delay) / 0.4).clamp(0.0, 1.0);
+        return Opacity(opacity: k, child: Transform.scale(scale: 0.6 + 0.4 * Curves.easeOutBack.transform(k), child: child));
+      },
+    );
+  }
+}
 
 /// Puts an unlock to use at once: wears the outfit, picks the look.
 void _tryUnlock(Settings settings, Unlock u) {

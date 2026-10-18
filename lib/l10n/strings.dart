@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../core/chain/chain_game.dart';
+import '../core/sugar/sugar_game.dart' show SugarCombo;
 import '../core/game_events.dart';
 import '../core/scoring.dart';
 import '../theme/palette.dart';
@@ -115,6 +116,7 @@ class AppStrings {
   String get bestPrefix => _t('En iyi: ', 'Best: ');
   String get about => _t('Hakkında', 'About');
   String get back => _t('Geri', 'Back');
+  String get backAgainToExit => _t('Çıkmak için bir kez daha geri bas', 'Press back again to exit');
   String get paused => _t('Duraklatıldı', 'Paused');
   String get resume => _t('Devam et', 'Resume');
   String get restart => _t('Baştan', 'Restart');
@@ -218,15 +220,32 @@ class AppStrings {
   String get newBadge => _t('YENİ', 'NEW');
   // Home lobby: Lokum's suggestions and the mode cards.
   String get forYou => _t('SENİN İÇİN', 'FOR YOU');
-  String get tipUntried => _t('Bunu hiç denemedin!', "You haven't tried this one!");
-  String get tipTry => _t('Hemen dene', 'Try it');
-  String tipLeftOff(int level) => _t('Kaldığın yer: Seviye $level', 'You stopped at level $level');
+  // Home: the games showcase, the game tiles, the continue bar, the tour.
+  String get allGames => _t('TÜM OYUNLAR', 'ALL GAMES');
+  String get allModes => _t('Tüm modlar', 'All modes');
+  String get newGameBadge => _t('YENİ OYUN', 'NEW GAME');
+  String get leftOffLabel => _t('KALDIĞIN YERDEN', 'WHERE YOU LEFT OFF');
+  String get lastPlayedLabel => _t('SON OYNADIĞIN', 'LAST PLAYED');
+  String get towerKind => _t('Kule diz', 'Stack a tower');
+  String get sugarKind => _t('Eşleştir · patlat', 'Match · pop');
+  String get chainKind => _t('Zincir kur', 'Make chains');
+  String get puzzleKind => _t('Blok yerleştir', 'Place blocks');
+  String get superKind => _t('Güçlü bloklar', 'Power blocks');
+  String get classicKind => _t('Düşen bloklar', 'Falling blocks');
+  String get tourTitle => _t('Burada tam 6 oyun var!', 'There are 6 games right here!');
+  String get tourLine => _t('Kaydırıp bak ya da aşağıdan birini seç.', 'Swipe to look, or pick one below.');
+  String get tourOk => _t('ANLADIM', 'GOT IT');
+  String get artSuper => _t('SÜPER!', 'SUPER!');
+  String get artLines => _t('4 SATIR!', '4 LINES!');
+  String get tipUntried => _t('Buna hiç bakmadın, bence bayılırsın!', "You haven't tried this, you'll love it!");
+  String get tipTry => _t('Bir dene', 'Give it a go');
+  String tipLeftOff(int level) => _t('$level. seviyede kalmıştık!', 'We stopped at level $level!');
   String get tipContinue => _t('Devam et', 'Continue');
-  String get tipDaily => _t('Bugünün bulmacası hazır!', "Today's puzzle is ready!");
+  String get tipDaily => _t('Bugünün bulmacası seni bekliyor!', "Today's puzzle is waiting for you!");
   String get tipSolve => _t('Çöz', 'Solve');
-  String get tipBeatBest => _t('Rekorunu geçebilir misin?', 'Can you beat your best?');
+  String get tipBeatBest => _t('Hadi, rekorunu bir zorlayalım!', "Come on, let's push your record!");
   String get tipPlay => _t('Oyna', 'Play');
-  String get tipTapMe => _t('Bana dokun, bir fikrim daha var!', 'Tap me for another idea!');
+  String get tipTapMe => _t('Bana dokun, aklımda bir şey daha var!', "Tap me, I've got another idea!");
   // Gifts: the daily calendar, the sugar jar, star chests, the weekly event.
   String get giftsTitle => _t('HEDİYELER', 'GIFTS');
   String get giftsShort => _t('Hediyeler', 'Gifts');
@@ -237,15 +256,22 @@ class AppStrings {
   String get giftTaken => _t('ALINDI', 'TAKEN');
   String get giftTake => _t('AL', 'TAKE');
   String get giftTomorrow => _t('Yarın yeni hediye', 'A new gift tomorrow');
+  String get giftTomorrowShort => _t('yarın', 'tomorrow');
+  String get giftTakeToday => _t('HEDİYENİ AL', 'TAKE YOUR GIFT');
+  String giftNextIn(int hours, int minutes) => hours > 0
+      ? _t('Sıradaki hediye: $hours sa $minutes dk sonra', 'Next gift in ${hours}h ${minutes}m')
+      : _t('Sıradaki hediye: $minutes dk sonra', 'Next gift in ${minutes}m');
   String get giftBigChest => _t('Büyük sandık', 'Big chest');
-  String get tipGift => _t('Bugünkü hediyen hazır!', "Today's gift is ready!");
+  String get tipGift => _t('Bugünün hediyesi geldi, aç bakalım!', "Today's gift is here, open it!");
   String get tipOpen => _t('Aç', 'Open');
-  String tipGiftsWaiting(int n) => _t('Açılmayı bekleyen $n hediyen var!', '$n gifts are waiting for you!');
+  String tipGiftsWaiting(int n) => _t('$n hediye seni bekliyor!', '$n gifts are waiting for you!');
   String get tipSee => _t('Gör', 'See');
   String get jarTitle => _t('Şeker kavanozu', 'Sugar jar');
   String get jarHint => _t('Patlattığın her şeker kavanoza düşer.', 'Every sweet you pop drops into the jar.');
   String get jarFull => _t('Kavanoz doldu!', 'The jar is full!');
+  String get jarFullAsk => _t('Kavanoz doldu! İçinde ne var?', "The jar is full! What's inside?");
   String get jarOpen => _t('AÇ', 'OPEN');
+  String get jarOpenFull => _t('KAVANOZU AÇ', 'OPEN THE JAR');
   String get chestsTitle => _t('Yıldız sandıkları', 'Star chests');
   String chestsHint(int every) => _t("Şeker Küpler'de her $every yıldızda bir sandık.", 'A chest for every $every Sugar Blocks stars.');
   String chestNext(int stars) => _t('Sonraki sandık: $stars yıldız', 'Next chest: $stars stars');
@@ -561,6 +587,16 @@ class AppStrings {
   String get chainHowChain => _t('Düşen küpler yeniden eşleşirse ZİNCİR olur', 'Falling cubes that match again make a CHAIN');
   String get chainHowGarbage => _t('Kırmızı blokların yanında eşleştir, kırılsınlar', 'Match next to red slabs to break them');
   String get chainHowTop => _t('Küpler tepeye değmesin!', 'Keep the cubes off the top!');
+  // The first mission's lesson, and the card before the chain missions.
+  String chainLesson(String step) => switch (step) {
+    'swap' => _t('Sarıyı sağa kaydır, bakalım ne olacak!', 'Slide the yellow right and see!'),
+    'fall' => _t('Maviler gitti; üstteki sarı düşüyor...', 'The blues are gone; the yellow above falls...'),
+    _ => _t('İşte zincir! Düşen küp yeniden eşleşti.', "That's a chain! The falling cube matched again."),
+  };
+  String get chainHowTitle => _t('Zincir nasıl yapılır?', 'How to make a chain');
+  String get chainHowStep1 => _t('Eşleştir', 'Make a match');
+  String get chainHowStep2 => _t('Üstteki küp düşer', 'The cube above falls');
+  String get chainHowStep3 => _t('Yeniden eşleşirse ×2!', 'It matches again: ×2!');
   String get chainHowKeys => _t('Oklar: imleç · Boşluk: takas · Shift: yükselt', 'Arrows: cursor · Space: swap · Shift: raise');
   String get chainStart => _t('BAŞLA', 'START');
   String get chainRaise => _t('Yükselt', 'Raise');
@@ -578,6 +614,7 @@ class AppStrings {
   String pierMissions(int first) => _t('Görev $first–${first + 4}', 'Missions $first–${first + 4}');
   String missionText(ChainMission m) {
     final secs = m.seconds.round();
+    if (m.number == 1 && m.kind == MissionKind.chain) return _t("Lokum'un gösterdiği küpü kaydır", 'Slide the cube Lokum shows');
     return switch (m.kind) {
       MissionKind.chain => m.count == 1
           ? _t('$secs saniyede ×${m.target} zincir yap', 'Make a ×${m.target} chain in $secs s')
@@ -715,7 +752,13 @@ class AppStrings {
     8 => _t('Boğaz Vapuru', 'The Bosphorus ferry'),
     9 => _t('İstiklal', 'İstiklal Avenue'),
     10 => 'Balat',
-    _ => _t('Çamlıca Tepesi', 'Çamlıca Hill'),
+    11 => _t('Çamlıca Tepesi', 'Çamlıca Hill'),
+    12 => 'Salacak',
+    13 => _t('Haydarpaşa', 'Haydarpaşa Station'),
+    14 => _t('Karaköy İskelesi', 'Karaköy Pier'),
+    15 => 'Kuzguncuk',
+    16 => _t('Dolmabahçe', 'Dolmabahçe Palace'),
+    _ => 'Anadolu Kavağı',
   };
 
   /// The story card of chapter [n]: when and where, what happened there
@@ -728,7 +771,7 @@ class AppStrings {
         'A few steps from the Spice Bazaar, a confectioner opened a shop that made lokum the symbol of Istanbul. Tonight its two-hundred-year-old book of recipes was stolen.',
       ),
       limon: _t("Defter artık bende. İstanbul'un tatlısını sayfa sayfa ekşiteceğim; ilk durak bu çarşı.", "The book is mine now. I'll sour Istanbul's sweets page by page, starting with this bazaar."),
-      lokum: _t('Bu çarşının her köşesini bilirim. Şekerleri kurtaralım, izini kaybetmeden.', 'I know every corner of this bazaar. Save the sweets and we keep on his trail.'),
+      lokum: _t('Bu çarşıyı avucumun içi gibi bilirim. Hadi şekerleri kurtaralım, izini de kaybetmeyelim.', 'I know every corner of this bazaar. Save the sweets and we keep on his trail.'),
     ),
     1 => (
       when: _t('1621 · Üsküdar', '1621 · Üsküdar'),
@@ -737,7 +780,7 @@ class AppStrings {
         "That winter the Bosphorus froze; chroniclers write that people walked across the ice from Üsküdar. Legend says the Maiden's Tower once hid a princess from a prophecy.",
       ),
       limon: _t('Buz bu şehrin tarihini bir kez yazdı, bir kez daha yazacak. Kuleye giden her yolu donduruyorum.', "Ice wrote this city's history once and it will again. I'm freezing every way to the tower."),
-      lokum: _t("1621'in buzu da çözülmüştü. Buzlu kareleri kır, kuleye ulaşalım.", "The ice of 1621 melted too. Crack the icy squares and we'll reach the tower."),
+      lokum: _t("1621'de de buz çözülmüştü, bu da çözülür. Buzlu kareleri kır, kuleye varalım.", "The ice of 1621 melted too. Crack the icy squares and we'll reach the tower."),
     ),
     2 => (
       when: _t('1452 · Rumeli Hisarı', '1452 · Rumeli Fortress'),
@@ -746,7 +789,7 @@ class AppStrings {
         'Mehmed II raised the fortress in about four months to command the Bosphorus. The next spring Byzantium closed the Golden Horn with a great iron chain.',
       ),
       limon: _t('Zincirin hikâyesini ben de bilirim. Şekerleri tek tek bağladım; hiçbiri yerinden kıpırdamayacak.', "I know the story of the chain too. I've bound the sweets one by one; not one will move."),
-      lokum: _t('O zincir de aşılmıştı: gemiler bir gecede karadan yürütüldü. Zincirleri kır, yol açılsın.', 'That chain was beaten too: ships were hauled overland in a single night. Break the chains and clear the way.'),
+      lokum: _t('O zinciri de aşmışlardı: gemileri bir gecede karadan yürüttüler. Zincirleri kır, yol açılsın.', 'That chain was beaten too: ships were hauled overland in a single night. Break the chains and clear the way.'),
     ),
     3 => (
       when: _t('1461 · Kapalıçarşı', '1461 · Grand Bazaar'),
@@ -755,7 +798,7 @@ class AppStrings {
         'The heart of the bazaar, the Cevahir Bedesten, was built soon after the conquest. Jewels and fine cloth were kept here and the gates were locked every evening.',
       ),
       limon: _t('Şekerleri bedestenin sandıklarına kilitledim. Bu labirentte kimse yolunu bulamaz.', "I've locked the sweets in the bedesten's chests. Nobody finds their way in this maze."),
-      lokum: _t('Kutunun yanında eşleştir, kilit çözülür. Defterin bir sayfası da burada olmalı.', 'Match beside a box and the lock gives way. A page of the book must be here too.'),
+      lokum: _t('Kutunun yanında eşleştirirsen kilit açılır. Defterin bir sayfası da burada olmalı.', 'Match beside a box and the lock gives way. A page of the book must be here too.'),
     ),
     4 => (
       when: _t('1348 · Galata', '1348 · Galata'),
@@ -764,7 +807,7 @@ class AppStrings {
         'Built by the Genoese, the tower became the post of fire watchmen in Ottoman times. When smoke rose over the city a signal went out from the top.',
       ),
       limon: _t("Galata'nın her köşesine saatli bombalar kurdum. Gözcüler bile yetişemez.", 'I set time bombs all over Galata. Not even the watchmen will keep up.'),
-      lokum: _t('Gözcü gibi düşün: önce sayısı en az olanı söndür. Süre bitmeden!', 'Think like a watchman: put out the lowest count first. Before time runs out!'),
+      lokum: _t('Gözcü gibi düşün: önce sayısı en küçük olanı söndür. Süre dolmadan!', 'Think like a watchman: put out the lowest count first. Before time runs out!'),
     ),
     5 => (
       when: _t('1072 · Kınalıada', '1072 · Kınalıada'),
@@ -773,7 +816,7 @@ class AppStrings {
         "Deposed Byzantine emperor Romanos IV Diogenes was exiled here. The islands are called the Princes' Islands because they were where such exiles were sent.",
       ),
       limon: _t('Ben sürgüne gitmem, kaçarım. Adaların gökkuşağını da yanıma alıyorum!', "I don't get exiled, I escape. And I'm taking the islands' rainbow with me!"),
-      lokum: _t('Renkleri gökkuşağı toplarıyla geri alacağız. Defterin son sayfaları onda; peşini bırakmak yok.', "We'll win the colours back with rainbow balls. He has the book's last pages; we don't let go."),
+      lokum: _t('Renkleri gökkuşağı toplarıyla geri alırız. Defterin son sayfaları onda, peşini bırakmıyoruz.', "We'll win the colours back with rainbow balls. He has the book's last pages; we don't let go."),
     ),
     6 => (
       when: _t('MÖ 685 · Kalkedon', '685 BC · Chalcedon'),
@@ -782,7 +825,7 @@ class AppStrings {
         'Megarians settled at Kadıköy 17 years before Byzantion was founded. Herodotus tells how the Persian general Megabazus called them blind for choosing this shore over the peninsula opposite.',
       ),
       limon: _t('Körler kıyısı, öyle mi? Bu yakanın şekerlerini acı kakaoyla kaplıyorum; her hamlede biraz daha yayılacak.', "The shore of the blind, is it? I'm coating this side's sweets in bitter cocoa, and it spreads with every move."),
-      lokum: _t('Biz karşıyı da görürüz, bu yakayı da. Çikolatanın yanında eşleştir; her hamlede birini kır ki yayılmasın.', "We see both shores. Match beside the chocolate and break some every move, so it can't spread."),
+      lokum: _t('Biz iki yakayı da görürüz. Çikolatanın yanında eşleştir, her hamlede birini kır ki yayılmasın.', "We see both shores. Match beside the chocolate and break some every move, so it can't spread."),
     ),
     7 => (
       when: _t('1856 · Ortaköy', '1856 · Ortaköy'),
@@ -791,7 +834,7 @@ class AppStrings {
         'Sultan Abdülmecid had the Grand Mecidiye Mosque built beside the Ortaköy pier. Its architects were Garabet Balyan and his son Nigoğos, who also built Dolmabahçe Palace; it stands so close to the water that waves break at its courtyard.',
       ),
       limon: _t('Defterdeki nar şerbeti tarifinin narlarını tahtanın tepesine sakladım. Aşağı inemeyecekler.', "I've hidden the pomegranates for the book's sherbet at the top of the board. They'll never come down."),
-      lokum: _t('Narlar şekerle birlikte düşer. Altlarını eşleştir, en alt sıraya varınca toplanırlar.', 'Pomegranates fall with the sweets. Match below them; once they reach the bottom row they are ours.'),
+      lokum: _t('Narlar şekerle birlikte düşer. Altlarında eşleştir, en alt sıraya inince bizimdir.', 'Pomegranates fall with the sweets. Match below them; once they reach the bottom row they are ours.'),
     ),
     8 => (
       when: _t('1872 · Sühulet', '1872 · The Sühulet'),
@@ -800,7 +843,7 @@ class AppStrings {
         "Şirket-i Hayriye's ferry Sühulet began carrying horse carts on its deck between Kabataş and Üsküdar. It was designed by the company's director Hüseyin Haki Efendi and counts among the world's first car ferries.",
       ),
       limon: _t('Vapurun güvertesini ele geçirdim. Şekerleri bantlara dizdim; her hamlede kayıp gidecekler.', "I've taken the ferry's deck. The sweets are on the belts now, and they slide away with every move."),
-      lokum: _t('Bant her hamleden sonra bir kare kayar. Şekerin nereye varacağını düşün; bazen eşleşme kendiliğinden gelir.', 'The belt moves one cell after every move. Think where the sweets will land; sometimes the match comes by itself.'),
+      lokum: _t('Bant her hamleden sonra bir kare kayar. Şekerin nereye gideceğini kestir; bazen eşleşme kendiliğinden gelir.', 'The belt moves one cell after every move. Think where the sweets will land; sometimes the match comes by itself.'),
     ),
     9 => (
       when: _t('1875 · Tünel', '1875 · The Tünel'),
@@ -809,7 +852,7 @@ class AppStrings {
         "The Tünel opened, climbing from Karaköy to Beyoğlu. It is the world's second oldest underground line, after London's, and takes the hill in a minute and a half. The Grande Rue above, today's İstiklal, grew famous for its patisseries.",
       ),
       limon: _t('Caddenin pastalarını kat kat dizdim, şekerlerin önüne yığdım. Bakalım kaç katını yiyebileceksin.', "I've stacked the avenue's cakes tier upon tier in front of the sweets. Let's see how many tiers you can eat."),
-      lokum: _t('Pastanın yanındaki her eşleşme bir kat yer. Son kat gidince yerinden paketli şeker çıkar!', 'Every match beside a cake eats a tier. When the last one goes, a wrapped sweet appears in its place!'),
+      lokum: _t('Pastanın yanında her eşleşme bir katını yer. Son kat da gidince yerinden paketli şeker çıkar!', 'Every match beside a cake eats a tier. When the last one goes, a wrapped sweet appears in its place!'),
     ),
     10 => (
       when: _t('1492 · Balat', '1492 · Balat'),
@@ -818,9 +861,9 @@ class AppStrings {
         'Sephardic Jews driven out of Spain came to Istanbul, received by Bayezid II, and many settled in Balat on the Golden Horn. Greek, Armenian and Jewish quarters lived side by side for centuries; colourful bay-windowed houses still line its hills.',
       ),
       limon: _t("Balat'ın renkli kapılarını kilitledim. Her biri yalnız kendi rengini tanır; anahtarlar bende.", "I've locked Balat's coloured doors. Each knows only its own colour, and I have the keys."),
-      lokum: _t('Anahtara gerek yok: kapının yanında kendi renginde bir eşleşme yap, kapı açılsın. Arkasında çizgili şeker var.', "No key needed: make a match in the door's own colour beside it and it opens. A striped sweet waits behind."),
+      lokum: _t('Anahtara ne gerek var! Kapının yanında onun renginde bir eşleşme yap, kapı açılsın. Arkasında çizgili şeker var.', "No key needed: make a match in the door's own colour beside it and it opens. A striped sweet waits behind."),
     ),
-    _ => (
+    11 => (
       when: _t('Çamlıca Tepesi', 'Çamlıca Hill'),
       history: _t(
         "Şehrin iki yakasını ve Boğaz'ı birden gören Çamlıca, 19. yüzyılda İstanbulluların mesire yeriydi; kaynak suyu ünlüydü. Ekşi Limon tarif defterinin son sayfalarıyla tepeye kaçtı. Bütün şehir aşağıda, ışıl ışıl.",
@@ -828,6 +871,62 @@ class AppStrings {
       ),
       limon: _t('Buraya kadar geldin demek. Bu tepe benim; oynadıkça tahtana limon atacağım. Ekşiliğimi bitirebilirsen defter senin.', "So you made it this far. This hill is mine, and I'll throw lemons on your board as you play. Wear down all my sourness and the book is yours."),
       lokum: _t('Her eşleşme onu biraz tatlandırır, özel şekerler iki kat! Limon dilimlerinin yanında eşleştir, temizle. Hadi, son sayfa!', 'Every match sweetens him a little, specials twice as much! Match beside the lemon slices to wash them away. Come on, the last page!'),
+    ),
+    // The second season: up the Bosphorus after Acı Biber, Ekşi Limon's
+    // cousin.
+    12 => (
+      when: _t('Bir sis sabahı · Salacak', 'A foggy morning · Salacak'),
+      history: _t(
+        "Kız Kulesi yüzyıllarca Boğaz'ın girişinde bir fener gibi nöbet tuttu; sisli sabahlarda gemiler onun ışığına bakarak yol buldu. Ekşi Limon tatlandı ve köşesine çekildi. Ama kuzeni Acı Biber şehre geldi, Salacak sahilini sabah sisiyle örttü.",
+        "For centuries the Maiden's Tower kept watch at the mouth of the Bosphorus like a lighthouse; on foggy mornings ships found their way by its light. Sour Lemon has turned sweet and retired. But his cousin Acı Biber has come to town and wrapped the Salacak shore in morning fog.",
+      ),
+      limon: _t('Kuzenim yumuşadı, ben yumuşamam! Bu sisin içinde şekerlerini bulamayacaksın.', "My cousin went soft. I won't! You'll never find your sweets in this fog."),
+      lokum: _t('Sis ne kadar koyu olursa olsun Kız Kulesi yolu gösterir. Sisin yanında eşleştir, dağılsın.', "However thick the fog, the Maiden's Tower shows the way. Match beside the fog and it lifts."),
+    ),
+    13 => (
+      when: _t('1908 · Haydarpaşa', '1908 · Haydarpaşa'),
+      history: _t(
+        "Haydarpaşa Garı 1908'de açıldı; Anadolu'ya giden trenler yıllarca buradan, denizin kıyısından kalktı. Acı Biber garın altına tüneller kazdı.",
+        'Haydarpaşa Station opened in 1908; for years the trains to Anatolia left from here, right by the sea. Acı Biber has dug tunnels under the station.',
+      ),
+      limon: _t('Şekerler tünele girecek, nereden çıkacaklarını kimse bilmeyecek!', 'The sweets go into my tunnels, and nobody knows where they come out!'),
+      lokum: _t('Tünel ne yapar? Üstten alır, alttan verir. Şekerin nereye düşeceğini kestir, gerisi kolay.', "What does a tunnel do? In at the top, out at the bottom. Guess where each sweet lands and the rest is easy."),
+    ),
+    14 => (
+      when: _t('Bir vapur sabahı · Karaköy', 'A ferry morning · Karaköy'),
+      history: _t(
+        "Karaköy iskelesinden yüz yılı aşkın süredir vapurlar kalkar; martılar simit kırıntısı için vapurların peşinden uçar. Acı Biber martılara şeker kapmayı öğretti.",
+        'Ferries have left Karaköy pier for over a hundred years, with gulls flying after them for crumbs of simit. Acı Biber has taught the gulls to grab sweets.',
+      ),
+      limon: _t('Martılarım şekerlerine bayılıyor. Kapsınlar bakalım, sana ne kalacak?', "My gulls love your sweets. Let them grab away, and see what's left for you!"),
+      lokum: _t('Martıyı korkutmak kolay: yanında bir eşleşme yap, havalansın gitsin.', "Scaring a gull is easy: make a match beside it and off it flies."),
+    ),
+    15 => (
+      when: _t('Bir yaz günü · Kuzguncuk', 'A summer day · Kuzguncuk'),
+      history: _t(
+        "Kuzguncuk'ta cami ile kilise yan yana durur; renkli ahşap evleri ve bostanlarıyla bilinir. Mahallenin teyzeleri her yaz kavanoz kavanoz gül reçeli yapar.",
+        "In Kuzguncuk a mosque and a church stand side by side; it is known for its colourful wooden houses and gardens. Every summer the neighbourhood's aunties make jar after jar of rose jam.",
+      ),
+      limon: _t('Reçel mi? Ben acıyı severim! Kavanozların hepsini tahtaya döktüm, toplayamazsın.', "Jam? I like things hot! I've spilled every jar over the board, and you can't mop it up."),
+      lokum: _t('Biz toplamayız, yayarız! Reçelin üstünde eşleştir, bütün tahta tatlansın.', "We don't mop it up, we spread it! Match on the jam until the whole board is sweet."),
+    ),
+    16 => (
+      when: _t('1856 · Dolmabahçe', '1856 · Dolmabahçe'),
+      history: _t(
+        "Dolmabahçe Sarayı 1856'da tamamlandı; büyük salonundaki kristal avize dünyanın en büyüklerindendir. Acı Biber bahçedeki fenerlerin hepsini söndürdü.",
+        'Dolmabahçe Palace was finished in 1856; the crystal chandelier in its great hall is one of the largest in the world. Acı Biber has put out every lantern in the garden.',
+      ),
+      limon: _t('Karanlıkta kimse şekerlerini göremez. Fenerleri yakmak üç vuruş ister, yetişemezsin!', "Nobody sees their sweets in the dark. A lantern takes three hits to light, and you won't keep up!"),
+      lokum: _t('Bir, iki, üç: fenerin yanında üç kez eşleştir, saray yine ışıl ışıl olsun.', 'One, two, three: match beside a lantern three times and the palace glows again.'),
+    ),
+    _ => (
+      when: _t('Anadolu Kavağı', 'Anadolu Kavağı'),
+      history: _t(
+        "Yoros Kalesi, Boğaz'ın Karadeniz'e açıldığı yeri yüzyıllardır tepeden gözler. Acı Biber Boğaz turunun sonunda, kalenin yanında bizi bekliyor.",
+        'Yoros Castle has watched over the spot where the Bosphorus opens onto the Black Sea for centuries. At the end of the trip up the Bosphorus, Acı Biber waits for us by the castle.',
+      ),
+      limon: _t('Son durak! Şekerlerini acılaştıracağım; sayıları bitmeden eşleştiremezsen yanarlar.', "Last stop! I'll make your sweets hot, and if you don't match them before their count runs out, they burn."),
+      lokum: _t('Her eşleşme onun acısını biraz alır. Acı şekerleri zamanında eşleştir; hadi, Boğaz turunu tatlı bitirelim!', "Every match takes some of his heat away. Match the hot sweets in time; come on, let's end this trip on a sweet note!"),
     ),
   };
   String get storyNext => _t('Devam ›', 'Next ›');
@@ -837,6 +936,20 @@ class AppStrings {
   String get sugarLucky => _t('ŞANSLI ŞEKER!', 'LUCKY SWEET!');
   String sugarStar(int n) => _t('$n. YILDIZ!', 'STAR $n!');
   String get sugarCombo => _t('SÜPER KOMBO!', 'SUPER COMBO!');
+  String sugarGoalFog(int n) => _t('$n sisi dağıt', 'Clear $n fog');
+  String sugarGoalGull(int n) => _t('$n martıyı kaçır', 'Shoo $n gulls');
+  String get sugarGoalJam => _t('Bütün tahtayı reçelle kapla', 'Cover the whole board in jam');
+  String sugarGoalLantern(int n) => _t('$n feneri yak', 'Light $n lanterns');
+  String get sugarGoalPepper => _t("Acı Biber'in acısını al", "Take away Acı Biber's heat");
+  String get sugarPepperAngry => _t('ACI BİBER KIZDI!', 'ACI BİBER IS FUMING!');
+  String sugarComboName(SugarCombo c) => switch (c) {
+    SugarCombo.cross => _t('ÇAPRAZ!', 'CROSS!'),
+    SugarCombo.bigCross => _t('DEV IŞIN!', 'GIANT BEAM!'),
+    SugarCombo.mega => _t('MEGA PATLAMA!', 'MEGA BLAST!'),
+    SugarCombo.rainbow => _t('GÖKKUŞAĞI!', 'RAINBOW!'),
+    SugarCombo.wipe => _t('TAHTA TERTEMİZ!', 'BOARD WIPE!'),
+  };
+  String get sugarGoalMet => _t('HEDEF TAMAM!\nYILDIZLAR İÇİN DEVAM', 'GOAL MET!\nKEEP GOING FOR STARS');
   String get sugarBombLost => _t('BOMBA PATLADI', 'THE BOMB WENT OFF');
   String get sugarRainbow => _t('Gökkuşağı', 'Rainbow');
   String get sugarRainbowHint => _t('Gökkuşağı topu yapmak istediğin şekere dokun', 'Tap the sweet to turn into a rainbow ball');
@@ -859,33 +972,38 @@ class AppStrings {
   /// What Lokum, the mascot, says: [key] picks the moment, [i] the line.
   String lokum(String key, int i) {
     final lines = switch (key) {
-      'start' => [_t('Hadi başlayalım!', "Let's go!"), _t('Bu seviye bizim!', 'This one is ours!'), _t('Hazırım!', 'Ready!')],
-      'nice' => [_t('Güzel!', 'Nice!'), _t('Tatlı hamle!', 'Sweet move!'), _t('Böyle devam!', 'Keep it up!')],
-      'great' => [_t('Vay canına!', 'Wow!'), _t('Harika gidiyorsun!', "You're on fire!"), _t('Bu muhteşem!!', 'Amazing!!')],
-      'rush' => [_t('Şeker çılgınlığı!', 'Sugar rush!'), _t('Yağmur gibi şeker!', "It's raining sweets!")],
-      'lucky' => [_t('Şanslı gün!', 'Lucky day!'), _t('Gökten hediye!', 'A gift from the sky!')],
-      'bomb' => [_t('Dikkat, bomba!', 'Watch the bomb!'), _t('Bombayı patlat!', 'Pop that bomb!')],
-      'last' => [_t('Son hamleler!', 'Last moves!'), _t('Az kaldı!', 'Almost there!')],
-      'finale' => [_t('Şölen zamanı!', 'Party time!'), _t('Hepsi patlasın!', 'Pop them all!')],
-      'win' => [_t('Yaşasın!', 'Hooray!'), _t('Sen bir şampiyonsun!', "You're a champ!")],
-      'lose' => [_t('Bir daha deneyelim!', "Let's try again!"), _t('Az kalmıştı!', 'So close!')],
-      'hint' => [_t('Şunu dene!', 'Try this one!'), _t('Şuraya bak!', 'Look here!')],
-      'sleepy' => [_t('Hıı... uyudum mu?', 'Zzz... did I nod off?'), _t('Sıra sende!', 'Your move!')],
-      'chain' => [_t('Zincir!', 'Chain!'), _t('Harika zincir!', 'Great chain!'), _t('Devam, devam!', 'Keep it going!')],
-      'danger' => [_t('Dikkat, tavan!', 'Mind the top!'), _t('Hızlı ol!', 'Quick!')],
-      'quad' => [_t('Dörtlü!', 'A quad!'), _t('Dört sıra birden!', 'Four at once!')],
-      'level' => [_t('Hızlanıyoruz!', 'Speeding up!'), _t('Yeni seviye!', 'New level!')],
-      'over' => [_t('Bir daha?', 'Again?'), _t('Az kaldı, tekrar!', 'So close, once more!')],
-      'record' => [_t('Yeni rekor!', 'New best!'), _t('Sen bir şampiyonsun!', "You're a champ!")],
-      'pause' => [_t('Mola! Bir çay içelim mi?', 'A break! Tea, anyone?'), _t('Dinlen biraz.', 'Have a rest.')],
-      'puzzleStuck' => [_t('Baştan alalım, yol orada!', "Let's restart, the way is there!"), _t('Bir geri al, tekrar bak.', 'Undo one and look again.')],
-      'attack' => [_t('Al sana çöp!', 'Garbage coming your way!'), _t('Limon şaşırdı!', 'That got Lemon!')],
-      'choco' => [_t('Çikolata yayılıyor!', 'The chocolate is spreading!'), _t('Çikolatayı durdur!', 'Stop the chocolate!')],
-      'fruit' => [_t('Bir nar daha!', 'Another pomegranate!'), _t('Nar bizde!', 'Got the pomegranate!')],
-      'cake' => [_t('Pasta bitti!', 'Cake gone!'), _t('Afiyet olsun!', 'Enjoy!')],
-      'door' => [_t('Kapı açıldı!', 'The door is open!'), _t('Bak arkasında ne var!', "Look what's behind it!")],
-      'limon' => [_t('Limon attı, temizle!', 'Lemons! Wash them away!'), _t('Ekşi geliyor!', 'Here comes the sour!')],
-      'limonAngry' => [_t('Kızdı! Devam!', "He's mad! Keep going!"), _t('Az kaldı, tatlanıyor!', "Nearly there, he's sweetening!")],
+      'start' => [_t('Hadi bakalım, başlıyoruz!', 'Here we go!'), _t('Bu seviye bize vız gelir!', 'This one\'s a piece of cake!'), _t('Kolları sıvadım!', 'Sleeves rolled up!'), _t('Hazırım, ya sen?', 'I\'m ready, are you?')],
+      'nice' => [_t('Oh, güzel!', 'Ooh, nice!'), _t('Tatlı bir hamle!', 'Sweet move!'), _t('Aynen böyle!', 'That\'s the way!'), _t('Bak bu oldu!', 'Now we\'re talking!')],
+      'great' => [_t('Vay vay vay!', 'Whoa, whoa, whoa!'), _t('Helal olsun sana!', 'Hats off to you!'), _t('Ağzım açık kaldı!', 'My jaw just dropped!'), _t('Bu ne güzellik böyle!', 'Now that\'s gorgeous!')],
+      'rush' => [_t('Şeker yağmuru başladı!', 'It\'s raining sweets!'), _t('Şekerler durmadan patlıyor!', 'They\'re popping on their own!'), _t('Çılgınlık zamanı!', 'Sugar madness!')],
+      'lucky' => [_t('Bugün şansımız yaver gidiyor!', 'Luck\'s on our side today!'), _t('Bu da bizden olsun!', 'This one\'s on the house!'), _t('Kısmetimize düştü!', 'What a lucky drop!')],
+      'bomb' => [_t('Aman dikkat, bomba var!', 'Careful, a bomb!'), _t('Şu bombayı hemen patlat!', 'Pop that bomb, quick!'), _t('Saat işliyor, acele et!', 'The clock\'s ticking, hurry!')],
+      'last' => [_t('Son birkaç hamle, dikkat!', 'Last few moves, careful!'), _t('Az kaldı, sakin ol!', 'Nearly there, stay calm!'), _t('Bitirmek üzereyiz!', 'We\'re about to finish!')],
+      'goalMet' => [_t('Hedef tamam! Şimdi yıldızlar!', 'Goal met! Now the stars!'), _t('Devam, üç yıldız bizim!', 'Keep going, three stars!')],
+      'comboHint' => [_t('Bunları birleştir!', 'Swap these two together!'), _t('İkisini yan yana getir, gör!', 'Put these two together and see!')],
+      'gull' => [_t('Martılar şeker kaptı!', 'Gulls took our sweets!'), _t('Kış kış, martı!', 'Shoo, gull, shoo!')],
+      'lantern' => [_t('Fener yandı!', 'A lantern is lit!'), _t('Bak nasıl parlıyor!', 'Look how it shines!')],
+      'pepper' => [_t('Acı geliyor, eşleştir!', 'Hot ones! Match them!'), _t('Yanmadan eşleştir!', 'Match them before they burn!')],
+      'finale' => [_t('Şenlik başlasın!', 'Let the party begin!'), _t('Kalanlar da patlasın!', 'Pop the rest too!'), _t('Bonus zamanı!', 'Bonus time!')],
+      'win' => [_t('Yaşasın, başardık!', 'Hooray, we did it!'), _t('Ellerine sağlık!', 'Well played, you!'), _t('İşte bu be!', 'That\'s how it\'s done!')],
+      'lose' => [_t('Üzülme, bir daha deneriz.', 'Don\'t worry, we\'ll try again.'), _t('Kıl payı kaçtı!', 'So close!'), _t('Olur böyle, hadi bir daha!', 'It happens, one more go!')],
+      'hint' => [_t('Şuna bir bak istersen.', 'Take a look at this one.'), _t('Psst, burada bir şey var!', 'Psst, there\'s something here!'), _t('Bence buradan dene.', 'I\'d try right here.')],
+      'sleepy' => [_t('Hıı... Dalmışım biraz.', 'Hmm... I dozed off a bit.'), _t('Uyumadım, gözümü dinlendirdim!', 'I was only resting my eyes!'), _t('Hadi, sıra sende!', 'Come on, your move!')],
+      'chain' => [_t('Zincir!', 'Chain!'), _t('Zincir üstüne zincir!', 'Chain after chain!'), _t('Durma, devam!', 'Don\'t stop now!')],
+      'danger' => [_t('Aman, tavana dayandı!', 'Uh-oh, near the top!'), _t('Yer daralıyor, çabuk!', 'Running out of room, quick!')],
+      'quad' => [_t('Dört sıra birden!', 'Four lines at once!'), _t('Dörtlü! Şahane!', 'A quad! Brilliant!')],
+      'level' => [_t('Hız arttı, hazır ol!', 'Speeding up, get ready!'), _t('Yeni seviye, kolay gelsin!', 'New level, good luck!')],
+      'over' => [_t('Bir el daha?', 'One more round?'), _t('Az kaldı, bir daha!', 'So close, again!')],
+      'record' => [_t('Yeni rekor! Helal olsun!', 'New best! Well done!'), _t('Rekor artık senin!', 'The record is yours!')],
+      'pause' => [_t('Mola! Bir çay koyayım mı?', 'Break time! Kettle on?'), _t('Biraz soluklan, buradayım.', 'Catch your breath, I\'m here.'), _t('Acele yok, keyfine bak.', 'No rush, take your time.')],
+      'puzzleStuck' => [_t('Baştan alalım, yolu buluruz.', 'Restart, we\'ll find the way.'), _t('Bir geri al, tekrar bak.', 'Undo one and look again.')],
+      'attack' => [_t('Al bakalım Limon!', 'Take that, Lemon!'), _t('Limon ne olduğunu anlamadı!', 'Lemon didn\'t see that coming!')],
+      'choco' => [_t('Çikolata yayılıyor, yetiş!', 'Chocolate\'s spreading, hurry!'), _t('Şu çikolatayı durduralım!', 'Let\'s stop that chocolate!')],
+      'fruit' => [_t('Bir nar daha bizde!', 'Another pomegranate for us!'), _t('Nar sepete!', 'Into the basket!')],
+      'cake' => [_t('Pastayı bitirdik!', 'The cake is gone!'), _t('Afiyet olsun bize!', 'Bon appétit to us!')],
+      'door' => [_t('Kapı açıldı!', 'The door is open!'), _t('Bakalım arkasından ne çıkacak!', 'Let\'s see what\'s behind it!')],
+      'limon' => [_t('Limon attı, temizle şunları!', 'More lemons! Wash them off!'), _t('Ekşi geliyor, dikkat!', 'Sour coming, watch out!')],
+      'limonAngry' => [_t('Kızdı! Bırakma!', 'He\'s mad! Keep at it!'), _t('Tatlanıyor, az kaldı!', 'He\'s sweetening, nearly there!')],
       _ => [''],
     };
     return lines[i % lines.length];
@@ -908,6 +1026,12 @@ class AppStrings {
     'cake' => _t('Pastanın yanındaki her eşleşme bir katını yer. Son kat gidince paketli şeker çıkar.', 'Every match beside a cake eats a tier. The last tier leaves a wrapped sweet.'),
     'door' => _t('Kapı yalnız kendi renginde bir eşleşmeyle açılır; arkasında çizgili şeker var.', 'A door opens only to a match in its own colour; a striped sweet waits behind.'),
     'limon' => _t("Her eşleşme Ekşi Limon'u tatlandırır, özel şekerler iki kat. Attığı dilimlerin yanında eşleştir!", 'Every match sweetens Sour Lemon, specials twice as much. Match beside the slices he throws!'),
+    'fog' => _t('Sis bazı kareleri örter. Yanında eşleştir, sis dağılsın; altından şeker çıkar.', 'Fog hides some cells. Match beside it to clear it and find the sweet beneath.'),
+    'tunnel' => _t('Şekerler tünelden geçip aşağıdan çıkar. Hangi şekerin nereye düşeceğini kestir!', 'Sweets fall through the tunnel and come out below. Guess where each one lands!'),
+    'gull' => _t('Martılar birkaç hamlede bir şeker kapar. Martının yanında eşleştir, kaçsın!', 'Every few moves gulls grab a sweet. Match beside a gull to shoo it off!'),
+    'jam' => _t('Reçelli karede eşleşince reçel o eşleşmenin bütün karelerine yayılır. Bütün tahtayı kapla!', 'A match on jam spreads the jam over all its cells. Cover the whole board!'),
+    'lantern' => _t('Fener üç vuruşta yanar: yanında üç kez eşleştir.', 'A lantern lights after three hits: match beside it three times.'),
+    'pepper' => _t('Acı Biber tahtaya acı şekerler atar: sayısı bitmeden eşleştir! Her eşleşme acısını azaltır.', 'Acı Biber makes sweets hot: match them before their count runs out! Every match cools him down.'),
     _ => '',
   };
   String get targetTitle => _t('Hedef', 'Targets');
@@ -986,6 +1110,23 @@ class AppStrings {
   String get dailyNew => _t('Yeni görev', 'New puzzle');
   String get dailyTomorrow => _t('Yarın yeni görev', 'New puzzle tomorrow');
   String resumeDaily(int movesLeft) => _t('Günlük Görev · $movesLeft hamle kaldı', 'Daily Puzzle · $movesLeft moves left');
+
+  /// A day, short: "12 Eki", "Oct 12".
+  String shortDate(DateTime d) => _t('${d.day} ${_monthsTr[d.month - 1].substring(0, 3)}', '${_monthsEn[d.month - 1]} ${d.day}');
+
+  // Records: the player's own top ten of each mode.
+  String get recordsTitle => _t('REKORLARIN', 'YOUR RECORDS');
+  String get recordsShort => _t('Rekorlar', 'Records');
+  String get recordsNone => _t('Henüz rekor yok. İlk oyunun ilk rekorun olacak!', 'No records yet. Your first game sets the first one!');
+  String get recordJustNow => _t('şimdi', 'now');
+  String get recordEarlier => _t('önceden', 'earlier');
+  String recordPlace(int n) => _t('REKORLARINDA $n. SIRA!', 'No. $n IN YOUR RECORDS!');
+  String get recordYours => _t('Rekor senin! Şimdi farkı aç.', 'The record is yours! Now widen the gap.');
+  String recordNextPlace(int place, String gap) => place == 1 ? _t('Sıradaki hedef: rekor · $gap kaldı', 'Next goal: the record · $gap to go') : _t('Sıradaki hedef: $place. sıra · $gap kaldı', 'Next goal: No. $place · $gap to go');
+  String recordTopFive(String gap) => _t("İlk 5'e girmek için $gap kaldı", '$gap to make your top five');
+  String toRecord(String gap) => _t('Rekora $gap kaldı', '$gap to your record');
+  String pastRecord(String gap) => _t('REKOR! +$gap', 'RECORD! +$gap');
+  String towerToRecord(int floors) => _t('Rekora $floors kat', '$floors to the record');
 
   static const _monthsTr = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
   static const _monthsEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

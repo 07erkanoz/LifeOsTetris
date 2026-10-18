@@ -109,11 +109,15 @@ void main() {
     final c = controllerOf(tester, ChainScreen);
     expect(c.mode, ChainMode.mission);
     expect(c.game.mission!.kind, MissionKind.chain);
-    // A known board where one swap makes a ×2 chain.
-    c.game.debugSetBoard(['..Y...', '..Y...', 'GGBG..', 'BBYB..']);
-    c.game.stopTime = 100;
-    c.game.swap(2, ChainGame.height - 2);
+    // The first mission is a lesson: its board is set for a ×2 chain, the
+    // swap that starts it glows, and no other swap goes.
+    expect(c.lesson, 'swap');
+    final (x, y) = c.game.onlySwap!;
+    expect(c.hint, (x, y));
+    expect(c.game.swap(0, y), isFalse, reason: 'only the swap Lokum shows');
+    expect(c.game.swap(x, y), isTrue);
     await pumpFor(tester, 120);
+    expect(c.lesson, 'chain');
     expect(c.game.won, isTrue);
     expect(settings.missionStars(1), 3);
     expect(find.byKey(const ValueKey('chain-goal-result')), findsOneWidget);

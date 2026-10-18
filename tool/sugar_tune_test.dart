@@ -43,6 +43,10 @@ SugarLevel withMoves(SugarLevel l, int moves, {List<SugarGoal Function()>? goals
   fruitsAtOnce: l.fruitsAtOnce,
   limonEvery: l.limonEvery,
   limonThrow: l.limonThrow,
+  gullEvery: l.gullEvery,
+  gullCount: l.gullCount,
+  pepperEvery: l.pepperEvery,
+  pepperThrow: l.pepperThrow,
 );
 
 ({double win, List<int> scores}) evaluate(SugarLevel l) {
@@ -121,5 +125,5 @@ void main() {
       // ignore: avoid_print
       print('TUNE ${level.number} moves=$moves target=0 colors=${colorTargets.join('/')} stars=[$s1, $s2, $s3] win=${r.win.toStringAsFixed(2)} want=${want.toStringAsFixed(2)}');
     }
-  }, timeout: const Timeout(Duration(minutes: 120)));
+  }, timeout: const Timeout(Duration(minutes: 600)));
 }

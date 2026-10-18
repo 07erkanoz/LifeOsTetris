@@ -64,7 +64,7 @@ void main() {
       final settings = Settings.memory()..language = AppLanguage.tr;
       await tester.pumpWidget(RepaintBoundary(key: _root, child: KuplerApp(settings: settings, audio: AudioService(enabled: false))));
       await _pump(tester, 6);
-      Navigator.of(tester.element(find.byKey(const ValueKey('play')))).push(
+      Navigator.of(tester.element(find.byKey(const ValueKey('start')))).push(
         MaterialPageRoute<void>(
           builder: (_) => Scaffold(
             backgroundColor: const Color(0xFF3A1470),
@@ -94,7 +94,7 @@ void main() {
     }
     await tester.pumpWidget(RepaintBoundary(key: _root, child: KuplerApp(settings: settings, audio: AudioService(enabled: false))));
     await _pump(tester, 10);
-    showLokumWardrobe(tester.element(find.byKey(const ValueKey('play'))), settings);
+    showLokumWardrobe(tester.element(find.byKey(const ValueKey('start'))), settings);
     await _pump(tester, 20);
     expect(tester.takeException(), isNull);
     await _shot(tester, 'wardrobe.png');

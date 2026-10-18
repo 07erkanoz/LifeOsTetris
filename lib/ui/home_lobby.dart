@@ -2,9 +2,10 @@ part of 'game_screen.dart';
 
 // ------------------------------------------------------------ home lobby
 
-/// The start screen: Lokum with a suggestion, the big play card for the
-/// last mode, cards for the other modes that show a little of each game,
-/// the daily puzzle and the shortcuts. Every skin dresses it its own way.
+/// The start screen: the games first. A continue bar for what was going on,
+/// the showcase that slides from game to game, every game as its own tile,
+/// then Lokum with a suggestion, the daily puzzle and the shortcuts. Every
+/// skin dresses it its own way.
 class _HomeLobby extends StatefulWidget {
   const _HomeLobby({super.key, required this.c});
 
@@ -18,6 +19,7 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
   late final AnimationController _clock = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600));
   int _tip = 0;
   double _hop = 0;
+  final _showcaseKey = GlobalKey();
 
   GameController get c => widget.c;
 
@@ -63,11 +65,10 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
     final s = AppStrings.of(context);
     final tips = _lobbyTips(c, s);
     final tip = tips[_tip % tips.length];
-    final last = _PlayMode.fromName(c.settings.lastPlay);
-    final cards = _lobbyCards(c.settings, last);
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
 
     final header = _LobbyHeader(c: c);
-    final hero = _LobbyHero(
+    final lokum = _LobbyHero(
       tip: tip,
       clock: _clock,
       hop: _hop,
@@ -77,34 +78,80 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
       outfit: c.settings.outfit,
       onWardrobe: () => showLokumWardrobe(context, c.settings),
     );
-    final resume = _resumeButtons(context);
-    final play = _LobbyPlayCard(mode: last, clock: _clock, settings: c.settings, onTap: () => _launch(context, c, last));
-    final changeMode = Center(
-      child: TextButton(
-        key: const ValueKey('change-mode'),
-        onPressed: () => _openModes(context, c),
-        child: Text(
-          '${s.changeMode} ›',
-          style: TextStyle(color: p.muted, fontSize: _fs(p, 14), fontWeight: FontWeight.w700),
+    final bars = _continueBars(context);
+    // The showcase: as tall as its width wants, a little less under a
+    // continue bar so the six games still fit on a phone.
+    // On a short phone it gives up some height so all six games fit.
+    Widget showcase(double width, {bool compact = false}) =>
+        _Showcase(key: _showcaseKey, c: c, clock: _clock, width: width, ratio: compact ? (bars.isEmpty ? 0.6 : 0.5) : (bars.isEmpty ? 0.83 : 0.72));
+    final gamesLabel = Row(
+      children: [
+        Expanded(
+          child: Row(
+            children: [
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 6),
+                  child: Text(
+                    s.allGames,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: p.muted, fontSize: _fs(p, 13), fontWeight: FontWeight.w800, letterSpacing: 1.2),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+                decoration: BoxDecoration(color: p.track, borderRadius: BorderRadius.circular(10)),
+                child: Text(
+                  '${_Game.values.length}',
+                  style: TextStyle(color: p.text, fontSize: _fs(p, 11), fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 170),
+          child: TextButton(
+            key: const ValueKey('change-mode'),
+            onPressed: () => _openModes(context, c),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                '${s.allModes} ›',
+                maxLines: 1,
+                style: TextStyle(color: p.muted, fontSize: _fs(p, 13.5), fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+    Widget tiles(int columns, {double art = 0.42}) => LayoutBuilder(
+      builder: (context, area) {
+        final width = (area.maxWidth - (columns - 1) * 12) / columns;
+        return GridView.count(
+          key: const ValueKey('game-tiles'),
+          crossAxisCount: columns,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: width / _tileHeight(p, width, textScale, art: art),
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 4),
+          children: [
+            for (final g in _Game.values) _GameTile(game: g, c: c, clock: _clock, onTap: () => _hasSave(c, g) ? _resume(context, g) : _openGame(context, c, g)),
+          ],
+        );
+      },
     );
     final daily = _LobbyDaily(
       settings: c.settings,
       onTap: () => BlocksScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics, entry: BlocksEntry.daily),
     );
     final shortcuts = _shortcutRow(context, c);
-    Widget label(String text) => Padding(
-      padding: const EdgeInsets.only(left: 6, bottom: 8),
-      child: Text(
-        text,
-        style: TextStyle(color: p.muted, fontSize: _fs(p, 13), fontWeight: FontWeight.w800, letterSpacing: 1.2),
-      ),
-    );
-    Widget card(_PlayMode m, {double? width}) => SizedBox(
-      width: width,
-      child: _LobbyModeCard(key: ValueKey('card-${m.name}'), mode: m, settings: c.settings, clock: _clock, onTap: () => _launch(context, c, m)),
-    );
 
     // Always the whole screen: the game is waiting behind it.
     return SizedBox.expand(
@@ -114,64 +161,47 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
           Positioned.fill(
             child: RepaintBoundary(child: CustomPaint(painter: BackgroundBasePainter(p))),
           ),
-          Positioned.fill(child: _LobbyBackdrop(c: c)),
           SafeArea(
             child: LayoutBuilder(
               builder: (context, box) {
                 final wide = box.maxWidth >= 900 && box.maxHeight >= 560;
                 final short = !wide && box.maxWidth > box.maxHeight && box.maxHeight < 560;
                 if (wide) {
-                  // Big screens get the same lobby, scaled up to fill them.
+                  // Big screens get the same lobby, scaled up to fill them:
+                  // the showcase and the rest on the left, the games on the
+                  // right.
                   final zoom = min(box.maxWidth / 1280, box.maxHeight / 740).clamp(1.0, 1.6);
                   final inner = Size(box.maxWidth / zoom, box.maxHeight / zoom);
-                  // A column of the essentials beside a wall of mode cards.
-                  final columns = inner.width >= 1250 ? 4 : 3;
+                  final content = min(inner.width, 1400.0) - 48;
+                  final left = (content * 0.44).clamp(400.0, 580.0);
+                  final columns = content - left - 28 >= 600 ? 3 : 2;
                   return SizedBox.fromSize(
                     size: box.biggest,
                     child: FittedBox(
                       alignment: Alignment.topCenter,
                       child: SizedBox.fromSize(
                         size: inner,
-                        child: Center(
+                        child: Align(
+                          alignment: Alignment.topCenter,
                           child: ConstrainedBox(
-                            constraints: BoxConstraints(maxWidth: 420 + 32 + columns * 200.0),
+                            constraints: const BoxConstraints(maxWidth: 1400),
                             child: SingleChildScrollView(
                               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   SizedBox(
-                                    width: 420,
+                                    width: left,
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: [
-                                        header,
-                                        const SizedBox(height: 14),
-                                        hero,
-                                        const SizedBox(height: 14),
-                                        ...resume,
-                                        play,
-                                        changeMode,
-                                        daily,
-                                        const SizedBox(height: 14),
-                                        shortcuts,
-                                      ],
+                                      children: [header, const SizedBox(height: 14), ...bars, showcase(left), const SizedBox(height: 16), shortcuts],
                                     ),
                                   ),
-                                  const SizedBox(width: 32),
+                                  const SizedBox(width: 28),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const SizedBox(height: 60),
-                                        label(s.forYou),
-                                        LayoutBuilder(
-                                          builder: (context, area) {
-                                            final w = (area.maxWidth - (columns - 1) * 14) / columns;
-                                            return Wrap(spacing: 14, runSpacing: 14, children: [for (final m in cards) card(m, width: w)]);
-                                          },
-                                        ),
-                                      ],
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [const SizedBox(height: 56), gamesLabel, const SizedBox(height: 6), tiles(columns), const SizedBox(height: 18), lokum, const SizedBox(height: 14), daily],
                                     ),
                                   ),
                                 ],
@@ -183,26 +213,10 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
                     ),
                   );
                 }
-                // The cards are as tall as their scene and text need at this
-                // width, text size and skin.
-                final cardWidth = short ? 150.0 : 162.0;
-                final textScale = MediaQuery.textScalerOf(context).scale(1);
-                final cardHeight = ((cardWidth - 18) / 1.35 + (_fs(p, 16) * 1.3 + _fs(p, 12) * 1.25 * 2) * textScale + 48).ceilToDouble();
-                final carousel = SizedBox(
-                  height: cardHeight + 8,
-                  child: ListView.separated(
-                    key: const ValueKey('lobby-cards'),
-                    scrollDirection: Axis.horizontal,
-                    clipBehavior: Clip.none,
-                    padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-                    itemCount: cards.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 12),
-                    itemBuilder: (context, i) => card(cards[i], width: cardWidth),
-                  ),
-                );
                 if (short) {
-                  // Play, other modes and the shortcuts on the left, always in
-                  // view; Lokum and the cards on the right.
+                  // Phones on their side: the showcase on the left, the games
+                  // and the rest on the right.
+                  final half = (box.maxWidth - 32 - 18) / 2;
                   return SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                     child: Row(
@@ -211,113 +225,160 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [header, const SizedBox(height: 8), ...resume, play, changeMode, shortcuts, const SizedBox(height: 10), daily],
+                            children: [header, const SizedBox(height: 8), ...bars, showcase(half)],
                           ),
                         ),
                         const SizedBox(width: 18),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [hero, const SizedBox(height: 10), label(s.forYou), carousel],
+                            children: [gamesLabel, tiles(2), const SizedBox(height: 14), lokum, const SizedBox(height: 12), daily, const SizedBox(height: 12), shortcuts],
                           ),
                         ),
                       ],
                     ),
                   );
                 }
-                // Phones: the shortcuts stay at the bottom like a tab bar.
-                return Center(
+                // Phones and upright tablets: the games first, what was going
+                // on after them. A tablet gets the width, three games a row.
+                final tablet = box.maxWidth >= 640;
+                final maxWidth = tablet ? 960.0 : 520.0;
+                final width = min(box.maxWidth, maxWidth) - 32;
+                final compact = !tablet && box.maxHeight < 720;
+                return Align(
+                  alignment: Alignment.topCenter,
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 520),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                    constraints: BoxConstraints(maxWidth: maxWidth),
+                    child: SingleChildScrollView(
+                      key: const ValueKey('lobby-scroll'),
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          header,
+                          const SizedBox(height: 12),
+                          ...bars,
+                          showcase(width, compact: compact),
+                          const SizedBox(height: 6),
+                          gamesLabel,
+                          tiles(tablet ? 3 : 2, art: compact ? 0.3 : 0.42),
+                          const SizedBox(height: 18),
+                          if (tablet)
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                header,
-                                const SizedBox(height: 12),
-                                hero,
-                                const SizedBox(height: 14),
-                                ...resume,
-                                play,
-                                changeMode,
-                                label(s.forYou),
-                                carousel,
-                                const SizedBox(height: 14),
-                                daily,
+                                Expanded(child: lokum),
+                                const SizedBox(width: 16),
+                                Expanded(child: daily),
                               ],
-                            ),
-                          ),
-                        ),
-                        Padding(padding: const EdgeInsets.fromLTRB(16, 6, 16, 10), child: shortcuts),
-                      ],
+                            )
+                          else ...[
+                            lokum,
+                            const SizedBox(height: 14),
+                            daily,
+                          ],
+                          const SizedBox(height: 14),
+                          shortcuts,
+                        ],
+                      ),
                     ),
                   ),
                 );
               },
             ),
           ),
+          if (!c.settings.homeTourSeen)
+            Positioned.fill(
+              child: _HomeTour(
+                target: _showcaseKey,
+                onDone: () => setState(() => c.settings.homeTourSeen = true),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  /// A game left half way (falling blocks, Bulmaca) comes back from here.
-  List<Widget> _resumeButtons(BuildContext context) {
+  /// Back into [game]'s game left half way.
+  void _resume(BuildContext context, _Game game) {
+    final settings = c.settings;
+    switch (game) {
+      case _Game.sugar:
+        SugarScreen.open(context, settings: settings, audio: c.audio, haptics: c.haptics, level: _savedSugarLevel(settings)!, resume: true);
+      case _Game.chain:
+        ChainScreen.open(context, settings: settings, audio: c.audio, haptics: c.haptics, mode: _savedChainSummary(settings)!.mode, resume: true);
+      case _Game.puzzle:
+        BlocksScreen.open(context, settings: settings, audio: c.audio, haptics: c.haptics, entry: BlocksEntry.resume);
+      case _Game.superGame || _Game.classic:
+        c.resume();
+      case _Game.tower:
+        break;
+    }
+  }
+
+  /// Right under the header: the game left half way (the last one played
+  /// first, the others go back in from their tiles), or with none the last
+  /// game played; nothing for a new player.
+  List<Widget> _continueBars(BuildContext context) {
     final s = AppStrings.of(context);
+    final settings = c.settings;
     final saved = c.savedSummary;
-    final savedPuzzle = BlocksController.summaryOf(c.settings.savedBlocks);
-    final sugarLevel = _savedSugarLevel(c.settings);
-    final chain = _savedChainSummary(c.settings);
-    return [
-      if (saved != null) ...[
-        GradientButton(
-          key: const ValueKey('resume-game'),
-          label: s.resumeGame,
-          subtitle: s.resumeSummary(s.modeName(saved.mode), saved.score, saved.level),
-          icon: Icons.replay_rounded,
-          secondary: true,
-          onTap: c.resume,
+    final savedPuzzle = BlocksController.summaryOf(settings.savedBlocks);
+    final sugarLevel = _savedSugarLevel(settings);
+    final chain = _savedChainSummary(settings);
+    Widget bar(String key, _Game game, String title, String? detail, VoidCallback onTap, {bool resume = true}) => _ContinueBar(
+      key: ValueKey(key),
+      game: game,
+      label: resume ? s.leftOffLabel : s.lastPlayedLabel,
+      title: title,
+      detail: detail,
+      button: resume ? s.badgeContinue : s.play,
+      clock: _clock,
+      onTap: onTap,
+    );
+    final bars = [
+      if (sugarLevel != null)
+        bar(
+          'resume-sugar',
+          _Game.sugar,
+          s.sugarTitle,
+          s.sugarCardLevel(sugarLevel),
+          () => SugarScreen.open(context, settings: settings, audio: c.audio, haptics: c.haptics, level: sugarLevel, resume: true),
         ),
-        const SizedBox(height: 12),
-      ],
-      if (savedPuzzle != null) ...[
-        GradientButton(
-          key: const ValueKey('resume-puzzle'),
-          label: s.resumeGame,
-          subtitle: '${s.puzzleTitle} · ${blocksResumeSubtitle(s, savedPuzzle)}',
-          icon: Icons.replay_rounded,
-          secondary: true,
-          onTap: () => BlocksScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics, entry: BlocksEntry.resume),
+      if (chain != null)
+        bar(
+          'resume-chain',
+          _Game.chain,
+          s.chainTitle,
+          '${chain.mode == ChainMode.timeAttack ? s.chainTimeTitle : s.chainEndlessTitle} · ${s.score(chain.score)}',
+          () => ChainScreen.open(context, settings: settings, audio: c.audio, haptics: c.haptics, mode: chain.mode, resume: true),
         ),
-        const SizedBox(height: 12),
-      ],
-      if (sugarLevel != null) ...[
-        GradientButton(
-          key: const ValueKey('resume-sugar'),
-          label: s.resumeGame,
-          subtitle: '${s.sugarTitle} · ${s.sugarCardLevel(sugarLevel)}',
-          icon: Icons.replay_rounded,
-          secondary: true,
-          onTap: () => SugarScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics, level: sugarLevel, resume: true),
+      if (savedPuzzle != null)
+        bar(
+          'resume-puzzle',
+          _Game.puzzle,
+          s.puzzleTitle,
+          blocksResumeSubtitle(s, savedPuzzle),
+          () => BlocksScreen.open(context, settings: settings, audio: c.audio, haptics: c.haptics, entry: BlocksEntry.resume),
         ),
-        const SizedBox(height: 12),
-      ],
-      if (chain != null) ...[
-        GradientButton(
-          key: const ValueKey('resume-chain'),
-          label: s.resumeGame,
-          subtitle: '${s.chainTitle} · ${chain.mode == ChainMode.timeAttack ? s.chainTimeTitle : s.chainEndlessTitle} · ${s.score(chain.score)}',
-          icon: Icons.replay_rounded,
-          secondary: true,
-          onTap: () => ChainScreen.open(context, settings: c.settings, audio: c.audio, haptics: c.haptics, mode: chain.mode, resume: true),
+      if (saved != null)
+        bar(
+          'resume-game',
+          saved.mode == GameMode.superMode ? _Game.superGame : _Game.classic,
+          s.modeName(saved.mode),
+          s.resumeSummary(s.modeName(saved.mode), saved.score, saved.level),
+          c.resume,
         ),
-        const SizedBox(height: 12),
-      ],
     ];
+    final lastPlay = settings.lastPlay;
+    if (bars.isEmpty) {
+      if (lastPlay == null) return const [];
+      final last = _PlayMode.fromName(lastPlay);
+      final record = last.record(settings, s);
+      return [bar('play', _Game.of(last), last.fullTitle(s), record == null ? last.subtitle(s) : s.bestLine(record), () => _launch(context, c, last), resume: false)];
+    }
+    final lastGame = lastPlay == null ? null : _Game.of(_PlayMode.fromName(lastPlay));
+    return [bars.firstWhere((b) => (b as _ContinueBar).game == lastGame, orElse: () => bars.first)];
   }
 }
 
@@ -328,13 +389,12 @@ double _fs(GamePalette p, double size) => p.skin == GameSkin.pixel ? size * 1.3 
 /// Strong second-line text: muted greys are too faint on the dark skins.
 Color _second(GamePalette p) => p.isDark ? Color.lerp(p.muted, p.text, 0.45)! : p.muted;
 
-/// The bottom row of small buttons (also used by nothing else now).
+/// The row of small buttons at the end of the home screen.
 Widget _shortcutRow(BuildContext context, GameController c) {
   final s = AppStrings.of(context);
   return Row(
     children: [
       for (final (i, (key, icon, label, onTap)) in [
-        ('open-modes', Icons.grid_view_rounded, s.modesTitle, () => _openModes(context, c)),
         ('open-themes', Icons.palette_rounded, s.themeLabel, () => _ThemeSheet.open(context, c.settings)),
         ('open-settings', Icons.settings_rounded, s.settingsTitle, () => _SettingsSheet.open(context, c.settings)),
         ('open-about', Icons.info_outline_rounded, s.about, () => AboutPage.open(context, c.settings)),
@@ -505,38 +565,6 @@ List<_LobbyTip> _lobbyTips(GameController c, AppStrings s) {
   final last = _PlayMode.fromName(settings.lastPlay);
   tips.add(_LobbyTip(title: note ?? s.tipBeatBest, line: last.fullTitle(s), button: s.tipPlay, pose: LokumPose.happy, mode: last, keyName: 'home-note'));
   return tips;
-}
-
-/// The cards: modes with something going on first, then new ones, then the
-/// rest; never the one already on the play card.
-List<_PlayMode> _lobbyCards(Settings s, _PlayMode last) {
-  const all = [
-    _PlayMode.towerClimb,
-    _PlayMode.sugar,
-    _PlayMode.chainEndless,
-    _PlayMode.blocksLevels,
-    _PlayMode.adventure,
-    _PlayMode.superMode,
-    _PlayMode.normal,
-    _PlayMode.bomb,
-    _PlayMode.sprint,
-    _PlayMode.chainTime,
-  ];
-  int rank(_PlayMode m) {
-    if (m == _PlayMode.sugar && s.savedSugar != null) return 0;
-    if (m.chainMode != null && _savedChainSummary(s)?.mode == m.chainMode) return 0;
-    if (!_played(s, m) && m.isNew) return 1;
-    if (!_played(s, m)) return 2;
-    return 3;
-  }
-
-  final list = [
-    for (final m in all)
-      if (m != last) m,
-  ];
-  final order = {for (final (i, m) in list.indexed) m: i};
-  list.sort((a, b) => rank(a) != rank(b) ? rank(a).compareTo(rank(b)) : order[a]!.compareTo(order[b]!));
-  return list;
 }
 
 // ------------------------------------------------------------------ parts
@@ -789,159 +817,6 @@ class _TipButton extends StatelessWidget {
   }
 }
 
-/// The big play card: the last mode, its record and a live look at it.
-class _LobbyPlayCard extends StatelessWidget {
-  const _LobbyPlayCard({required this.mode, required this.clock, required this.settings, required this.onTap});
-
-  final _PlayMode mode;
-  final Animation<double> clock;
-  final Settings settings;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = GamePalette.of(context);
-    final s = AppStrings.of(context);
-    final neon = isNeon(p);
-    final fg = p.flat && p.accent1.computeLuminance() > 0.45 ? p.ink : Colors.white;
-    final record = mode.record(settings, s);
-    return GestureDetector(
-      key: const ValueKey('play'),
-      onTap: onTap,
-      child: Container(
-        height: _fs(p, 1) * 136,
-        padding: const EdgeInsets.fromLTRB(20, 12, 12, 12),
-        decoration: neon
-            ? neonCardDecoration(radius: 26, tone: neonPink, glow: 0.6)
-            : p.flat
-            ? flatCardDecoration(p, radius: p.skin == GameSkin.pixel ? 4 : 26, fill: p.accent1, depth: 6)
-            : BoxDecoration(
-                borderRadius: BorderRadius.circular(26),
-                gradient: LinearGradient(colors: [p.accent1, p.accent2]),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1.5),
-                boxShadow: [BoxShadow(color: p.accent1.withValues(alpha: 0.4), blurRadius: 24, offset: const Offset(0, 8))],
-              ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      s.play,
-                      style: TextStyle(color: neon ? p.text : fg, fontSize: _fs(p, 40), height: 1, fontWeight: FontWeight.w900, letterSpacing: 1),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    mode.fullTitle(s),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: (neon ? p.text : fg).withValues(alpha: 0.95), fontSize: _fs(p, 16), fontWeight: FontWeight.w800),
-                  ),
-                  if (record != null)
-                    Text(
-                      s.bestLine(record),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: (neon ? p.text : fg).withValues(alpha: 0.8), fontSize: _fs(p, 13), fontWeight: FontWeight.w700),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            AspectRatio(
-              aspectRatio: 1.05,
-              child: _ModeScene(mode: mode, clock: clock),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// A mode card: a live scene, the name, one line and a badge.
-class _LobbyModeCard extends StatelessWidget {
-  const _LobbyModeCard({super.key, required this.mode, required this.settings, required this.clock, required this.onTap});
-
-  final _PlayMode mode;
-  final Settings settings;
-  final Animation<double> clock;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = GamePalette.of(context);
-    final s = AppStrings.of(context);
-    final info = _cardInfo(mode, settings, s);
-    return GestureDetector(
-      onTap: onTap,
-      child: GlassCard(
-        radius: p.skin == GameSkin.pixel ? 4 : 22,
-        padding: const EdgeInsets.all(9),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AspectRatio(
-              aspectRatio: 1.35,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  _ModeScene(mode: mode, clock: clock),
-                  if (info.badge != null)
-                    Positioned(
-                      left: 6,
-                      top: 6,
-                      child: _Badge(text: info.badge!, colors: info.badgeColors),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
-                _cardTitle(mode, s),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: p.text, fontSize: _fs(p, 16), fontWeight: FontWeight.w900),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text(
-                info.line,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: _second(p), fontSize: _fs(p, 12), height: 1.2, fontWeight: FontWeight.w700),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: SizedBox(
-                  height: 6,
-                  child: info.progress == null
-                      ? null
-                      : LinearProgressIndicator(value: info.progress, backgroundColor: p.track, valueColor: AlwaysStoppedAnimation(info.badgeColors.first)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 2),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// The daily puzzle, sized for the lobby (readable on the pixel skin too).
 class _LobbyDaily extends StatelessWidget {
   const _LobbyDaily({required this.settings, required this.onTap});
@@ -1019,17 +894,6 @@ class _LobbyDaily extends StatelessWidget {
     );
   }
 }
-
-/// A card names the game, not the variant ("Zincir Küpler", not "Sonsuz").
-String _cardTitle(_PlayMode m, AppStrings s) => switch (m) {
-  _PlayMode.chainEndless => s.chainTitle,
-  _PlayMode.chainTime => s.chainTimeTitle,
-  _PlayMode.blocksLevels => s.puzzleTitle,
-  _PlayMode.blocksEndless => '${s.puzzleTitle} · ${s.endlessMode}',
-  _PlayMode.normal || _PlayMode.relaxed => s.classicTitle,
-  _PlayMode.towerClimb => s.towerTitle,
-  _ => m.title(s),
-};
 
 const _modeTones = {
   _ModeGroup.superGroup: [Color(0xFFB45BFF), Color(0xFFFF5FB8)],

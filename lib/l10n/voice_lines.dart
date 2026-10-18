@@ -123,10 +123,10 @@ const Map<Voice, List<String>> _tr = {
     'Buraya her oyunda gelemiyorsun. {gap} puan kaldı.',
   ],
   Voice.newBest: [
-    'Yeni rekor! Bundan sonrası bonus.',
+    'Yeni rekor! Bundan sonrası hep kâr.',
     'Rekoru kırdın. Bakalım nereye kadar gidecek.',
     'Eski rekor tarih oldu.',
-    'Şu an en iyi oyunundasın. Devam!',
+    'Şu an hayatının oyununu oynuyorsun. Devam!',
     'Rekor senin. Durma, farkı aç.',
     'İşte bu! Yeni rekor.',
     'Dün hayal gibi gelen skoru geçtin.',
@@ -137,7 +137,7 @@ const Map<Voice, List<String>> _tr = {
     'Eski rekoru çoktan geçtin. Yeni çıtayı bu oyun koyuyor.',
     'Rekoru kırmak bir şey, farkı bu kadar açmak başka.',
     'Her satırla bir sonraki oyunun hedefini yükseltiyorsun.',
-    'Bu oyun unutulmaz.',
+    'Bu oyun unutulmayacak.',
     'Çok yükseklerdesin. Derin bir nefes al, devam.',
   ],
   Voice.aboveAverage: [
@@ -158,7 +158,7 @@ const Map<Voice, List<String>> _tr = {
   Voice.comeback: [
     'Herkes burada pes ederdi. Sen etmedin.',
     'Tahta tavana dayanmıştı, kurtardın!',
-    'Bunu kimse görmedi ama sen biliyorsun.',
+    'Kimse görmedi ama ben gördüm!',
     'Paniğe kapılmadın. Asıl ustalık bu.',
     'Az önce kaybediyordun. Şimdi kontrol yine sende.',
     'En zor anda en temiz hamleleri yaptın.',
@@ -178,7 +178,7 @@ const Map<Voice, List<String>> _tr = {
   Voice.firstQuadNew: [
     'Bu oyunun ilk dörtlüsü. Beklemeyi biliyorsun.',
     'Dört satır birden! Sabrın karşılığı.',
-    'Kuyuyu açık tutup I parçasını bekledin. İşte sonucu.',
+    'Kuyuyu açık tutup uzun parçayı bekledin. Al sana sonucu!',
     'Bunu bilerek yaptın, değil mi?',
     'Dörtlü! İşi ciddiye aldın.',
   ],
@@ -253,12 +253,12 @@ const Map<Voice, List<String>> _tr = {
     'Ortalamanın üstünde bir oyun. Bunlar birikince rekor kendiliğinden gelir.',
     'Normalde {avg} puan civarı yapıyorsun. Bu oyun onu geçti, gidişat iyi.',
     'Rekor değil ama ortalamanın üstünde. İyi oyunlar böyle birikir.',
-    'Bu oyunda her zamankinden iyiydin. Bunu bil.',
+    'Bu oyunda her zamankinden iyiydin, bunu bir kenara yaz.',
   ],
   Voice.endBestToday: [
     'Bugünün en iyi oyunu bu. Günü rekorla kapatmaya hâlâ vakit var.',
     'Bugün oynadıklarının en iyisi. El ısındı.',
-    'Her oyun bir öncekinden iyi olmak zorunda değil ama bu oldu.',
+    'Her oyun bir öncekinden iyi olmaz ama bu oldu.',
   ],
   Voice.endWall: [
     'Son oyunlarının çoğu {level}. seviye civarında bitiyor. Demek ki engel orada. Aşılır, merak etme.',
@@ -321,7 +321,7 @@ const Map<Voice, List<String>> _tr = {
     'Dün en iyi oyununda {score} puan yapmıştın. Bugün henüz oynamadın.',
     'Dün {score} puana kadar çıkmıştın. Bugün nereye kadar?',
   ],
-  Voice.homeBack: ['Tekrar hoş geldin! Tahta seni bekliyordu.', 'Bir süredir yoktun. El unutmaz, bir dene.'],
+  Voice.homeBack: ['Hoş geldin, özlemiştik!', 'Epeydir yoktun. El alışkanlığı unutmaz, bir dene.'],
   Voice.homeGrowth: [
     'Son oyunlarının ortalaması yüzde {pct} yükseldi. Gelişiyorsun.',
     'Gidişat iyi: son oyunlarının ortalaması yüzde {pct} arttı.',

@@ -69,13 +69,13 @@ void main() {
   for (final (name, size) in [('phone', const Size(390, 844)), ('desktop', const Size(1440, 900))]) {
     testWidgets('$name: start a game, play, pause and quit to menu', (tester) async {
       await pumpApp(tester, size);
-      expect(find.byKey(const ValueKey('play')), findsOneWidget);
+      expect(find.byKey(const ValueKey('start')), findsOneWidget);
 
       await startMode(tester, 'normal');
       for (var i = 0; i < 30; i++) {
         await tester.pump(const Duration(milliseconds: 33));
       }
-      expect(find.byKey(const ValueKey('play')), findsNothing);
+      expect(find.byKey(const ValueKey('start')), findsNothing);
       expect(tester.takeException(), isNull);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.space);
@@ -90,7 +90,7 @@ void main() {
 
       await tester.tap(find.text('Menü'));
       await tester.pump(const Duration(milliseconds: 300));
-      expect(find.byKey(const ValueKey('play')), findsOneWidget);
+      expect(find.byKey(const ValueKey('start')), findsOneWidget);
     });
   }
 
@@ -103,6 +103,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     for (final theme in [VisualTheme.pixel, VisualTheme.neon, VisualTheme.toy, VisualTheme.toyHd]) {
+      await tester.ensureVisible(find.byKey(const ValueKey('open-themes')));
+      await tester.pump(const Duration(milliseconds: 40));
       await tester.tap(find.byKey(const ValueKey('open-themes')));
       await tester.pump(const Duration(milliseconds: 300));
       await tester.tap(find.byKey(ValueKey('theme-${theme.name}')).last);
@@ -217,7 +219,7 @@ void main() {
 
     testWidgets('survives the play button starting a new game', (tester) async {
       final settings = await pumpWithSavedPuzzle(tester);
-      await tester.tap(find.byKey(const ValueKey('play')));
+      await startMode(tester, 'blocksEndless');
       for (var i = 0; i < 10; i++) {
         await tester.pump(const Duration(milliseconds: 33));
       }
@@ -249,6 +251,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('Menü'));
     await tester.pump(const Duration(milliseconds: 300));
+    // With the game dropped, the bar on top offers the last mode again.
+    settings(tester).savedGame = null;
+    await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Klasik Küpler · Rahat'), findsOneWidget);
 
     // The modes page closes with its back button too.
@@ -272,6 +277,8 @@ void main() {
 
   testWidgets('about page shows the developer', (tester) async {
     await pumpApp(tester, const Size(390, 844));
+    await tester.ensureVisible(find.text('Hakkında'));
+    await tester.pump(const Duration(milliseconds: 40));
     await tester.tap(find.text('Hakkında'));
     // The About hero (and the home's cards) animate forever, so pump frames
     // for a fixed time instead of settling, until the page has slid in.
@@ -286,17 +293,17 @@ void main() {
 
   testWidgets('English UI and switching language from the menu', (tester) async {
     await pumpApp(tester, const Size(390, 844), language: AppLanguage.en);
-    expect(find.text('Super Blocks'), findsOneWidget);
+    expect(find.text('Super Blocks'), findsWidgets);
     expect(find.text('About'), findsOneWidget);
 
     // The language lives in the settings now.
-    await tester.tap(find.byKey(const ValueKey('open-settings')));
+    await tester.tap(find.byKey(const ValueKey('lobby-settings')));
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('Türkçe'));
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tapAt(const Offset(5, 5));
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text('Süper Küpler'), findsOneWidget);
+    expect(find.text('Süper Küpler'), findsWidgets);
     expect(find.text('Hakkında'), findsOneWidget);
   });
 

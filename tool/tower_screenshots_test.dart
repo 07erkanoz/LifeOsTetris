@@ -72,7 +72,7 @@ Future<void> _app(WidgetTester tester, Settings settings) async {
 
 Future<TowerController> _climb(WidgetTester tester, Settings settings, {TowerMode mode = TowerMode.climb}) async {
   await _app(tester, settings);
-  TowerScreen.open(tester.element(find.byKey(const ValueKey('play'))), settings: settings, audio: AudioService(enabled: false), mode: mode);
+  TowerScreen.open(tester.element(find.byKey(const ValueKey('start'))), settings: settings, audio: AudioService(enabled: false), mode: mode);
   await _pump(tester);
   return (tester.state(find.byType(TowerScreen)) as dynamic).c as TowerController;
 }

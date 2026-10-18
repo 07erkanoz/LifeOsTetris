@@ -115,6 +115,9 @@ class SugarController extends ChangeNotifier {
   (Cell, Cell)? hint;
   double _idle = 0;
 
+  /// Whether Lokum has pointed out two specials that fire together.
+  bool _comboShown = false;
+
   /// When Lokum dived into the board for a sugar rush (board time).
   double? diveStart;
   static const double diveLength = 1.1;
@@ -142,6 +145,9 @@ class SugarController extends ChangeNotifier {
 
   /// Ekşi Limon is in this level.
   bool get hasLimon => level.limonEvery > 0;
+
+  /// Acı Biber is the rival of this level (the second season's last).
+  bool get hasPepper => level.pepperEvery > 0;
 
   /// What Lokum wears.
   LokumOutfit get outfit => LokumOutfit.worn(settings.lokumOutfit, settings.totalSugarStars, settings.unlocks);
@@ -205,6 +211,7 @@ class SugarController extends ChangeNotifier {
     _overAge = -1;
     _playTime = 0;
     _idle = 0;
+    _comboShown = false;
     _lastCallout = 1;
     _warnedLastMoves = game.moves <= 5;
     _warnedBomb = false;
@@ -288,6 +295,10 @@ class SugarController extends ChangeNotifier {
       }
       if (game.status == SugarStatus.idle && now >= _waitUntil) {
         _idle += dt;
+        if (_idle > 2.5 && !_comboShown && game.comboPairs.isNotEmpty) {
+          _comboShown = true;
+          say('comboHint', LokumPose.point, priority: 2, hold: 2.6);
+        }
         if (_idle > 6 && hint == null) {
           hint = game.findMove();
           // Lokum points the way.
@@ -513,13 +524,33 @@ class SugarController extends ChangeNotifier {
             Special.none => Sfx.hard,
           });
           if (e.combo) {
-            fx.callout(strings.sugarCombo, size: 1.0, delay: start - now);
             fx.flash = 0.7;
             fx.confetti(count: 40, delay: start - now);
             say('great', LokumPose.wow, priority: 2);
           }
           if (settings.vibration && e.kind != Special.none) haptics.heavy();
           _wait(start - now + 0.3);
+        case SugarComboFired():
+          // Every combination has its name and something of its own.
+          fx.callout(strings.sugarComboName(e.combo), size: 1.05);
+          final cells = [for (var i = 0; i < SugarGame.size; i++) i];
+          switch (e.combo) {
+            case SugarCombo.bigCross:
+              // Three beams each way: a thick cross.
+              for (var d = -1; d <= 1; d++) {
+                fx.beam(SugarBlast(Special.lineH, e.x, e.y + d, [for (final x in cells) (x, e.y + d)]), const Color(0xFFB46CFF));
+                fx.beam(SugarBlast(Special.lineV, e.x + d, e.y, [for (final y in cells) (e.x + d, y)]), const Color(0xFFB46CFF));
+              }
+            case SugarCombo.mega:
+              // A second wave after the first, and a big shake.
+              fx.beam(SugarBlast(Special.bomb, e.x, e.y, [for (var y = e.y - 3; y <= e.y + 3; y++) for (var x = e.x - 3; x <= e.x + 3; x++) (x, y)]), const Color(0xFFFFB347), delay: 0.22);
+              fx.kick(1);
+            case SugarCombo.wipe:
+              fx.flash = 1;
+              fx.kick(1);
+            case SugarCombo.cross || SugarCombo.rainbow:
+              break;
+          }
         case SugarIceCracked():
           fx.chips(e.x + 0.5, e.y + 0.5, const Color(0xFFE6F6FF));
           audio.play(Sfx.hard, volume: 0.4);
@@ -581,6 +612,12 @@ class SugarController extends ChangeNotifier {
           fx.callout(strings.sugarShuffled, size: 0.9);
           audio.play(Sfx.gravity);
           _wait(0.5);
+        case SugarGoalMet():
+          // A score level: the goal is in, the stars are still to win.
+          fx.callout(strings.sugarGoalMet, size: 0.9);
+          audio.play(Sfx.power, volume: 0.7);
+          say('goalMet', LokumPose.cheer, priority: 2);
+          _wait(0.6);
         case SugarFinale():
           fx.callout(strings.sugarFinale, size: 1.15);
           fx.confetti(count: 30);
@@ -641,11 +678,48 @@ class SugarController extends ChangeNotifier {
           audio.play(Sfx.bump, volume: 0.7);
           say('limon', LokumPose.scared, priority: 2);
           _wait(0.7);
+        case SugarFogCleared():
+          fx.burst(e.x + 0.5, e.y + 0.5, const Color(0xFFFFFFFF), count: 8);
+          motions[e.piece.id] = SugarMotion(_cell((e.x, e.y)), _cell((e.x, e.y)), now, 0.3, fall: true);
+          audio.play(Sfx.soft, volume: 0.6);
+        case SugarGullsLanded():
+          for (var i = 0; i < e.cells.length; i++) {
+            final (x, y) = e.cells[i];
+            ghosts.add(SugarGhost(e.pieces[i], x.toDouble(), y.toDouble(), at + 0.2 + i * 0.08));
+            fx.chips(x + 0.5, y + 0.5, const Color(0xFFFFFFFF), count: 6);
+          }
+          audio.play(Sfx.bump, volume: 0.6);
+          say('gull', LokumPose.wow, priority: 2);
+          _wait(at - now + 0.4);
+        case SugarGullFled():
+          fx.chips(e.x + 0.5, e.y + 0.5, const Color(0xFFE6E9F0), count: 10);
+          audio.play(Sfx.move, volume: 0.6);
+        case SugarJamSpread():
+          for (final (x, y) in e.cells) {
+            fx.chips(x + 0.5, y + 0.5, const Color(0xFFFF5A8A), count: 3);
+          }
+        case SugarLanternHit():
+          if (e.left == 0) {
+            fx.burst(e.x + 0.5, e.y + 0.5, const Color(0xFFFFE07A), count: 12);
+            audio.play(Sfx.power, volume: 0.6);
+            say('lantern', LokumPose.cheer);
+          } else {
+            fx.chips(e.x + 0.5, e.y + 0.5, const Color(0xFFFFE07A), count: 5);
+            audio.play(Sfx.hard, volume: 0.45);
+          }
+        case SugarPepperThrew():
+          for (final (x, y) in e.cells) {
+            fx.burst(x + 0.5, y + 0.5, const Color(0xFFFF5A3A), count: 6);
+          }
+          limonThrew = now;
+          audio.play(Sfx.bump, volume: 0.7);
+          say('pepper', LokumPose.scared, priority: 2);
+          _wait(at - now + 0.4);
         case SugarSliceCleared():
           fx.chips(e.x + 0.5, e.y + 0.5, const Color(0xFFFFF06A), count: 9);
           audio.play(Sfx.hard, volume: 0.4);
         case SugarLimonPhase():
-          fx.callout(strings.sugarLimonAngry, size: 1.1);
+          fx.callout(hasPepper ? strings.sugarPepperAngry : strings.sugarLimonAngry, size: 1.1);
           fx.kick(0.8);
           fx.flash = 0.6;
           limonThrew = now;

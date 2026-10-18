@@ -59,6 +59,41 @@ void paintChest(Canvas canvas, Offset c, double s, List<Color> tone, {bool open 
   canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(c.dx, body.top + s * 0.1), width: s * 0.16, height: s * 0.2), Radius.circular(s * 0.04)), band);
 }
 
+/// A wrapped present [s] wide around [c]: a pink box, a gold ribbon and a
+/// bow; [tilt] turns it, [lid] lifts the lid off.
+void paintPresent(Canvas canvas, Offset c, double s, {double tilt = 0, double lid = 0}) {
+  canvas.save();
+  canvas.translate(c.dx, c.dy);
+  canvas.rotate(tilt);
+  final box = Rect.fromCenter(center: Offset(0, s * 0.12), width: s * 0.8, height: s * 0.56);
+  canvas.drawRRect(RRect.fromRectAndRadius(box.shift(Offset(0, s * 0.04)), Radius.circular(s * 0.08)), Paint()..color = Colors.black.withValues(alpha: 0.25));
+  canvas.drawRRect(RRect.fromRectAndRadius(box, Radius.circular(s * 0.08)), Paint()..shader = ui.Gradient.linear(box.topCenter, box.bottomCenter, const [Color(0xFFFF7AC6), Color(0xFFD0207A)]));
+  final gold = Paint()..shader = ui.Gradient.linear(Offset(-s / 2, 0), Offset(s / 2, 0), chestGold, const [0, 0.5, 1]);
+  canvas.drawRect(Rect.fromCenter(center: box.center, width: s * 0.14, height: box.height), gold);
+  final top = Rect.fromCenter(center: Offset(0, box.top - s * 0.06 - lid), width: s * 0.9, height: s * 0.18);
+  canvas.drawRRect(RRect.fromRectAndRadius(top, Radius.circular(s * 0.06)), Paint()..shader = ui.Gradient.linear(top.topCenter, top.bottomCenter, const [Color(0xFFFF9AD8), Color(0xFFE0247A)]));
+  canvas.drawRect(Rect.fromCenter(center: top.center, width: s * 0.14, height: top.height), gold);
+  for (final dir in [-1.0, 1.0]) {
+    canvas.drawOval(Rect.fromCenter(center: Offset(dir * s * 0.13, top.top - s * 0.07), width: s * 0.26, height: s * 0.16), gold);
+  }
+  canvas.restore();
+}
+
+/// Light turning behind something to be opened: [n] rays, turned by [turn].
+void paintRays(Canvas canvas, Offset c, double r, {double turn = 0, int n = 12, Color color = const Color(0x44FFC21A)}) {
+  final paint = Paint()..color = color;
+  final path = Path();
+  for (var i = 0; i < n; i++) {
+    final a = turn + i * 2 * pi / n;
+    path
+      ..moveTo(c.dx, c.dy)
+      ..lineTo(c.dx + cos(a - 0.1) * r, c.dy + sin(a - 0.1) * r)
+      ..lineTo(c.dx + cos(a + 0.1) * r, c.dy + sin(a + 0.1) * r)
+      ..close();
+  }
+  canvas.drawPath(path, paint);
+}
+
 /// A glass jar of sweets [s] tall around [c], [fill] 0..1 full.
 void paintJar(Canvas canvas, Offset c, double s, double fill, {bool shine = false}) {
   final body = RRect.fromRectAndCorners(

@@ -413,6 +413,19 @@ enum _Game {
   };
 }
 
+/// The modes of [game] that keep records: each one's name, its list and
+/// how a value reads.
+List<(String, String, String Function(int))> _recordModes(_Game game, AppStrings s) => switch (game) {
+  _Game.tower => [
+    for (final m in [_PlayMode.towerClimb, _PlayMode.towerWind]) (m.title(s), Settings.towerRecords(m.towerMode!), s.floorsLine),
+  ],
+  _Game.superGame || _Game.classic => [
+    for (final m in game.modes)
+      if (m.gameMode case final mode?) (m.title(s), Settings.gameRecords(mode), mode.recordsTime ? (int v) => s.clock(v / 100) : s.score),
+  ],
+  _ => const [],
+};
+
 /// A word on a mode's scene: its clock or its length.
 String? _sceneTag(_PlayMode m, AppStrings s) => switch (m) {
   _PlayMode.chainTime => s.clock(ChainGame.timeAttackLength, tenths: false),
@@ -558,6 +571,16 @@ class _ModesPageState extends State<_ModesPage> with SingleTickerProviderStateMi
                               ),
                             ),
                           ),
+                          if (game != null && _recordModes(game, s).isNotEmpty) ...[
+                            GlassIconButton(
+                              key: const ValueKey('records-open'),
+                              icon: Icons.emoji_events_rounded,
+                              tooltip: s.recordsShort,
+                              size: 40,
+                              onTap: () => showRecordsSheet(context, title: game.title(s), modes: _recordModes(game, s), settings: settings),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
                           if (game != null) _Tag(s.modeCount(game.modes.length), icon: Icons.grid_view_rounded),
                         ],
                       ),

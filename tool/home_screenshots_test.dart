@@ -40,7 +40,7 @@ void main() {
   setUpAll(_loadFonts);
 
   for (final theme in [VisualTheme.toyHd, VisualTheme.neon, VisualTheme.pixel]) {
-    for (final (name, size, ratio) in [('telefon', const Size(430, 932), 2.5), ('yatay', const Size(915, 412), 2.0), ('masaustu', const Size(1600, 900), 1.0)]) {
+    for (final (name, size, ratio) in [('telefon', const Size(430, 932), 2.5), ('yatay', const Size(915, 412), 2.0), ('masaustu', const Size(1600, 900), 1.0), ('tablet', const Size(820, 1180), 2.0), ('tablet-yatay', const Size(1180, 820), 2.0), ('tablet-buyuk', const Size(1024, 1366), 2.0)]) {
       testWidgets('${theme.name} $name', (tester) async {
         tester.view.physicalSize = size * ratio;
         tester.view.devicePixelRatio = ratio;
@@ -73,5 +73,31 @@ void main() {
           ..writeAsBytesSync(bytes!);
       });
     }
+  }
+
+  // A new player's first look: the tour over the showcase.
+  for (final language in AppLanguage.values) {
+    testWidgets('first time ${language.name}', (tester) async {
+      const size = Size(430, 932), ratio = 2.5;
+      tester.view.physicalSize = size * ratio;
+      tester.view.devicePixelRatio = ratio;
+      addTearDown(tester.view.reset);
+      final settings = Settings.memory()
+        ..language = language
+        ..homeTourSeen = false;
+      await tester.pumpWidget(RepaintBoundary(key: _root, child: KuplerApp(settings: settings, audio: AudioService(enabled: false))));
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 33));
+      }
+      final boundary = _root.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      final bytes = await tester.runAsync(() async {
+        final image = await boundary.toImage(pixelRatio: ratio);
+        final data = await image.toByteData(format: ui.ImageByteFormat.png);
+        return data!.buffer.asUint8List();
+      });
+      File('${_out}ilk-acilis-${language.name}.png')
+        ..parent.createSync(recursive: true)
+        ..writeAsBytesSync(bytes!);
+    });
   }
 }

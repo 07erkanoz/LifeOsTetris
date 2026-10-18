@@ -56,7 +56,10 @@ void main() {
             expect(tester.takeException(), isNull, reason: 'main menu');
 
             for (final mode in ['superMode', 'normal', 'relaxed', 'sprint', 'ultra', 'dig', 'target', 'chaos']) {
-              settings.lastPlay = mode;
+              // The bar on top plays the last mode once nothing waits.
+              settings
+                ..lastPlay = mode
+                ..savedGame = null;
               await tester.pump();
               await tester.tap(find.byKey(const ValueKey('play')));
               await tester.pump(const Duration(milliseconds: 100));

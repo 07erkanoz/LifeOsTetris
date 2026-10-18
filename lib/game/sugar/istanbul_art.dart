@@ -5,6 +5,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../../core/tower/tower_landmarks.dart';
+import '../tower/landmark_art.dart';
+
 // ------------------------------------------------------------ Ekşi Limon --
 
 /// The villain: a sour lemon with a frown, an ice-blue cape and a grin.
@@ -212,7 +215,76 @@ void paintDusk(Canvas canvas, Rect r) {
 void paintStoryScene(Canvas canvas, Size size, int chapter, {double t = 0}) {
   final w = size.width, h = size.height;
   final horizon = h * 0.62;
-  switch (chapter % 12) {
+  switch (chapter) {
+    case 12:
+      // Salacak on a foggy morning: the Maiden's Tower in the mist.
+      final sky = Rect.fromLTWH(0, 0, w, horizon);
+      canvas.drawRect(sky, Paint()..shader = ui.Gradient.linear(sky.topCenter, sky.bottomCenter, const [Color(0xFF9AAED0), Color(0xFFDDE6F2), Color(0xFFF2F4F8)], const [0, 0.6, 1]));
+      paintSkyline(canvas, w, horizon, h * 0.3, const Color(0xFF8A96B8));
+      paintBosphorus(canvas, Rect.fromLTWH(0, horizon, w, h * 0.38), ferryAt: 0.25, colors: const [Color(0xFF9AAED0), Color(0xFF5A6A9A)], tower: 1.8);
+      final mist = Paint()
+        ..color = Colors.white.withValues(alpha: 0.55)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, h * 0.04);
+      for (var i = 0; i < 5; i++) {
+        final x = (w * (i * 0.27) + t * 8) % (w * 1.3) - w * 0.15;
+        canvas.drawOval(Rect.fromCenter(center: Offset(x, horizon - h * 0.02 + i % 2 * h * 0.06), width: w * 0.5, height: h * 0.09), mist);
+      }
+    case 13:
+      // Haydarpaşa at sunset: the station on the shore.
+      final sky = Rect.fromLTWH(0, 0, w, horizon);
+      canvas.drawRect(sky, Paint()..shader = ui.Gradient.linear(sky.topCenter, sky.bottomCenter, const [Color(0xFF5A3A8A), Color(0xFFFF8A62), Color(0xFFFFC98A)], const [0, 0.6, 1]));
+      paintSkyline(canvas, w, horizon, h * 0.22, const Color(0xFF7A3A6A));
+      paintLandmark(canvas, Landmark.haydarpasa, Offset(w * 0.55, horizon + h * 0.01), min(w, h) / 560);
+      paintBosphorus(canvas, Rect.fromLTWH(0, horizon, w, h * 0.38), ferryAt: 0.18, colors: const [Color(0xFF8A4A7A), Color(0xFF3A1A4A)], tower: 0);
+    case 14:
+      // Karaköy pier in the morning: ferries and a flock of gulls.
+      final sky = Rect.fromLTWH(0, 0, w, horizon);
+      canvas.drawRect(sky, Paint()..shader = ui.Gradient.linear(sky.topCenter, sky.bottomCenter, const [Color(0xFF4A9AE6), Color(0xFFA8DCF8)]));
+      paintSkyline(canvas, w, horizon, h * 0.34, const Color(0xFF3A5A8A));
+      paintBosphorus(canvas, Rect.fromLTWH(0, horizon, w, h * 0.2), ferryAt: 0.5 + 0.05 * sin(t * 0.3), colors: const [Color(0xFF3A8AD8), Color(0xFF1A4A8A)], tower: 0);
+      _quay(canvas, Rect.fromLTWH(0, h * 0.82, w, h * 0.18));
+      paintGulls(canvas, [
+        for (var i = 0; i < 7; i++) Offset(w * (0.12 + i * 0.12) + 10 * sin(t + i), h * (0.14 + 0.05 * (i % 3)) + 4 * sin(t * 1.3 + i)),
+      ], const Color(0xFFFFFFFF));
+    case 15:
+      // Kuzguncuk in summer: wooden houses in a row by the water.
+      final sky = Rect.fromLTWH(0, 0, w, horizon);
+      canvas.drawRect(sky, Paint()..shader = ui.Gradient.linear(sky.topCenter, sky.bottomCenter, const [Color(0xFF6AB8F0), Color(0xFFFFE6B0)]));
+      const colors = [Color(0xFFE8A060), Color(0xFF9AD0C0), Color(0xFFF0D070), Color(0xFFE08A9A), Color(0xFFB0A0E0), Color(0xFF8AC0E8)];
+      final hw = w / 6.2;
+      for (var i = 0; i < 6; i++) {
+        final house = Rect.fromLTWH(w * 0.02 + i * hw * 1.02, horizon - hw * 1.1, hw, hw * 1.1);
+        canvas.drawRect(house, Paint()..color = colors[i]);
+        canvas.drawPath(Path()..addPolygon([house.topLeft - Offset(hw * 0.06, 0), Offset(house.center.dx, house.top - hw * 0.45), house.topRight + Offset(hw * 0.06, 0)], true), Paint()..color = const Color(0xFFB0443A));
+        for (final dx in [0.2, 0.6]) {
+          canvas.drawRect(Rect.fromLTWH(house.left + hw * dx, house.top + hw * 0.25, hw * 0.2, hw * 0.3), Paint()..color = const Color(0xFF4A3A6A));
+        }
+      }
+      paintBosphorus(canvas, Rect.fromLTWH(0, horizon, w, h * 0.38), ferryAt: 0.7, colors: const [Color(0xFF4AA0E0), Color(0xFF1A5AAF)], tower: 0);
+    case 16:
+      // Dolmabahçe by night: the palace's clock tower and lit lanterns.
+      final sky = Rect.fromLTWH(0, 0, w, horizon);
+      canvas.drawRect(sky, Paint()..shader = ui.Gradient.linear(sky.topCenter, sky.bottomCenter, const [Color(0xFF0E0A2A), Color(0xFF2A2A6A), Color(0xFF5A3A8A)], const [0, 0.6, 1]));
+      final r = Random(16);
+      for (var i = 0; i < 40; i++) {
+        canvas.drawCircle(Offset(r.nextDouble() * w, r.nextDouble() * horizon * 0.7), 0.8 + r.nextDouble(), Paint()..color = Colors.white.withValues(alpha: 0.4 + 0.4 * (0.5 + 0.5 * sin(t * 2 + i))));
+      }
+      paintSkyline(canvas, w, horizon, h * 0.2, const Color(0xFF1A1440));
+      paintLandmark(canvas, Landmark.dolmabahce, Offset(w * 0.5, horizon + h * 0.01), min(w, h) / 520);
+      paintBosphorus(canvas, Rect.fromLTWH(0, horizon, w, h * 0.38), ferryAt: 0.85, colors: const [Color(0xFF2A2A6A), Color(0xFF0E0A2A)], tower: 0);
+      for (var i = 0; i < 6; i++) {
+        final c = Offset(w * (0.08 + i * 0.17), horizon + h * 0.03);
+        canvas.drawCircle(c, h * 0.05, Paint()..shader = ui.Gradient.radial(c, h * 0.05, const [Color(0xCCFFE07A), Color(0x00FFE07A)]));
+        canvas.drawCircle(c, h * 0.012, Paint()..color = const Color(0xFFFFE07A));
+      }
+    case 17:
+      // Anadolu Kavağı at dusk: the castle on its hill, the Black Sea.
+      final sky = Rect.fromLTWH(0, 0, w, horizon);
+      canvas.drawRect(sky, Paint()..shader = ui.Gradient.linear(sky.topCenter, sky.bottomCenter, const [Color(0xFF3A1A4A), Color(0xFFFF7A4A), Color(0xFFFFC07A)], const [0, 0.6, 1]));
+      _hill(canvas, size, horizon, const Color(0xFF4A5A2A));
+      _fortress(canvas, Offset(w * 0.62, horizon - h * 0.08), min(h * 0.2, w * 0.36));
+      paintBosphorus(canvas, Rect.fromLTWH(0, horizon, w, h * 0.38), ferryAt: 0.2, colors: const [Color(0xFF3A4A7A), Color(0xFF14183A)], tower: 0);
+      paintAciBiber(canvas, Offset(w * 0.2, horizon - h * 0.12 + 4 * sin(t * 1.6)), h * 0.2);
     case 6:
       _wide(canvas, size, const Color(0xFF5A2A9A), const Color(0xFF2A1438), _kadikoy);
     case 7:
@@ -868,4 +940,52 @@ void _island(Canvas canvas, Offset c, double w) {
     final tx = c.dx + dx * w, ty = c.dy - w * (0.16 - dx.abs() * 0.12);
     canvas.drawPath(Path()..addPolygon([Offset(tx - w * 0.05, ty), Offset(tx, ty - w * 0.14), Offset(tx + w * 0.05, ty)], true), Paint()..color = const Color(0xFF1E6A2A));
   }
+}
+
+/// Acı Biber, Ekşi Limon's cousin: a red pepper with a green stalk, angry
+/// brows, a cheeky grin and a little flame; [s] tall around [c].
+void paintAciBiber(Canvas canvas, Offset c, double s, {bool laugh = true}) {
+  final body = Path()
+    ..moveTo(c.dx - s * 0.28, c.dy - s * 0.3)
+    ..quadraticBezierTo(c.dx + s * 0.4, c.dy - s * 0.45, c.dx + s * 0.3, c.dy + s * 0.05)
+    ..quadraticBezierTo(c.dx + s * 0.18, c.dy + s * 0.45, c.dx - s * 0.05, c.dy + s * 0.62)
+    ..quadraticBezierTo(c.dx - s * 0.02, c.dy + s * 0.3, c.dx - s * 0.32, c.dy + s * 0.05)
+    ..quadraticBezierTo(c.dx - s * 0.45, c.dy - s * 0.2, c.dx - s * 0.28, c.dy - s * 0.3)
+    ..close();
+  canvas.drawPath(body, Paint()..shader = ui.Gradient.linear(c - Offset(s * 0.3, s * 0.3), c + Offset(s * 0.3, s * 0.5), const [Color(0xFFFF5A3A), Color(0xFFC0101A)]));
+  canvas.drawPath(body, Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = s * 0.04
+    ..color = const Color(0xFF6A0A10));
+  canvas.drawOval(Rect.fromCenter(center: c + Offset(-s * 0.12, -s * 0.2), width: s * 0.14, height: s * 0.26), Paint()..color = Colors.white.withValues(alpha: 0.35));
+  canvas.drawPath(
+    Path()
+      ..moveTo(c.dx - s * 0.12, c.dy - s * 0.33)
+      ..quadraticBezierTo(c.dx - s * 0.05, c.dy - s * 0.55, c.dx + s * 0.12, c.dy - s * 0.6),
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = s * 0.08
+      ..strokeCap = StrokeCap.round
+      ..color = const Color(0xFF3AA34A),
+  );
+  for (final dx in [-0.12, 0.1]) {
+    canvas.drawCircle(c + Offset(dx * s, -s * 0.08), s * 0.07, Paint()..color = Colors.white);
+    canvas.drawCircle(c + Offset(dx * s + s * 0.015, -s * 0.07), s * 0.035, Paint()..color = const Color(0xFF1A1020));
+  }
+  final ink = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = s * 0.035
+    ..strokeCap = StrokeCap.round
+    ..color = const Color(0xFF1A1020);
+  canvas.drawLine(c + Offset(-s * 0.2, -s * 0.2), c + Offset(-s * 0.05, -s * 0.15), ink);
+  canvas.drawLine(c + Offset(s * 0.18, -s * 0.2), c + Offset(s * 0.03, -s * 0.15), ink);
+  canvas.drawArc(Rect.fromCenter(center: c + Offset(0, s * (laugh ? 0.06 : 0.12)), width: s * 0.26, height: s * 0.16), laugh ? 0.2 : pi + 0.2, pi - 0.4, false, ink);
+  canvas.drawPath(
+    Path()
+      ..moveTo(c.dx + s * 0.32, c.dy - s * 0.3)
+      ..quadraticBezierTo(c.dx + s * 0.5, c.dy - s * 0.5, c.dx + s * 0.4, c.dy - s * 0.7)
+      ..quadraticBezierTo(c.dx + s * 0.6, c.dy - s * 0.48, c.dx + s * 0.45, c.dy - s * 0.28)
+      ..close(),
+    Paint()..color = const Color(0xFFFFA020),
+  );
 }

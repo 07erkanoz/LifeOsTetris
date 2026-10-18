@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import '../core/sugar/sugar_levels.dart';
 import '../game/sugar/istanbul_art.dart';
 import '../game/sugar/sugar_art.dart';
 import '../l10n/strings.dart';
@@ -115,8 +116,8 @@ class _StoryCardState extends State<StoryCard> with TickerProviderStateMixin {
                                         Expanded(
                                           child: _Bubble(
                                             text: story.limon,
-                                            fill: const Color(0xFFFFF7A0),
-                                            ink: const Color(0xFF5A3A00),
+                                            fill: widget.chapter >= SugarLevels.secondSeason ? const Color(0xFFFFD8CC) : const Color(0xFFFFF7A0),
+                                            ink: widget.chapter >= SugarLevels.secondSeason ? const Color(0xFF6A0A10) : const Color(0xFF5A3A00),
                                             size: text,
                                             tailRight: true,
                                           ),
@@ -126,7 +127,7 @@ class _StoryCardState extends State<StoryCard> with TickerProviderStateMixin {
                                           child: SizedBox(
                                             width: limon * 1.3,
                                             height: limon * 1.2,
-                                            child: CustomPaint(painter: _LimonPainter(laugh: (t * 2).floor().isEven)),
+                                            child: CustomPaint(painter: _LimonPainter(laugh: (t * 2).floor().isEven, pepper: widget.chapter >= SugarLevels.secondSeason)),
                                           ),
                                         ),
                                       ],
@@ -285,13 +286,18 @@ class _ScenePainter extends CustomPainter {
 }
 
 class _LimonPainter extends CustomPainter {
-  _LimonPainter({required this.laugh});
+  _LimonPainter({required this.laugh, this.pepper = false});
 
   final bool laugh;
 
-  @override
-  void paint(Canvas canvas, Size size) => paintEksiLimon(canvas, Offset(size.width / 2, size.height * 0.55), size.height / 1.3, laugh: laugh);
+  /// Acı Biber, the second season's rival, instead.
+  final bool pepper;
 
   @override
-  bool shouldRepaint(_LimonPainter old) => old.laugh != laugh;
+  void paint(Canvas canvas, Size size) => pepper
+      ? paintAciBiber(canvas, Offset(size.width / 2, size.height * 0.5), size.height / 1.3, laugh: laugh)
+      : paintEksiLimon(canvas, Offset(size.width / 2, size.height * 0.55), size.height / 1.3, laugh: laugh);
+
+  @override
+  bool shouldRepaint(_LimonPainter old) => old.laugh != laugh || old.pepper != pepper;
 }

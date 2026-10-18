@@ -24,7 +24,7 @@ Future<(Settings, BlocksController)> openEndless(WidgetTester tester) async {
   final settings = Settings.memory()..language = AppLanguage.tr;
   await tester.pumpWidget(KuplerApp(settings: settings, audio: AudioService(enabled: false)));
   await pumpFor(tester, 6);
-  BlocksScreen.open(tester.element(find.byKey(const ValueKey('play'))), settings: settings, audio: AudioService(enabled: false), entry: BlocksEntry.endless);
+  BlocksScreen.open(tester.element(find.byKey(const ValueKey('start'))), settings: settings, audio: AudioService(enabled: false), entry: BlocksEntry.endless);
   await pumpFor(tester, 20);
   final c = (tester.state(find.byType(BlocksScreen)) as dynamic).c as BlocksController;
   return (settings, c);

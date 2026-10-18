@@ -48,7 +48,8 @@ void main() {
         addTearDown(tester.view.reset);
         final settings = Settings.memory()
           ..language = AppLanguage.tr
-          ..visualTheme = theme;
+          ..visualTheme = theme
+          ..lastPlay = 'superMode';
         await tester.pumpWidget(RepaintBoundary(key: _root, child: KuplerApp(settings: settings, audio: AudioService(enabled: false))));
         for (var i = 0; i < 20; i++) {
           await tester.pump(const Duration(milliseconds: 33));

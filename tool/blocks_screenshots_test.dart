@@ -60,7 +60,7 @@ Future<BlocksController> _open(WidgetTester tester, BlocksEntry entry) async {
   final settings = Settings.memory()..language = AppLanguage.tr;
   await tester.pumpWidget(RepaintBoundary(key: _root, child: KuplerApp(settings: settings, audio: AudioService(enabled: false))));
   await _pump(tester, 10);
-  BlocksScreen.open(tester.element(find.byKey(const ValueKey('play'))), settings: settings, audio: AudioService(enabled: false), entry: entry);
+  BlocksScreen.open(tester.element(find.byKey(const ValueKey('start'))), settings: settings, audio: AudioService(enabled: false), entry: entry);
   await _pump(tester, 30);
   return (tester.state(find.byType(BlocksScreen)) as dynamic).c as BlocksController;
 }
@@ -119,7 +119,7 @@ void main() {
       final settings = Settings.memory()..language = AppLanguage.tr;
       await tester.pumpWidget(RepaintBoundary(key: _root, child: KuplerApp(settings: settings, audio: AudioService(enabled: false))));
       await _pump(tester, 10);
-      BlocksScreen.open(tester.element(find.byKey(const ValueKey('play'))), settings: settings, audio: AudioService(enabled: false), entry: entry);
+      BlocksScreen.open(tester.element(find.byKey(const ValueKey('start'))), settings: settings, audio: AudioService(enabled: false), entry: entry);
       await _pump(tester, 40);
       final boundary = _root.currentContext!.findRenderObject()! as RenderRepaintBoundary;
       final bytes = await tester.runAsync(() async {

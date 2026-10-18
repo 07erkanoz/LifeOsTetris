@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lifeos_kupler/app.dart';
 import 'package:lifeos_kupler/audio/audio_service.dart';
+import 'package:lifeos_kupler/core/scoring.dart';
+import 'package:lifeos_kupler/game/game_controller.dart';
 import 'package:lifeos_kupler/l10n/strings.dart';
 import 'package:lifeos_kupler/settings/settings.dart';
 import 'package:lifeos_kupler/ui/game_screen.dart';
@@ -80,8 +83,57 @@ void main() {
     await pumpFor(tester, 15);
     expect(find.byType(SugarScreen), findsNothing);
     expect(find.byType(SugarMapScreen), findsNothing);
-    expect(find.byKey(const ValueKey('play')), findsOneWidget);
+    expect(find.byKey(const ValueKey('start')), findsOneWidget);
     expect(settings.lastPlay, 'sugar');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets("the phone's back: pause, home, then out only on a second press", (tester) async {
+    final settings = await pumpHome(tester);
+    settings.homeTourSeen = false;
+    await pumpFor(tester, 4);
+    var exits = 0;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'SystemNavigator.pop') exits++;
+      return null;
+    });
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+
+    // The first launch's tour closes first.
+    expect(find.byKey(const ValueKey('home-tour')), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await pumpFor(tester, 8);
+    expect(find.byKey(const ValueKey('home-tour')), findsNothing);
+    expect(exits, 0);
+
+    final c = (tester.state(find.byType(GameScreen)) as dynamic).controller as GameController;
+    c.start(GameMode.classic);
+    await pumpFor(tester, 10);
+    await tester.binding.handlePopRoute();
+    await pumpFor(tester, 6);
+    expect(c.game.paused, isTrue, reason: 'a game pauses, it does not close');
+    await tester.binding.handlePopRoute();
+    await pumpFor(tester, 10);
+    expect(find.byKey(const ValueKey('start')), findsOneWidget);
+    expect(find.byKey(const ValueKey('resume-game')), findsOneWidget, reason: 'kept to continue');
+    expect(exits, 0);
+
+    // The home screen: a hint first, out on the second press.
+    await tester.binding.handlePopRoute();
+    await pumpFor(tester, 6);
+    expect(find.text('Çıkmak için bir kez daha geri bas'), findsOneWidget);
+    expect(exits, 0);
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(exits, 1);
+
+    // Too late for a second press: a hint again.
+    await pumpFor(tester, 60, 50);
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(exits, 1);
+    await pumpFor(tester, 60, 50);
+    expect(settings.homeTourSeen, isTrue);
     expect(tester.takeException(), isNull);
   });
 }

@@ -205,6 +205,17 @@ class _GoalIconPainter extends CustomPainter {
         paintDoor(canvas, r, sugarColors[SugarColor.blue]!);
       case GoalKind.limon:
         paintEksiLimon(canvas, r.center + Offset(0, size.height * 0.08), size.width * 0.72);
+      case GoalKind.pepper:
+        paintAciBiber(canvas, r.center + Offset(0, size.height * 0.02), size.width * 0.72);
+      case GoalKind.fog:
+        paintCandy(canvas, r.deflate(size.width * 0.1), SugarColor.blue);
+        paintFog(canvas, r);
+      case GoalKind.gull:
+        paintGull(canvas, r);
+      case GoalKind.jam:
+        paintJam(canvas, r);
+      case GoalKind.lantern:
+        paintLantern(canvas, r, 0, glow: 0.8);
       case GoalKind.score:
         paintGoldStar(canvas, r.center, size.width * 0.46);
     }
@@ -657,7 +668,7 @@ class SugarMascotView extends StatelessWidget {
     final text = line;
     if (text == null) return lokum;
     final bubble = Container(
-      constraints: BoxConstraints(maxWidth: size * 3.2),
+      constraints: BoxConstraints(maxWidth: size * 5),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -666,7 +677,8 @@ class SugarMascotView extends StatelessWidget {
       ),
       child: Text(text, style: const TextStyle(fontFamily: 'Baloo2', fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF7A2A9E), height: 1.1)),
     );
-    final padded = Padding(padding: const EdgeInsets.only(top: 4), child: bubble);
+    // Narrower where there is less room (the pause panel).
+    final padded = Flexible(child: Padding(padding: const EdgeInsets.only(top: 4), child: bubble));
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,

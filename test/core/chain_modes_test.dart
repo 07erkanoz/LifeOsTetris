@@ -93,7 +93,7 @@ void main() {
     });
 
     test('a chain mission counts chains of its size and ends when done', () {
-      final g = ChainGame(random: Random(1))..startMission(const ChainMission(number: 1, kind: MissionKind.chain, target: 2, seconds: 90));
+      final g = ChainGame(random: Random(1))..startMission(const ChainMission(number: 6, kind: MissionKind.chain, target: 2, seconds: 90));
       g.debugSetBoard(['..Y...', '..Y...', 'GGBG..', 'BBYB..']);
       g.stopTime = 1000;
       g.drainEvents();
@@ -102,6 +102,19 @@ void main() {
       expect(events.whereType<ChainMissionProgress>().last.progress, 1);
       expect(g.won, isTrue);
       expect(g.isOver, isTrue);
+    });
+
+    test('the first mission is a lesson: a board set for a chain, one swap, a still stack', () {
+      final g = ChainGame(random: Random(1))..startMission(ChainMissions.of(1));
+      final (x, y) = g.onlySwap!;
+      expect(g.swap(x + 1, y), isFalse);
+      final before = g.debugRows();
+      run(g, 5);
+      expect(g.debugRows(), before, reason: 'the stack waits for the lesson');
+      expect(g.swap(x, y), isTrue);
+      final events = run(g, 4);
+      expect(events.whereType<ChainMatched>().map((e) => e.chain), containsAllInOrder([1, 2]));
+      expect(g.won, isTrue);
     });
 
     test('a mission out of time is missed, unless surviving was the goal', () {

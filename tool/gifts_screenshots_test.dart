@@ -70,7 +70,7 @@ Future<Settings> _open(WidgetTester tester) async {
   settings.addSugarCandies({settings.event.color: 112, SugarColor.green: 30});
   await tester.pumpWidget(RepaintBoundary(key: _root, child: KuplerApp(settings: settings, audio: AudioService(enabled: false))));
   await _pump(tester, 6);
-  GiftsScreen.open(tester.element(find.byKey(const ValueKey('play'))), settings: settings);
+  GiftsScreen.open(tester.element(find.byKey(const ValueKey('start'))), settings: settings);
   await _pump(tester, 15);
   return settings;
 }
@@ -83,6 +83,26 @@ void main() {
     await tester.drag(find.byType(SingleChildScrollView).last, const Offset(0, -1200));
     await _pump(tester, 15);
     await _shot(tester, 'gifts-bottom.png');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('today taken, the jar full, a gift opening', (tester) async {
+    final settings = await _open(tester);
+    await tester.tap(find.byKey(const ValueKey('gift-daily')));
+    await _pump(tester, 40);
+    await tester.tap(find.byKey(const ValueKey('gift-collect')));
+    await _pump(tester, 10);
+    settings.addSugarCandies({SugarColor.red: 2000});
+    await _pump(tester, 20);
+    await _shot(tester, 'gifts-taken.png');
+    await tester.ensureVisible(find.byKey(const ValueKey('gift-jar')));
+    await _pump(tester, 10);
+    await _shot(tester, 'gifts-jar.png');
+    await tester.tap(find.byKey(const ValueKey('gift-jar')));
+    await _pump(tester, 12);
+    await _shot(tester, 'gifts-opening.png');
+    await _pump(tester, 30);
+    await _shot(tester, 'gifts-opened.png');
     expect(tester.takeException(), isNull);
   });
 

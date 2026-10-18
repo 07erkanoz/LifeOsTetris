@@ -14,6 +14,9 @@ import '../core/scoring.dart';
 import '../game/play_history.dart';
 import '../l10n/strings.dart';
 import '../theme/palette.dart';
+import 'score_board.dart';
+
+export 'score_board.dart' show ScoreEntry;
 
 /// User preferences, best scores and lifetime stats, persisted with
 /// shared_preferences.
@@ -28,6 +31,7 @@ class Settings extends ChangeNotifier {
   double _musicVolume = 0.6;
   bool _sfx = true;
   bool _effects = true;
+  bool _homeTourSeen = false;
   bool _shake = true;
   bool _vibration = true;
   bool _showButtons = !_desktop;
@@ -93,6 +97,8 @@ class Settings extends ChangeNotifier {
   String? _chainCubes;
   String? _sugarScene;
   PlayHistory _history = PlayHistory();
+  ScoreBoard _board = ScoreBoard();
+  int _lastPlace = 0;
   LineMemory _lineMemory = LineMemory();
 
   /// The time used for play history; tests may move it.
@@ -113,6 +119,7 @@ class Settings extends ChangeNotifier {
       s._musicVolume = prefs.getDouble('musicVolume') ?? 0.6;
       s._sfx = prefs.getBool('sfx') ?? true;
       s._effects = prefs.getBool('effects') ?? true;
+      s._homeTourSeen = prefs.getBool('homeTourSeen') ?? false;
       s._shake = prefs.getBool('shake') ?? true;
       s._vibration = prefs.getBool('vibration') ?? true;
       // Desktops play with the keyboard: on-screen buttons start off there.
@@ -191,6 +198,7 @@ class Settings extends ChangeNotifier {
       s._totalLines = prefs.getInt('totalLines') ?? 0;
       s._totalSeconds = prefs.getInt('totalSeconds') ?? 0;
       s._history = PlayHistory.decode(prefs.getString('playHistory'));
+      s._board = ScoreBoard.decode(prefs.getString('scoreBoard'));
       s._lineMemory = LineMemory(prefs.getStringList('recentLines'));
     }
     applyVisualTheme(s._visualTheme);
@@ -212,6 +220,9 @@ class Settings extends ChangeNotifier {
   /// In-memory settings, used by tests.
   factory Settings.memory() {
     final s = Settings._(null);
+    // Tests start past the home screen's one-time tour (they turn it on
+    // when it is what they look at).
+    s._homeTourSeen = true;
     applyVisualTheme(s._visualTheme);
     return s;
   }
@@ -222,6 +233,9 @@ class Settings extends ChangeNotifier {
   double get musicVolume => _musicVolume;
   bool get sfx => _sfx;
   bool get effects => _effects;
+
+  /// Whether the home screen's one-time tour ("there are six games") was shown.
+  bool get homeTourSeen => _homeTourSeen;
   bool get shake => _shake;
   bool get vibration => _vibration;
   bool get showButtons => _showButtons;
@@ -720,6 +734,7 @@ class Settings extends ChangeNotifier {
   bool recordTowerRun({required TowerMode mode, required int floors, required double seconds}) {
     final record = floors > 0 && floors > towerBest(mode);
     final today = dayKey(clock());
+    _lastPlace = floors > 0 && mode != TowerMode.daily ? _addRecord(towerRecords(mode), floors) : 0;
     _set(
       () {
         if (record) _towerBest[mode] = floors;
@@ -775,6 +790,7 @@ class Settings extends ChangeNotifier {
   set musicVolume(double v) => _set(() => _musicVolume = v, () => _prefs?.setDouble('musicVolume', v));
   set sfx(bool v) => _set(() => _sfx = v, () => _prefs?.setBool('sfx', v));
   set effects(bool v) => _set(() => _effects = v, () => _prefs?.setBool('effects', v));
+  set homeTourSeen(bool v) => _set(() => _homeTourSeen = v, () => _prefs?.setBool('homeTourSeen', v));
   set shake(bool v) => _set(() => _shake = v, () => _prefs?.setBool('shake', v));
   set vibration(bool v) => _set(() => _vibration = v, () => _prefs?.setBool('vibration', v));
   set showButtons(bool v) => _set(() => _showButtons = v, () => _prefs?.setBool('showButtons', v));
@@ -787,11 +803,59 @@ class Settings extends ChangeNotifier {
     applyVisualTheme(v);
   }, () => _prefs?.setString('visualTheme', v.name));
 
+  // ------------------------------------------------------------ records
+
+  /// The list of [mode]'s records: points, or for timed challenges the
+  /// fastest finished runs in hundredths of a second.
+  static String gameRecords(GameMode mode) => 'game_${mode.name}';
+
+  /// The list of a Kule Küpler mode's records, in floors.
+  static String towerRecords(TowerMode mode) => 'tower_${mode.name}';
+
+  /// The records of [key], best first. A best from before the lists shows
+  /// as the only one until the next game.
+  List<ScoreEntry> records(String key) {
+    final list = _board.of(key);
+    if (list.isNotEmpty) return list;
+    final seed = _seedOf(key);
+    return seed == null || seed <= 0 ? const [] : [ScoreEntry(seed, null)];
+  }
+
+  /// Where [value] would go on [key]'s list (1-based; 0: off the list).
+  int recordPlaceFor(String key, int value) {
+    if (_board.of(key).isEmpty) {
+      final seed = _seedOf(key);
+      if (seed != null && seed > 0) return (_lowerFirst(key) ? value < seed : value > seed) ? 1 : 2;
+    }
+    return _board.placeFor(key, value, lower: _lowerFirst(key));
+  }
+
+  /// The place the last game recorded took on its list (0: none).
+  int get lastRecordPlace => _lastPlace;
+
+  bool _lowerFirst(String key) => key.startsWith('game_') && GameMode.values.byName(key.substring(5)).recordsTime;
+
+  int? _seedOf(String key) {
+    if (key.startsWith('tower_')) return _towerBest[TowerMode.values.byName(key.substring(6))];
+    final mode = GameMode.values.byName(key.substring(5));
+    if (!mode.recordsTime) return _best[mode];
+    final t = _bestTime[mode];
+    return t == null ? null : (t * 100).round();
+  }
+
+  int _addRecord(String key, int value) {
+    final place = _board.add(key, value, clock(), lower: _lowerFirst(key), seed: _seedOf(key));
+    _prefs?.setString('scoreBoard', _board.encode());
+    return place;
+  }
+
   /// Records a finished game. Returns true when it is a new best for [mode]:
   /// the highest score, or for timed challenges the fastest [won] run.
   bool recordGame({required GameMode mode, required int score, required int lines, required double seconds, bool won = false}) {
     final bestTime = _bestTime[mode];
     final record = mode.recordsTime ? won && (bestTime == null || seconds < bestTime) : score > _best[mode]!;
+    // On the list before the best moves, so an old best is kept on it.
+    _lastPlace = mode.recordsTime ? (won ? _addRecord(gameRecords(mode), (seconds * 100).round()) : 0) : (score > 0 ? _addRecord(gameRecords(mode), score) : 0);
     _set(
       () {
         if (record) mode.recordsTime ? _bestTime[mode] = seconds : _best[mode] = score;

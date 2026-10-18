@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' as ui;
@@ -27,7 +28,7 @@ import '../game/chain/chain_sprites.dart' show chainColors, paintChainCube, pain
 import '../game/game_controller.dart';
 import '../game/motivation.dart';
 import '../game/sugar/istanbul_art.dart' show paintBosphorus, paintDusk, paintEksiLimon, paintSkyline;
-import '../game/sugar/sugar_art.dart' show LokumOutfit, LokumPose, paintCandy, paintGoldStar, paintLokum, paintSparkle, paintSugarLabel;
+import '../game/sugar/sugar_art.dart' show LokumOutfit, LokumPose, paintCandy, paintGoldStar, paintLokum, paintSparkle, paintStriped, paintSugarLabel, paintWrapped;
 import '../game/tower/landmark_art.dart';
 import '../game/tower/tower_art.dart';
 import '../game/tower/tower_painter.dart' show towerSkyAt;
@@ -53,13 +54,14 @@ import 'sugar_screen.dart';
 import 'sugar_widgets.dart' show DancingLokum, SugarMascotView;
 import 'board_view.dart';
 import 'power_bar.dart';
+import 'records_list.dart';
 import 'theme_picker.dart';
 import 'tower_build_screen.dart';
 import 'tower_screen.dart';
 import 'widgets.dart';
 
 part 'home_lobby.dart';
-part 'lobby_backdrop.dart';
+part 'home_showcase.dart';
 part 'home_menu.dart';
 
 String formatTime(double seconds) {
@@ -82,6 +84,10 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   late final GameController controller = GameController(settings: widget.settings, audio: widget.audio, haptics: widget.haptics);
   late final Ticker _ticker = createTicker(controller.tick);
   final FocusNode _focus = FocusNode(debugLabel: 'game');
+
+  /// Set by a back press on the home screen: a second one soon after
+  /// closes the app.
+  Timer? _exitArmed;
 
   @override
   void initState() {
@@ -115,6 +121,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _exitArmed?.cancel();
     _ticker.dispose();
     _focus.dispose();
     controller.dispose();
@@ -194,12 +201,52 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   bool _isGameKey(LogicalKeyboardKey key) => _gameKeys.contains(key);
 
+  /// The phone's back button: a game pauses, a paused or ended one goes
+  /// back to the home screen (kept to continue), and the home screen
+  /// closes only on a second press, not by a slip of the thumb.
+  void _back() {
+    final c = controller;
+    if (c.game.status == GameStatus.ready) {
+      if (!widget.settings.homeTourSeen) {
+        widget.settings.homeTourSeen = true;
+      } else if (_exitArmed?.isActive ?? false) {
+        _exitArmed?.cancel();
+        SystemNavigator.pop();
+      } else {
+        _exitArmed = Timer(const Duration(seconds: 2), () {});
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              key: const ValueKey('exit-hint'),
+              content: Text(AppStrings.of(context).backAgainToExit, textAlign: TextAlign.center, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white)),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              width: 300,
+              elevation: 0,
+              backgroundColor: const Color(0xFF402868),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22), side: const BorderSide(color: Color(0x66FF5FB8), width: 1.5)),
+            ),
+          );
+      }
+    } else if (c.game.status == GameStatus.over || c.game.paused) {
+      c.toMenu();
+    } else {
+      c.togglePause();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = GamePalette.of(context);
     final dpr = MediaQuery.devicePixelRatioOf(context);
     controller.strings = AppStrings.of(context);
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _back();
+      },
+      child: Scaffold(
       backgroundColor: palette.background.first,
       body: Listener(
         // Browsers allow sound only after a gesture: the first touch on the
@@ -253,6 +300,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -551,6 +599,7 @@ class _PhoneLayout extends StatelessWidget {
             ),
           ),
         ),
+        _RecordBar(c: c),
         Expanded(child: _BoardArea(c: c, padding: 10)),
         if (c.game.powersEnabled)
           Padding(
@@ -795,7 +844,12 @@ class _DesktopLayout extends StatelessWidget {
       ),
     );
 
-    return Padding(
+    // On a wide window the columns and the board keep together in the
+    // middle instead of spreading to its edges.
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1180),
+        child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 20),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -893,6 +947,8 @@ class _DesktopLayout extends StatelessWidget {
           ),
         ],
       ),
+    ),
+      ),
     );
   }
 }
@@ -914,11 +970,19 @@ class _Kbd extends StatelessWidget {
         border: Border.all(color: p.isDark ? const Color(0x1FFFFFFF) : const Color(0xFFDFE4EE)),
         boxShadow: [BoxShadow(color: p.isDark ? const Color(0x80000000) : const Color(0xFFD5DBE7), offset: const Offset(0, 2))],
       ),
-      child: Text(
-        label,
-        textAlign: TextAlign.center,
-        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.text),
-      ),
+      // Arrows as icons: the game's fonts have no arrow glyphs.
+      child: switch (label) {
+        '←' || '→' || '↑' || '↓' => Icon(
+          const {'←': Icons.arrow_back_rounded, '→': Icons.arrow_forward_rounded, '↑': Icons.arrow_upward_rounded, '↓': Icons.arrow_downward_rounded}[label],
+          size: 14,
+          color: p.text,
+        ),
+        _ => Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: p.text),
+        ),
+      },
     );
   }
 }
@@ -1331,6 +1395,68 @@ class _PauseOverlay extends StatelessWidget {
   }
 }
 
+/// The ended game's place among its mode's records, and what to aim for.
+List<Widget> _records(BuildContext context, GameController c) {
+  final s = AppStrings.of(context);
+  final timed = c.mode.recordsTime;
+  final key = Settings.gameRecords(c.mode);
+  final entries = c.settings.records(key);
+  if (entries.isEmpty || (timed && !c.game.won)) return const [];
+  final place = c.settings.lastRecordPlace;
+  final value = timed ? (c.game.time * 100).round() : c.game.score;
+  String format(int v) => timed ? s.clock(v / 100) : s.score(v);
+  return [
+    const SizedBox(height: 12),
+    RecordsBlock(entries: entries, format: format, place: place, goal: recordGoal(s, entries, place, value, format, lower: timed)),
+  ];
+}
+
+/// Under the score while playing: how far to the record, and past it.
+class _RecordBar extends StatelessWidget {
+  const _RecordBar({required this.c});
+
+  final GameController c;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder(
+    valueListenable: c.frame,
+    builder: (context, _, _) {
+      final s = AppStrings.of(context);
+      final best = c.settings.bestScore(c.mode);
+      final score = c.game.score;
+      if (c.mode.recordsTime || best <= 0) return const SizedBox.shrink();
+      final past = score > best;
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 2),
+        child: Container(
+          key: const ValueKey('record-bar'),
+          height: 18,
+          decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.28), borderRadius: BorderRadius.circular(9)),
+          child: Stack(
+            children: [
+              FractionallySizedBox(
+                widthFactor: past ? 1 : (score / best).clamp(0.0, 1.0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(9),
+                    gradient: LinearGradient(colors: past ? const [Color(0xFFFACC15), Color(0xFFFF8A10)] : const [Color(0xFFFF5FB8), Color(0xFFFACC15)]),
+                  ),
+                ),
+              ),
+              Center(
+                child: Text(
+                  past ? s.pastRecord(s.score(score - best)) : s.toRecord(s.score(best - score)),
+                  style: const TextStyle(fontSize: 11.5, height: 1, fontWeight: FontWeight.w900, color: Colors.white, shadows: [Shadow(color: Color(0x88000000), blurRadius: 2)]),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
 class _GameOverOverlay extends StatelessWidget {
   const _GameOverOverlay({super.key, required this.c});
 
@@ -1361,7 +1487,8 @@ class _GameOverOverlay extends StatelessWidget {
       _ => game.won ? s.challengeDone : s.challengeFailed,
     };
     final bestTime = c.settings.bestTime(c.mode);
-    final happy = game.won || c.newRecord;
+    final place = c.settings.lastRecordPlace;
+    final happy = game.won || c.newRecord || (place >= 1 && place <= 3);
     return _OverlayShell(
       landscapeTail: 4,
       children: [
@@ -1420,6 +1547,7 @@ class _GameOverOverlay extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(color: p.muted, fontWeight: FontWeight.w600),
         ),
+        ..._records(context, c),
         if (c.endNote case final note?) ...[
           const SizedBox(height: 14),
           Text(

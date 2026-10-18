@@ -51,7 +51,7 @@ void main() {
       final g = SugarGame(seed: level.number)..start(level);
       for (var y = 0; y < 8; y++) {
         for (var x = 0; x < 8; x++) {
-          expect(g.board[y][x] != null || g.blocked(x, y), isTrue, reason: 'level ${level.number} ($x, $y)');
+          expect(g.board[y][x] != null || g.blocked(x, y) || g.hole[y][x] > 0, isTrue, reason: 'level ${level.number} ($x, $y)');
         }
       }
       expect(g.drainEvents(), isEmpty, reason: 'nothing happens before the first move');
@@ -144,6 +144,18 @@ void main() {
     expect(cleared.pieces.every((c) => c.$3.color == SugarColor.purple), isTrue);
     expect(g.goals.single.done, isTrue);
     expect(g.board.expand((r) => r).where((p) => p?.color == SugarColor.purple), isEmpty);
+  });
+
+  test('two specials side by side are a pair; each combination has its name', () {
+    final pair = game(board({}), specials: {(3, 3): Special.lineH, (4, 3): Special.bomb});
+    expect(pair.comboPairs, [((3, 3), (4, 3))]);
+    pair.swap((3, 3), (4, 3));
+    expect(pair.drainEvents().whereType<SugarComboFired>().single.combo, SugarCombo.bigCross);
+    for (final (a, b, combo) in [(Special.lineH, Special.lineV, SugarCombo.cross), (Special.bomb, Special.bomb, SugarCombo.mega), (Special.prism, Special.none, SugarCombo.rainbow), (Special.prism, Special.prism, SugarCombo.wipe)]) {
+      final g = game(board({}), specials: {(3, 3): a, if (b != Special.none) (4, 3): b});
+      g.swap((3, 3), (4, 3));
+      expect(g.drainEvents().whereType<SugarComboFired>().single.combo, combo);
+    }
   });
 
   test('two specials swapped together combine, and score double', () {
@@ -314,6 +326,25 @@ void main() {
     expect(g.moves, 0);
   });
 
+  test('a score-only level goes on for its stars, then its finale fires the moves left', () {
+    final g = SugarGame(seed: 2)..start(testLevel(moves: 12, goals: [() => SugarGoal.score(10)], stars: const [10, 20, 600]));
+    final m = SugarSolver.best(g)!;
+    g.swap(m.$1, m.$2);
+    g.settle();
+    expect(g.goalsDone, isTrue);
+    expect(g.drainEvents().whereType<SugarGoalMet>(), hasLength(1), reason: 'the goal is in: on for the stars');
+    var finale = false;
+    while (!g.isOver) {
+      final m = SugarSolver.best(g);
+      m == null ? g.shuffle() : g.swap(m.$1, m.$2);
+      g.settle();
+      finale |= g.drainEvents().any((e) => e is SugarFinale);
+    }
+    expect(g.status, SugarStatus.won);
+    expect(finale, isTrue, reason: 'the three stars came before the last move');
+    expect(g.starCount, 3);
+  });
+
   test('goals met with moves left: the finale fires them two at a time, each worth more', () {
     final g = game(board({6: 'GBRBGBGB', 7: 'RRPOPOPO'}), moves: 6);
     g.goals = [SugarGoal.color(SugarColor.red, 3)];
@@ -428,8 +459,9 @@ void main() {
     expect(c.score, greaterThan(0));
   });
 
-  test('levels: 120 in twelve chapters, goals match the board, bosses and chests', () {
-    expect(SugarLevels.count, 120);
+  test('levels: 180 in eighteen chapters, goals match the board, bosses and chests', () {
+    expect(SugarLevels.count, 180);
+    expect(SugarLevels.chapters * SugarLevels.perChapter, SugarLevels.count);
     for (final level in SugarLevels.all) {
       final cells = level.layout.join().split('');
       final ice = cells.where((c) => c == 'i' || c == 'I' || c == 'C').length;
@@ -437,6 +469,9 @@ void main() {
       final chocolate = cells.where((c) => c == 'H').length;
       final cakes = cells.where((c) => c == 'W').length;
       final doors = cells.where((c) => '123456'.contains(c)).length;
+      final fog = cells.where((c) => c == 'F').length;
+      final lanterns = cells.where((c) => c == 'Q').length;
+      final tunnels = cells.where((c) => c == 'X').length;
       for (final goal in level.goals.map((f) => f())) {
         if (goal.kind == GoalKind.ice) expect(goal.target, ice, reason: 'level ${level.number}');
         if (goal.kind == GoalKind.box) expect(goal.target, boxes, reason: 'level ${level.number}');
@@ -445,6 +480,9 @@ void main() {
         if (goal.kind == GoalKind.choco) expect(goal.target, inInclusiveRange(1, chocolate), reason: 'level ${level.number}');
         if (goal.kind == GoalKind.cake) expect(goal.target, cakes, reason: 'level ${level.number}');
         if (goal.kind == GoalKind.door) expect(goal.target, doors, reason: 'level ${level.number}');
+        if (goal.kind == GoalKind.fog) expect(goal.target, fog, reason: 'level ${level.number}');
+        if (goal.kind == GoalKind.lantern) expect(goal.target, lanterns, reason: 'level ${level.number}');
+        if (goal.kind == GoalKind.jam) expect(goal.target, 64 - tunnels, reason: 'level ${level.number}');
       }
       // Doors in colours the level has, and every cake whole.
       for (final c in cells.where((c) => '123456'.contains(c))) {
@@ -456,7 +494,10 @@ void main() {
           expect([level.layout[y][x + 1], level.layout[y + 1][x], level.layout[y + 1][x + 1]], ['w', 'w', 'w'], reason: 'level ${level.number} cake at ($x, $y)');
         }
       }
-      expect(level.goals.any((f) => f().kind == GoalKind.limon), level.number == SugarLevels.count, reason: 'Ekşi Limon waits at the very end');
+      expect(level.goals.any((f) => f().kind == GoalKind.limon), level.number == 120, reason: 'Ekşi Limon waits at the end of the first season');
+      expect(level.goals.any((f) => f().kind == GoalKind.pepper), level.number > 170, reason: 'Acı Biber at the end of the second');
+      // No tunnel on the top row: every column fills from the top.
+      expect(level.layout[0].contains('X'), isFalse, reason: 'level ${level.number}');
       expect(level.stars[0] <= level.stars[1] && level.stars[1] <= level.stars[2], isTrue, reason: 'level ${level.number}');
       expect(level.boss, level.number % 10 == 0);
       // Every column under a box can be reached from the side.
@@ -477,5 +518,116 @@ void main() {
       final g = SugarSolver.play(SugarLevels.of(n), 42);
       expect(g.status, SugarStatus.won, reason: 'level $n');
     }
+  });
+
+  group('the second season', () {
+    // Swapping (2, 6) and (2, 7) lines up three reds on the bottom row.
+    SugarGame bottomRed(void Function(SugarGame g) setUp, {List<SugarGoal>? goals}) {
+      final g = game(board({6: 'GBRBGBGB', 7: 'RRPOPOPO'}));
+      if (goals != null) g.goals = goals;
+      setUp(g);
+      expect(g.swap((2, 6), (2, 7)), isTrue);
+      g.settle();
+      return g;
+    }
+
+    test('fog lifts after a match beside it, a sweet under it', () {
+      final g = bottomRed((g) {
+        g.fog[6][0] = 1;
+        g.board[6][0] = null;
+      }, goals: [SugarGoal.fog(1)]);
+      expect(g.fog[6][0], 0);
+      expect(g.goals.single.done, isTrue);
+      expect(g.board[6][0], isNotNull);
+    });
+
+    test('a gull beside a match flies off; gulls land every few moves', () {
+      final g = bottomRed((g) {
+        g.gull[6][1] = 1;
+        g.board[6][1] = null;
+      }, goals: [SugarGoal.gull(5)]);
+      expect(g.gull[6][1], 0);
+      expect(g.goals.single.progress, 1);
+      final landing = SugarGame(seed: 3)..start(SugarLevels.of(141));
+      final m = SugarSolver.best(landing)!;
+      for (var i = 0; i < 3; i++) {
+        final move = SugarSolver.best(landing) ?? m;
+        landing.swap(move.$1, move.$2);
+        landing.settle();
+      }
+      expect(landing.drainEvents().whereType<SugarGullsLanded>(), isNotEmpty, reason: 'every third move');
+    });
+
+    test('a lantern takes three hits to light', () {
+      final g = bottomRed((g) {
+        g.lantern[6][0] = 3;
+        g.board[6][0] = null;
+      }, goals: [SugarGoal.lantern(1)]);
+      expect(g.lantern[6][0], 2);
+      expect(g.goals.single.done, isFalse);
+    });
+
+    test('a match on jam spreads it over the match', () {
+      final g = bottomRed((g) => g.jam[7][0] = 1, goals: [SugarGoal.jam(64)]);
+      expect([for (var x = 0; x < 3; x++) g.jam[7][x]], [1, 1, 1]);
+      expect(g.goals.single.progress, 3);
+    });
+
+    test('sweets fall through a tunnel and it stays empty', () {
+      final g = bottomRed((g) {
+        g.hole[4][0] = 1;
+        g.board[4][0] = null;
+      });
+      expect(g.board[4][0], isNull);
+      for (var y = 0; y < 8; y++) {
+        for (var x = 0; x < 8; x++) {
+          if (g.hole[y][x] == 0) expect(g.board[y][x], isNotNull, reason: '($x, $y)');
+        }
+      }
+    });
+
+    test('Acı Biber makes sweets hot; matches cool him down', () {
+      final g = SugarGame(seed: 5)..start(SugarLevels.of(171));
+      expect(g.goals.single.kind, GoalKind.pepper);
+      var hot = false;
+      // He throws every sixth move.
+      for (var i = 0; i < 6; i++) {
+        final m = SugarSolver.best(g)!;
+        g.swap(m.$1, m.$2);
+        g.settle();
+        hot |= g.drainEvents().any((e) => e is SugarPepperThrew);
+      }
+      expect(hot, isTrue);
+      expect(g.board.expand((r) => r).any((p) => p?.timer != null), isTrue);
+      expect(g.goals.single.progress, greaterThan(0));
+    });
+
+    test('a saved game keeps the second season\'s grids', () {
+      final g = SugarGame(seed: 2)..start(SugarLevels.of(151));
+      final save = jsonDecode(jsonEncode(g.toSave())) as Map<String, Object?>;
+      final back = SugarGame(seed: 9)..restore(SugarLevels.of(151), save);
+      expect(back.jam, g.jam);
+      expect(back.hole, g.hole);
+    });
+
+    test('every level lets new sweets in at the top', () {
+      for (final level in SugarLevels.all) {
+        final g = SugarGame(seed: 1)..start(level);
+        final open = [for (var x = 0; x < SugarGame.size; x++) if (g.holds(x, 0)) x];
+        expect(open.length, greaterThanOrEqualTo(2), reason: 'level ${level.number}: the top row is shut, the board would drain');
+      }
+    });
+
+    test('a board too empty for any move ends, it does not shuffle for ever', () {
+      final g = bottomRed((g) {
+        for (var y = 0; y < 6; y++) {
+          for (var x = 0; x < SugarGame.size; x++) {
+            g.board[y][x] = null;
+            if (y == 0) g.fog[y][x] = 1;
+          }
+        }
+      }, goals: [SugarGoal.fog(8)]);
+      expect(g.isOver || g.hasMove(), isTrue);
+    });
   });
 }

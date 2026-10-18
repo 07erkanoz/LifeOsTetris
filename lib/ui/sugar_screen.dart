@@ -209,9 +209,13 @@ class _Play extends StatelessWidget {
     final s = AppStrings.of(context);
     final g = c.game;
     final running = c.started && !g.isOver;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
-      child: Column(
+    // On a wide window the bars and the board keep together in the middle.
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 680),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+          child: Column(
         children: [
           _TopBar(c: c, onBack: onBack),
           const SizedBox(height: 6),
@@ -272,7 +276,7 @@ class _Play extends StatelessWidget {
                           child: IgnorePointer(child: _Mascot(c: c, size: cell * 1.05)),
                         ),
                         // Ekşi Limon glowers from the top-left one.
-                        if (c.hasLimon)
+                        if (c.hasLimon || c.hasPepper)
                           Positioned(
                             left: -4,
                             top: -cell * 1.3,
@@ -291,6 +295,8 @@ class _Play extends StatelessWidget {
             ),
           ),
         ],
+          ),
+        ),
       ),
     );
   }
@@ -337,15 +343,18 @@ class _Limon extends StatelessWidget {
     builder: (context, _, _) => CustomPaint(
       key: const ValueKey('sugar-limon'),
       size: Size(size * 1.5, size * 1.25),
-      painter: _LimonPainter(left: c.game.limonLeft, since: c.now - c.limonThrew, time: c.now),
+      painter: _LimonPainter(left: c.game.limonLeft, since: c.now - c.limonThrew, time: c.now, pepper: c.hasPepper),
     ),
   );
 }
 
 class _LimonPainter extends CustomPainter {
-  _LimonPainter({required this.left, required this.since, required this.time});
+  _LimonPainter({required this.left, required this.since, required this.time, this.pepper = false});
 
   final double left, since, time;
+
+  /// Acı Biber instead of Ekşi Limon.
+  final bool pepper;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -356,7 +365,11 @@ class _LimonPainter extends CustomPainter {
     canvas.save();
     canvas.translate(size.width / 2, s * 0.55 - hop);
     if (throwing) canvas.rotate(sin(since * 18) * 0.12);
-    paintEksiLimon(canvas, Offset.zero, s * 0.82, laugh: throwing || left > 0.34);
+    if (pepper) {
+      paintAciBiber(canvas, Offset.zero, s * 0.82, laugh: throwing || left > 0.34);
+    } else {
+      paintEksiLimon(canvas, Offset.zero, s * 0.82, laugh: throwing || left > 0.34);
+    }
     canvas.restore();
     final bar = Rect.fromLTWH(size.width * 0.08, s * 1.04, size.width * 0.84, s * 0.16);
     final rr = RRect.fromRectAndRadius(bar, Radius.circular(bar.height / 2));
@@ -509,12 +522,12 @@ class _GoalChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final done = goal.done;
     // Ekşi Limon's bar shows the sourness left, in lemon yellow.
-    final limon = goal.kind == GoalKind.limon;
+    final limon = goal.isRival;
     final share = ((limon ? goal.left : goal.progress) / goal.target).clamp(0.0, 1.0);
     final text = switch (goal.kind) {
       GoalKind.score => _thousands(goal.target),
       // Ekşi Limon's sourness left.
-      GoalKind.limon => AppStrings.of(context).percent((goal.left * 100 / goal.target).ceil()),
+      GoalKind.limon || GoalKind.pepper => AppStrings.of(context).percent((goal.left * 100 / goal.target).ceil()),
       _ => '${min(goal.progress, goal.target)}/${goal.target}',
     };
     return Container(
@@ -672,6 +685,11 @@ class _GoalLine extends StatelessWidget {
       GoalKind.cake => s.sugarGoalCake(goal.target),
       GoalKind.door => s.sugarGoalDoor(goal.target),
       GoalKind.limon => s.sugarGoalLimon,
+      GoalKind.fog => s.sugarGoalFog(goal.target),
+      GoalKind.gull => s.sugarGoalGull(goal.target),
+      GoalKind.jam => s.sugarGoalJam,
+      GoalKind.lantern => s.sugarGoalLantern(goal.target),
+      GoalKind.pepper => s.sugarGoalPepper,
     };
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),

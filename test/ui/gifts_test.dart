@@ -69,7 +69,7 @@ void main() {
       settings.recordSugarLevel(n, stars: 3, score: 5000, seconds: 30);
     }
     await pumpApp(tester, settings: settings);
-    GiftsScreen.open(tester.element(find.byKey(const ValueKey('play'))), settings: settings);
+    GiftsScreen.open(tester.element(find.byKey(const ValueKey('start'))), settings: settings);
     await pumpFor(tester, 12);
     // A locked look cannot be picked.
     await tapKey(tester, 'cubes-cini');
@@ -105,7 +105,7 @@ void main() {
     }
     expect(settings.setComplete(0), isTrue);
     expect(settings.giftsReady, greaterThanOrEqualTo(2), reason: 'the set prize waits too');
-    showPostcards(tester.element(find.byKey(const ValueKey('play'))), settings);
+    showPostcards(tester.element(find.byKey(const ValueKey('start'))), settings);
     await pumpFor(tester, 10);
     final rainbows = settings.sugarBoosters(SugarBooster.rainbow);
     await tapKey(tester, 'set-claim-0');
@@ -129,6 +129,8 @@ void main() {
     final settings = Settings.memory()..language = AppLanguage.tr;
     settings.applyGift(const Gift(card: 3));
     await pumpApp(tester, settings: settings);
+    await tester.ensureVisible(find.byKey(const ValueKey('lokum')));
+    await tester.pump(const Duration(milliseconds: 40));
     for (var i = 0; i < 8 && find.byKey(const ValueKey('tip-card')).evaluate().isEmpty; i++) {
       await tester.tap(find.byKey(const ValueKey('lokum')));
       await pumpFor(tester, 10);
@@ -145,7 +147,7 @@ void main() {
     testWidgets('the gifts screen fits ${size.width.round()}×${size.height.round()} with large text', (tester) async {
       final settings = await pumpApp(tester, size: size, text: 1.3);
       settings.addSugarCandies({SugarColor.red: 400});
-      GiftsScreen.open(tester.element(find.byKey(const ValueKey('play'))), settings: settings);
+      GiftsScreen.open(tester.element(find.byKey(const ValueKey('start'))), settings: settings);
       await pumpFor(tester, 12);
       expect(tester.takeException(), isNull);
       await tester.drag(find.byType(SingleChildScrollView).last, const Offset(0, -2000));
@@ -159,7 +161,7 @@ void main() {
     settings.applyGift(const Gift(unlock: Unlock.freeze, freezes: 2));
     settings.applyGift(const Gift(unlock: Unlock.cubesLokum));
     settings.chainCubes = 'lokum';
-    ChainScreen.open(tester.element(find.byKey(const ValueKey('play'))), settings: settings, audio: AudioService(enabled: false), mode: ChainMode.endless);
+    ChainScreen.open(tester.element(find.byKey(const ValueKey('start'))), settings: settings, audio: AudioService(enabled: false), mode: ChainMode.endless);
     await pumpFor(tester, 12, 40);
     await tester.tap(find.byKey(const ValueKey('chain-start')));
     await pumpFor(tester, 20);

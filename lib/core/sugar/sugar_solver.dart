@@ -79,7 +79,11 @@ class SugarSolver {
         GoalKind.fruit => gained * 160,
         GoalKind.cake => gained * 90,
         GoalKind.door => gained * 70,
-        GoalKind.limon => gained * 2,
+        GoalKind.limon || GoalKind.pepper => gained * 2,
+        GoalKind.fog => gained * 40,
+        GoalKind.gull => gained * 50,
+        GoalKind.jam => gained * 14,
+        GoalKind.lantern => gained * 90,
       };
     }
     // Layers knocked count too, not only boxes gone.
@@ -111,7 +115,7 @@ class SugarSolver {
       }
       final left = g.moves;
       g.settle();
-      if (g.status == SugarStatus.won && !g.playsAllMoves && lastFinale == 0) lastFinale = left;
+      if (g.status == SugarStatus.won && g.inFinale && lastFinale == 0) lastFinale = left;
     }
     return g;
   }

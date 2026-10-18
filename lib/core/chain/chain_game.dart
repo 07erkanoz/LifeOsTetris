@@ -340,6 +340,8 @@ class ChainGame {
   void start(ChainMode mode, {ChainDifficulty difficulty = ChainDifficulty.normal}) {
     this.mode = mode;
     this.difficulty = difficulty;
+    onlySwap = null;
+    _lesson = false;
     for (final row in board) {
       row.fillRange(0, width, null);
     }
@@ -385,9 +387,25 @@ class ChainGame {
 
   /// Starts [m] on the rising board: garbage missions begin with slabs to
   /// break.
+  /// The first mission teaches a chain: a board set for one, bottom rows
+  /// first. Sliding the yellow on its second row right clears three blues;
+  /// the yellow above them falls onto two yellows.
+  static const tutorialRows = ['..Y...', 'BBYBYG', 'MGOGBM', 'GOMBMO'];
+
+  /// The one swap the first mission takes (then any), while it waits.
+  (int, int)? onlySwap;
+
+  /// The stack keeps still for the first mission's lesson.
+  bool _lesson = false;
+
   void startMission(ChainMission m) {
     start(ChainMode.mission, difficulty: m.difficulty);
     mission = m;
+    if (m.number == 1 && m.kind == MissionKind.chain) {
+      debugSetBoard(tutorialRows);
+      onlySwap = (2, height - tutorialRows.length + 1);
+      _lesson = true;
+    }
     if (m.kind == MissionKind.garbage) {
       // Slabs over the stack, enough to reach the target with a little
       // spare; more drop as they go.
@@ -481,6 +499,9 @@ class ChainGame {
     final a = board[y][x], b = board[y][x + 1];
     if (a == null && b == null) return false;
     if (!_swappable(a) || !_swappable(b)) return false;
+    final only = onlySwap;
+    if (only != null && only != (x, y)) return false;
+    onlySwap = null;
     // A puzzle takes one swap at a time, each from a still board.
     if (isPuzzle) {
       if (movesLeft <= 0 || !settled || (a != null && b != null && a.color == b.color)) return false;
@@ -899,7 +920,7 @@ class ChainGame {
   bool get _topOccupied => board[0].any((b) => b != null);
 
   void _updateRise(double dt) {
-    if (busy) return;
+    if (busy || _lesson) return;
     if (_topOccupied) {
       // Touching the top: the game ends unless something clears in time.
       final settled = board[0].any((b) => b != null && (b.isGarbage ? !b.slab!.falling : b.state == BlockState.idle));

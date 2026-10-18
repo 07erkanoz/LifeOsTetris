@@ -10,6 +10,7 @@ import 'package:lifeos_kupler/settings/settings.dart';
 import 'package:lifeos_kupler/theme/palette.dart';
 import 'package:lifeos_kupler/game/chain/chain_controller.dart';
 import 'package:lifeos_kupler/ui/chain_screen.dart';
+import 'package:lifeos_kupler/ui/sugar_map_screen.dart';
 import 'package:lifeos_kupler/ui/tower_screen.dart';
 import 'package:lifeos_kupler/ui/sugar_screen.dart';
 
@@ -33,7 +34,7 @@ Future<Settings> pumpLobby(WidgetTester tester, {Size size = const Size(390, 844
 
 void main() {
   for (final theme in [VisualTheme.toyHd, VisualTheme.neon, VisualTheme.pixel]) {
-    for (final size in const [Size(390, 844), Size(360, 640), Size(844, 390), Size(1024, 768), Size(1920, 1080)]) {
+    for (final size in const [Size(390, 844), Size(360, 640), Size(844, 390), Size(820, 1180), Size(1024, 768), Size(1920, 1080)]) {
       for (final text in [1.0, 1.3]) {
         testWidgets('${theme.name} ${size.width.round()}×${size.height.round()} text ×$text: the lobby fits', (tester) async {
           final settings = Settings.memory()
@@ -41,14 +42,17 @@ void main() {
             ..visualTheme = theme;
           await pumpLobby(tester, size: size, settings: settings, text: text);
           expect(tester.takeException(), isNull);
-          for (final key in ['play', 'change-mode', 'open-settings', 'lokum', 'tip-action']) {
+          for (final key in ['showcase', 'game-tiles', 'change-mode', 'open-settings', 'lokum', 'tip-action', 'daily-puzzle']) {
             expect(find.byKey(ValueKey(key)), findsOneWidget, reason: key);
           }
-          // The essentials are on screen without scrolling.
+          // The games are on screen without scrolling: the showcase and the
+          // first tiles.
           final screen = Offset.zero & size;
-          for (final key in ['play', 'open-settings']) {
+          for (final key in ['show-tower', 'tile-tower', 'tile-sugar', 'lobby-settings']) {
             expect(screen.contains(tester.getCenter(find.byKey(ValueKey(key)))), isTrue, reason: '$key in view');
           }
+          // A new player has nothing to continue.
+          expect(find.byKey(const ValueKey('play')), findsNothing);
           await pumpFor(tester, 10);
           expect(tester.takeException(), isNull);
         });
@@ -58,6 +62,8 @@ void main() {
 
   testWidgets('Lokum offers today\'s gift, the daily puzzle, then a mode never played; tapping him changes the idea', (tester) async {
     await pumpLobby(tester);
+    await tester.ensureVisible(find.byKey(const ValueKey('lokum')));
+    await pumpFor(tester, 2);
     expect(find.byKey(const ValueKey('tip-gift')), findsOneWidget, reason: 'today\'s gift is waiting');
     expect(find.byKey(const ValueKey('gifts-badge')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('lokum')));
@@ -66,37 +72,109 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('lokum')));
     await pumpFor(tester, 10);
     expect(find.byKey(const ValueKey('tip-towerClimb')), findsOneWidget);
-    expect(find.text('Bunu hiç denemedin!'), findsOneWidget);
+    expect(find.text('Buna hiç bakmadın, bence bayılırsın!'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('tip-action')));
     await pumpFor(tester, 15, 40);
     expect(find.byType(TowerScreen), findsOneWidget);
   });
 
-  testWidgets('a Şeker Küpler level left half way comes first, on the bubble and the cards', (tester) async {
+  testWidgets('a Şeker Küpler level left half way comes first: the bar on top, the bubble and its tile', (tester) async {
     final settings = Settings.memory()..language = AppLanguage.tr;
     settings.savedSugar = jsonEncode({'level': 7});
     await pumpLobby(tester, settings: settings);
+    expect(find.byKey(const ValueKey('resume-sugar')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('resume-sugar')), matching: find.text('Seviye 7')), findsOneWidget);
     expect(find.byKey(const ValueKey('tip-sugar')), findsOneWidget);
-    expect(find.text('Kaldığın yer: Seviye 7'), findsWidgets);
-    expect(find.text('DEVAM'), findsOneWidget);
-    // The play card's own mode is not repeated among the cards.
-    expect(find.byKey(const ValueKey('card-superMode')), findsNothing);
-    expect(find.byKey(const ValueKey('card-sugar')), findsOneWidget);
+    expect(find.text('7. seviyede kalmıştık!'), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const ValueKey('tile-sugar')), matching: find.text('DEVAM')), findsOneWidget);
+    // The bar is above the showcase.
+    expect(tester.getRect(find.byKey(const ValueKey('resume-sugar'))).bottom, lessThanOrEqualTo(tester.getRect(find.byKey(const ValueKey('showcase'))).top));
   });
 
-  testWidgets('a mode played is no longer new', (tester) async {
+  testWidgets('one bar however many games wait: the last one played; the others go back in from their tiles', (tester) async {
+    final settings = Settings.memory()
+      ..language = AppLanguage.tr
+      ..lastPlay = 'sugar';
+    settings.savedSugar = jsonEncode({'level': 7});
+    final chain = ChainGame()..start(ChainMode.endless);
+    chain.score = 321;
+    settings.savedChain = jsonEncode(chain.toSave());
+    await pumpLobby(tester, settings: settings);
+    expect(find.byKey(const ValueKey('resume-sugar')), findsOneWidget);
+    expect(find.byKey(const ValueKey('resume-chain')), findsNothing);
+    expect(find.descendant(of: find.byKey(const ValueKey('tile-chain')), matching: find.text('DEVAM')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('tile-chain')));
+    await pumpFor(tester, 20, 40);
+    final c = (tester.state(find.byType(ChainScreen)) as dynamic).c as ChainController;
+    expect(c.game.score, 321, reason: 'straight back into the game left');
+  });
+
+  testWidgets('the showcase slides on by itself, and OYNA starts the game shown', (tester) async {
+    await pumpLobby(tester);
+    expect(find.text('1 / 6'), findsOneWidget);
+    await pumpFor(tester, 160, 30);
+    expect(find.text('2 / 6'), findsOneWidget, reason: 'the next game after a few seconds');
+    await tester.tap(find.byKey(const ValueKey('show-sugar')));
+    await pumpFor(tester, 15, 40);
+    expect(find.byType(SugarMapScreen), findsOneWidget);
+  });
+
+  testWidgets('a game tile opens its own page; a game of one mode starts', (tester) async {
+    await pumpLobby(tester);
+    await tester.tap(find.byKey(const ValueKey('tile-chain')));
+    await pumpFor(tester, 12, 40);
+    expect(find.byKey(const ValueKey('game-back')), findsOneWidget);
+    expect(find.byKey(const ValueKey('mode-chainMissions')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('game-back')));
+    await pumpFor(tester, 12, 40);
+    await tester.tap(find.byKey(const ValueKey('tile-tower')));
+    await pumpFor(tester, 12, 40);
+    expect(find.byKey(const ValueKey('mode-towerClimb')), findsOneWidget);
+  });
+
+  testWidgets('the first time, Lokum shows there are six games; once', (tester) async {
+    final settings = Settings.memory()
+      ..language = AppLanguage.tr
+      ..homeTourSeen = false;
+    await pumpLobby(tester, settings: settings);
+    await pumpFor(tester, 4);
+    expect(find.byKey(const ValueKey('home-tour')), findsOneWidget);
+    expect(find.text('Burada tam 6 oyun var!'), findsOneWidget);
+    // It takes the tap: nothing starts behind it.
+    await tester.tap(find.byKey(const ValueKey('home-tour-ok')));
+    await pumpFor(tester, 6);
+    expect(find.byKey(const ValueKey('home-tour')), findsNothing);
+    expect(find.byType(SugarMapScreen), findsNothing);
+    expect(settings.homeTourSeen, isTrue);
+  });
+
+  testWidgets('the last game played comes back from the bar on top', (tester) async {
+    final settings = Settings.memory()
+      ..language = AppLanguage.tr
+      ..lastPlay = 'towerClimb';
+    await pumpLobby(tester, settings: settings);
+    expect(find.descendant(of: find.byKey(const ValueKey('play')), matching: find.textContaining('SON OYNADIĞIN', findRichText: true)), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('play')));
+    await pumpFor(tester, 15, 40);
+    expect(find.byType(TowerScreen), findsOneWidget);
+  });
+
+  testWidgets('a new player sees no NEW badges; for the others a game played is no longer new', (tester) async {
     final settings = Settings.memory()..language = AppLanguage.tr;
+    await pumpLobby(tester, settings: settings);
+    expect(find.text('YENİ'), findsNothing, reason: 'to a new player everything is new');
+    // Once they have played something, the games they have not tried are new.
+    settings.lastPlay = 'normal';
+    await pumpFor(tester, 4);
+    expect(find.descendant(of: find.byKey(const ValueKey('tile-chain')), matching: find.text('YENİ')), findsOneWidget);
     settings.recordChainGame(mode: ChainMode.endless, difficulty: ChainDifficulty.easy, score: 900, seconds: 30);
     await pumpLobby(tester, settings: settings);
+    await tester.ensureVisible(find.byKey(const ValueKey('lokum')));
     await tester.tap(find.byKey(const ValueKey('lokum')));
     await pumpFor(tester, 10);
     expect(find.byKey(const ValueKey('tip-chainEndless')), findsNothing);
-    // Played modes move to the end of the cards, with their record.
-    final card = find.byKey(const ValueKey('card-chainEndless'));
-    await tester.scrollUntilVisible(card, 160, scrollable: find.descendant(of: find.byKey(const ValueKey('lobby-cards')), matching: find.byType(Scrollable)));
-    expect(find.descendant(of: card, matching: find.textContaining('900')), findsOneWidget);
-    expect(find.descendant(of: card, matching: find.text('YENİ')), findsNothing);
+    expect(find.descendant(of: find.byKey(const ValueKey('tile-chain')), matching: find.text('YENİ')), findsNothing);
   });
 
   testWidgets('with visual effects off the scenes hold still', (tester) async {
@@ -114,7 +192,7 @@ void main() {
   testWidgets('a Zincir Küpler game left half way continues from the home, paused', (tester) async {
     final settings = await pumpLobby(tester);
     expect(find.byKey(const ValueKey('resume-chain')), findsNothing);
-    ChainScreen.open(tester.element(find.byKey(const ValueKey('play'))), settings: settings, audio: AudioService(enabled: false), mode: ChainMode.timeAttack);
+    ChainScreen.open(tester.element(find.byKey(const ValueKey('start'))), settings: settings, audio: AudioService(enabled: false), mode: ChainMode.timeAttack);
     await pumpFor(tester, 12, 40);
     await tester.tap(find.byKey(const ValueKey('chain-start')));
     await pumpFor(tester, 20);
@@ -158,7 +236,7 @@ void main() {
     final settings = Settings.memory()..language = AppLanguage.tr;
     await pumpLobby(tester, settings: settings);
     // Play a level a little, then leave it from the pause menu.
-    SugarScreen.open(tester.element(find.byKey(const ValueKey('play'))), settings: settings, audio: AudioService(enabled: false), level: 2);
+    SugarScreen.open(tester.element(find.byKey(const ValueKey('start'))), settings: settings, audio: AudioService(enabled: false), level: 2);
     await pumpFor(tester, 12, 40);
     await tester.ensureVisible(find.byKey(const ValueKey('sugar-play')));
     await tester.tap(find.byKey(const ValueKey('sugar-play')));

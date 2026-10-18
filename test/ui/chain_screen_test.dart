@@ -79,7 +79,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('chain-menu')));
     await pumpFor(tester, 15, 40);
     expect(find.byType(ChainScreen), findsNothing);
-    expect(find.byKey(const ValueKey('play')), findsOneWidget);
+    expect(find.byKey(const ValueKey('start')), findsOneWidget);
   });
 
   testWidgets('dragging a cube sideways swaps it along', (tester) async {

@@ -346,6 +346,14 @@ class _MapPainter extends CustomPainter {
     [Color(0xFF6AA8E6), Color(0xFFE0708A), Color(0xFF2A1A5A)],
     [Color(0xFF2A1A5A), Color(0xFF4AA0F0), Color(0xFFBEE6FF)],
     [Color(0xFFBEE6FF), Color(0xFF2A1A5A), Color(0xFF0A0826)],
+    // The second season: Salacak's fog, Haydarpaşa's sunset, Karaköy's
+    // morning, Kuzguncuk's summer, Dolmabahçe by night, the Black Sea.
+    [Color(0xFF0A0826), Color(0xFFDDE6F2), Color(0xFFB8C8E6)],
+    [Color(0xFFB8C8E6), Color(0xFFFF9A62), Color(0xFF8A3A6A)],
+    [Color(0xFF8A3A6A), Color(0xFF9AD4F8), Color(0xFF5AA8E6)],
+    [Color(0xFF5AA8E6), Color(0xFFFFE0A0), Color(0xFFFF9AA0)],
+    [Color(0xFFFF9AA0), Color(0xFF2A2A7A), Color(0xFF14123A)],
+    [Color(0xFF14123A), Color(0xFFFF7A4A), Color(0xFF3A1A3A)],
   ];
   static const _hills = [
     [[Color(0xFFB6F2C8), Color(0xFF5CC98A)], [Color(0xFFD6FFE0), Color(0xFF7ADBA0)]],
@@ -360,6 +368,12 @@ class _MapPainter extends CustomPainter {
     [[Color(0xFF8A6A8A), Color(0xFF4A3A5A)], [Color(0xFFA0808A), Color(0xFF5A4A6A)]],
     [[Color(0xFFE08A6A), Color(0xFFA04A3A)], [Color(0xFFFFC07A), Color(0xFFC0702A)]],
     [[Color(0xFF1E3A2A), Color(0xFF0E1A16)], [Color(0xFF2A4A3A), Color(0xFF14261E)]],
+    [[Color(0xFFE6ECF6), Color(0xFFB0BED6)], [Color(0xFFF4F7FC), Color(0xFFC8D2E6)]],
+    [[Color(0xFFC07A6A), Color(0xFF7A3A4A)], [Color(0xFFD8907A), Color(0xFF8A4A5A)]],
+    [[Color(0xFF6AA0C8), Color(0xFF2A5A8A)], [Color(0xFF8AB8DA), Color(0xFF3A6A9A)]],
+    [[Color(0xFF8AD07A), Color(0xFF3A8A4A)], [Color(0xFFA8E08A), Color(0xFF4A9A5A)]],
+    [[Color(0xFF3A3A8A), Color(0xFF1A1A4A)], [Color(0xFF4A4A9A), Color(0xFF22225A)]],
+    [[Color(0xFF5A3A2A), Color(0xFF2A1A14)], [Color(0xFF6A4A3A), Color(0xFF34221A)]],
   ];
 
   @override
@@ -442,8 +456,30 @@ class _MapPainter extends CustomPainter {
           case 10:
             final side = 32 + rnd.nextDouble() * 12;
             paintDoor(canvas, Rect.fromCenter(center: Offset(x, y - side / 2), width: side, height: side * 1.2), sugarColors.values.elementAt(i % 5));
-          default:
+          case 11:
             _pine(canvas, Offset(x, y), 46 + rnd.nextDouble() * 24, snow: false);
+          case 12:
+            // Morning mist: soft white puffs.
+            final k = 26 + rnd.nextDouble() * 14;
+            final puff = Paint()
+              ..color = Colors.white.withValues(alpha: 0.75)
+              ..maskFilter = MaskFilter.blur(BlurStyle.normal, k * 0.25);
+            for (final (dx, dy, r) in const [(-0.7, 0.0, 0.7), (0.0, -0.35, 0.85), (0.75, 0.05, 0.65)]) {
+              canvas.drawCircle(Offset(x + dx * k, y - k + dy * k), r * k, puff);
+            }
+          case 13:
+            _tower(canvas, Offset(x, y), 50 + rnd.nextDouble() * 26);
+          case 14:
+            final side = 40 + rnd.nextDouble() * 14;
+            paintGull(canvas, Rect.fromCenter(center: Offset(x, y - side / 2), width: side, height: side));
+          case 15:
+            final side = 36 + rnd.nextDouble() * 12;
+            paintJam(canvas, Rect.fromCenter(center: Offset(x, y - side / 2), width: side, height: side));
+          case 16:
+            final side = 40 + rnd.nextDouble() * 14;
+            paintLantern(canvas, Rect.fromCenter(center: Offset(x, y - side / 2), width: side, height: side), i % 4, glow: i.isEven ? 0.8 : 0);
+          default:
+            _rock(canvas, Offset(x, y), 50 + rnd.nextDouble() * 30);
         }
       }
     }

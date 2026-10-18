@@ -76,7 +76,7 @@ Future<Settings> _open(WidgetTester tester) async {
   return settings;
 }
 
-BuildContext _ctx(WidgetTester tester) => tester.element(find.byKey(const ValueKey('play')));
+BuildContext _ctx(WidgetTester tester) => tester.element(find.byKey(const ValueKey('start')));
 
 void main() {
   setUpAll(_loadFonts);

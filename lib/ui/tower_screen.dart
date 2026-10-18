@@ -17,6 +17,7 @@ import '../platform/orientation_lock.dart';
 import '../settings/settings.dart';
 import '../theme/palette.dart';
 import 'gifts_screen.dart' show showGiftPopup;
+import 'records_list.dart';
 import 'sugar_widgets.dart' show DancingLokum;
 import 'widgets.dart';
 
@@ -258,7 +259,7 @@ class _Hud extends StatelessWidget {
                   children: [
                     const Icon(Icons.emoji_events_rounded, size: 15, color: _gold),
                     const SizedBox(width: 4),
-                    Text(s.floorsLine(max(c.best, c.game.height)), style: _skyText(12.5)),
+                    Text(c.mode != TowerMode.daily && c.best > c.game.height ? s.towerToRecord(c.best - c.game.height) : s.floorsLine(max(c.best, c.game.height)), style: _skyText(12.5)),
                   ],
                 ),
               ),
@@ -446,6 +447,19 @@ class _OverPanel extends StatelessWidget {
         if (daily) ...[
           const SizedBox(height: 10),
           Text(again ? s.towerTriesLeft(triesLeft) : s.towerNoTries, textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: p.muted, fontWeight: FontWeight.w700)),
+        ] else if (g.height > 0) ...[
+          // The climb's place among the records: already on the list once
+          // recorded, where it would go while a second chance is open.
+          const SizedBox(height: 12),
+          Builder(
+            builder: (context) {
+              final key = Settings.towerRecords(c.mode);
+              final recorded = !c.canRevive;
+              final place = recorded ? settings.lastRecordPlace : settings.recordPlaceFor(key, g.height);
+              final shown = recorded || place == 0 ? settings.records(key) : ([...settings.records(key)]..insert(place - 1, ScoreEntry(g.height, now)));
+              return RecordsBlock(entries: shown, format: s.floorsLine, place: place, goal: recordGoal(s, shown, place, g.height, s.floorsLine));
+            },
+          ),
         ],
         const SizedBox(height: 18),
         if (c.canRevive) ...[

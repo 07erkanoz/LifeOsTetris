@@ -106,6 +106,13 @@ class SugarBoardPainter extends CustomPainter {
         if (g.choco[y][x] > 0) sprites.draw(canvas, sprites.chocolate, at);
         if (g.slice[y][x] > 0) sprites.draw(canvas, sprites.lemonSlice, at);
         if (g.door[y][x] > 0) sprites.draw(canvas, sprites.door(SugarColor.values[g.door[y][x] - 1]), at);
+        final cellRect = at & Size(cell, cell);
+        if (g.jam[y][x] > 0) paintJam(canvas, cellRect);
+        if (g.hole[y][x] > 0) {
+          paintTunnel(canvas, cellRect, top: y == 0 || g.hole[y - 1][x] == 0, bottom: y == SugarGame.size - 1 || g.hole[y + 1][x] == 0, t: fx.time * 0.8);
+        }
+        if (g.lantern[y][x] > 0) paintLantern(canvas, cellRect, g.lantern[y][x], glow: g.lantern[y][x] == 1 ? 0.5 + 0.3 * sin(fx.time * 5) : 0);
+        if (g.gull[y][x] > 0) paintGull(canvas, cellRect, flap: max(0, sin(fx.time * 3 + x * 1.7 + y)) * 0.6);
       }
     }
     for (final (x, y) in g.cakes) {
@@ -145,6 +152,17 @@ class SugarBoardPainter extends CustomPainter {
               ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * 0.14),
           );
         }
+        if (p.special != Special.none && !p.fruit) {
+          final centre = at + Offset(cell / 2, cell / 2);
+          final beat = 0.5 + 0.5 * sin(fx.time * 4 + x * 0.7 + y * 1.3);
+          final tone = p.isPrism ? Colors.white : sugarColors[p.color]!;
+          final r = cell * (0.6 + 0.08 * beat);
+          canvas.drawCircle(centre, r, Paint()..shader = ui.Gradient.radial(centre, r, [tone.withValues(alpha: 0.7), tone.withValues(alpha: 0)]));
+          canvas.drawCircle(centre, cell * 0.5, Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = cell * 0.045
+            ..color = Colors.white.withValues(alpha: 0.35 + 0.45 * beat));
+        }
         sprites.draw(canvas, sprites.piece(p), at, scale: scale, scaleY: squash);
         if (p.chained) sprites.draw(canvas, sprites.chains, at);
         if (timer != null && p.special == Special.none) {
@@ -160,6 +178,32 @@ class SugarBoardPainter extends CustomPainter {
         }
       }
     }
+    // Two specials side by side: a spark flickers between them.
+    if (g.status == SugarStatus.idle) {
+      for (final (a, b) in g.comboPairs) {
+        if (c.motions.containsKey(g.board[a.$2][a.$1]!.id) || c.motions.containsKey(g.board[b.$2][b.$1]!.id)) continue;
+        final p = o + Offset((a.$1 + 0.5) * cell, (a.$2 + 0.5) * cell), q = o + Offset((b.$1 + 0.5) * cell, (b.$2 + 0.5) * cell);
+        final flicker = (fx.time * 9).floor();
+        final along = q - p, normal = Offset(-along.dy, along.dx) / along.distance;
+        final bolt = Path()..moveTo(p.dx + along.dx * 0.28, p.dy + along.dy * 0.28);
+        for (var i = 1; i <= 4; i++) {
+          final k = 0.28 + 0.44 * i / 4;
+          final jag = i == 4 ? 0.0 : ((i + flicker).isEven ? 1 : -1) * cell * 0.09;
+          final pt = p + along * k + normal * jag;
+          bolt.lineTo(pt.dx, pt.dy);
+        }
+        canvas.drawPath(bolt, Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = cell * 0.14
+          ..color = const Color(0xFFFFE066).withValues(alpha: 0.55)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * 0.06));
+        canvas.drawPath(bolt, Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = cell * 0.05
+          ..strokeJoin = StrokeJoin.round
+          ..color = Colors.white);
+      }
+    }
     // Cubes popping.
     for (final gh in c.ghosts) {
       final at = o + Offset(gh.x, gh.y) * cell;
@@ -173,11 +217,12 @@ class SugarBoardPainter extends CustomPainter {
     }
     canvas.restore();
 
-    // Ice over the cells.
+    // Ice over the cells, and the fog.
     for (var y = 0; y < SugarGame.size; y++) {
       for (var x = 0; x < SugarGame.size; x++) {
         final h = g.ice[y][x];
         if (h > 0) sprites.draw(canvas, sprites.ice(h, x + y), o + Offset(x * cell, y * cell));
+        if (g.fog[y][x] > 0) paintFog(canvas, Rect.fromLTWH(o.dx + x * cell, o.dy + y * cell, cell, cell), drift: sin(fx.time * 0.8 + x + y * 0.6));
       }
     }
 

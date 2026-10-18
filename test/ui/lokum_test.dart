@@ -47,7 +47,7 @@ void main() {
     final mood = LokumMood();
     mood.say(AppStrings.tr, 'quad', LokumPose.wow, 1);
     expect(mood.pose, LokumPose.wow);
-    expect(mood.line, 'Dörtlü!');
+    expect(mood.line, 'Dört sıra birden!');
     // A lesser moment does not cut in.
     mood.say(AppStrings.tr, null, LokumPose.cheer, 1.5, priority: 0);
     expect(mood.pose, LokumPose.wow);
@@ -69,6 +69,8 @@ void main() {
   testWidgets('the wardrobe opens from the home; locked outfits wait for stars; the pick sticks', (tester) async {
     final settings = Settings.memory()..language = AppLanguage.tr;
     await pumpApp(tester, settings: settings);
+    await tester.ensureVisible(find.byKey(const ValueKey('wardrobe-open')));
+    await tester.pump(const Duration(milliseconds: 40));
     await tester.tap(find.byKey(const ValueKey('wardrobe-open')));
     await pumpFor(tester, 10);
     expect(find.byKey(const ValueKey('wardrobe')), findsOneWidget);
@@ -102,7 +104,7 @@ void main() {
     tester.platformDispatcher.textScaleFactorTestValue = 1.3;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     final settings = await pumpApp(tester, size: const Size(360, 640));
-    showLokumWardrobe(tester.element(find.byKey(const ValueKey('play'))), settings);
+    showLokumWardrobe(tester.element(find.byKey(const ValueKey('start'))), settings);
     await pumpFor(tester, 10);
     expect(tester.takeException(), isNull);
   });
@@ -110,7 +112,7 @@ void main() {
   testWidgets('Zincir Küpler: Lokum stands by the Yükselt button, clear of the board', (tester) async {
     final settings = await pumpApp(tester);
     settings.lokumOutfit = 'fez';
-    ChainScreen.open(tester.element(find.byKey(const ValueKey('play'))), settings: settings, audio: AudioService(enabled: false), mode: ChainMode.endless);
+    ChainScreen.open(tester.element(find.byKey(const ValueKey('start'))), settings: settings, audio: AudioService(enabled: false), mode: ChainMode.endless);
     await pumpFor(tester, 12, 40);
     await tester.tap(find.byKey(const ValueKey('chain-start')));
     await pumpFor(tester, 20);

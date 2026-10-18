@@ -49,6 +49,9 @@ class ChainController extends ChangeNotifier {
 
   /// A puzzle's hint: the swap to make next, while it shows.
   (int, int)? hint;
+
+  /// The first mission's lesson, step by step: 'swap', 'fall', 'chain'.
+  String? lesson;
   bool _hinted = false;
 
   /// Endless and time attack keep their game to continue later.
@@ -166,8 +169,10 @@ class ChainController extends ChangeNotifier {
     newRecord = false;
     stars = 0;
     prize = null;
-    hint = null;
+    hint = game.onlySwap;
     _hinted = false;
+    lesson = game.onlySwap == null ? null : 'swap';
+    if (hint != null) game.setCursor(hint!.$1, hint!.$2);
     _overAge = -1;
     _grab = null;
     lokum.reset();
@@ -397,6 +402,10 @@ class ChainController extends ChangeNotifier {
           audio.play(Sfx.values.byName('clear$size'));
           if (e.chain >= 2) audio.playCombo(e.chain - 1);
           if (e.chain >= 2) lokum.say(_strings, 'chain', e.chain >= 3 ? LokumPose.wow : LokumPose.cheer, clock, priority: 2);
+          if (lesson != null) {
+            lesson = e.chain >= 2 ? 'chain' : 'fall';
+            notifyListeners();
+          }
           if (settings.vibration) e.chain >= 3 || e.combo >= 6 ? haptics.celebrate() : haptics.medium();
         case ChainPopped():
           if (e.index % 2 == 0) audio.play(Sfx.soft, volume: 0.35);
