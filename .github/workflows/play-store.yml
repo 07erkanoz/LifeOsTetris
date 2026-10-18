@@ -1,0 +1,78 @@
+name: Google Play
+
+# The Google Play listing and releases through the API (android/play_store.py).
+# A change to android/metadata/ sends the listing; releases and the status
+# run by hand (Actions → Google Play → Run workflow). A release takes the app
+# bundle of the newest successful Build run on main.
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'status, listing or release'
+        default: status
+      track:
+        description: 'Release track: internal, alpha (closed test), beta (open test) or production'
+        default: internal
+      status:
+        description: 'Release status: completed, or draft while the app is a draft'
+        default: completed
+      notes:
+        description: 'Release notes (optional)'
+        default: ''
+  push:
+    branches: [main]
+    paths: ['android/metadata/**', 'android/play_store.py', '.github/workflows/play-store.yml']
+
+concurrency:
+  group: play-store
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  play:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+      COMMAND: ${{ inputs.command || 'listing' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the service account
+        id: key
+        run: |
+          if [ -z "$PLAY_SERVICE_ACCOUNT_JSON" ]; then
+            echo "::warning::PLAY_SERVICE_ACCOUNT_JSON is not set; nothing sent to Google Play."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fetch the newest app bundle
+        if: steps.key.outputs.ready == 'true' && env.COMMAND == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          id=$(gh run list -R "$GITHUB_REPOSITORY" --workflow=build.yml --branch main --status success -L 1 --json databaseId -q '.[0].databaseId')
+          gh run download "$id" -R "$GITHUB_REPOSITORY" -n Lokum-Google-Play -D aab
+          ls -la aab
+
+      - name: Google Play
+        if: steps.key.outputs.ready == 'true'
+        env:
+          TRACK: ${{ inputs.track || 'internal' }}
+          STATUS: ${{ inputs.status || 'completed' }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          case "$COMMAND" in
+            release)
+              if [ -n "$NOTES" ]; then
+                python3 android/play_store.py release aab/Lokum-Google-Play.aab --track "$TRACK" --status "$STATUS" --notes "$NOTES"
+              else
+                python3 android/play_store.py release aab/Lokum-Google-Play.aab --track "$TRACK" --status "$STATUS"
+              fi ;;
+            *) python3 android/play_store.py "$COMMAND" ;;
+          esac
