@@ -34,7 +34,7 @@ Future<void> _loadFonts() async {
   await family('Inter', [for (final w in ['Regular', 'SemiBold', 'ExtraBold', 'Black']) 'assets/fonts/Inter-$w.otf']);
   await family('Baloo2', [for (final w in ['SemiBold', 'Bold', 'ExtraBold']) 'assets/fonts/Baloo2-$w.ttf']);
   final sdk = Platform.environment['FLUTTER_ROOT'] ?? File(Platform.resolvedExecutable).parent.parent.parent.parent.parent.parent.path;
-  await family('MaterialIcons', ['$sdk/bin/cache/artifacts/material_fonts/materialicons-regular.otf']);
+  await family('MaterialIcons', [Directory('$sdk/bin/cache/artifacts/material_fonts').listSync().whereType<File>().firstWhere((f) => f.path.toLowerCase().endsWith('materialicons-regular.otf')).path]);
 }
 
 Future<void> _pump(WidgetTester tester, int frames, [int ms = 33]) async {
@@ -68,9 +68,10 @@ Future<Settings> _openMap(WidgetTester tester, int done) async {
   await _pump(tester, 20);
   await tester.tap(find.byKey(const ValueKey('change-mode')));
   await _pump(tester, 10, 40);
-  await tester.ensureVisible(find.byKey(const ValueKey('mode-sugar'), skipOffstage: false));
+  // The games page: Şeker Küpler has one mode, so its card opens it.
+  await tester.ensureVisible(find.byKey(const ValueKey('game-sugar'), skipOffstage: false));
   await tester.pump(const Duration(milliseconds: 40));
-  await tester.tap(find.byKey(const ValueKey('mode-sugar')));
+  await tester.tap(find.byKey(const ValueKey('game-sugar')));
   await _pump(tester, 15, 40);
   return settings;
 }

@@ -31,7 +31,7 @@ Future<void> _loadFonts() async {
   await family('Baloo2', [for (final w in ['SemiBold', 'Bold', 'ExtraBold']) 'assets/fonts/Baloo2-$w.ttf']);
   await family('Jersey10', ['assets/fonts/Jersey10-Regular.ttf']);
   final sdk = Platform.environment['FLUTTER_ROOT'] ?? File(Platform.resolvedExecutable).parent.parent.parent.parent.parent.parent.path;
-  await family('MaterialIcons', ['$sdk/bin/cache/artifacts/material_fonts/materialicons-regular.otf']);
+  await family('MaterialIcons', [Directory('$sdk/bin/cache/artifacts/material_fonts').listSync().whereType<File>().firstWhere((f) => f.path.toLowerCase().endsWith('materialicons-regular.otf')).path]);
 }
 
 Future<void> _pump(WidgetTester tester, int frames, [int ms = 33]) async {
@@ -60,6 +60,11 @@ Future<ChainController> _open(WidgetTester tester) async {
   await tester.pumpWidget(RepaintBoundary(key: _root, child: KuplerApp(settings: settings, audio: AudioService(enabled: false))));
   await _pump(tester, 20);
   await tester.tap(find.byKey(const ValueKey('change-mode')));
+  await _pump(tester, 10, 40);
+  // The games page, then Zincir Küpler's modes.
+  await tester.ensureVisible(find.byKey(const ValueKey('game-chain'), skipOffstage: false));
+  await tester.pump(const Duration(milliseconds: 40));
+  await tester.tap(find.byKey(const ValueKey('game-chain')));
   await _pump(tester, 10, 40);
   final card = find.byKey(const ValueKey('mode-chainEndless'));
   await tester.ensureVisible(find.byKey(const ValueKey('mode-chainEndless'), skipOffstage: false));
