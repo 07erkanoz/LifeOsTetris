@@ -98,11 +98,67 @@ void main() {
     expect(s.eventClaimed, 0);
   });
 
+  test('the rotation keeps the four old weeks until 21 December 2026, then all eight', () {
+    // Before: tulip, ferry, coffee, simit, as always.
+    expect(WeeklyEvent.of(DateTime(2026, 10, 19)), WeeklyEvent.simit);
+    expect(WeeklyEvent.of(DateTime(2026, 10, 26)), WeeklyEvent.tulip);
+    expect(WeeklyEvent.of(DateTime(2026, 12, 14)), WeeklyEvent.simit);
+    // From the 21st the eight, starting on a tulip week like the four did.
+    final weeks = [for (var w = 0; w < 8; w++) WeeklyEvent.of(DateTime(2026, 12, 21).add(Duration(days: 7 * w)))];
+    expect(weeks, [WeeklyEvent.tulip, WeeklyEvent.ferry, WeeklyEvent.coffee, WeeklyEvent.simit, WeeklyEvent.hamam, WeeklyEvent.dondurma, WeeklyEvent.mehter, WeeklyEvent.karadeniz]);
+    expect(weeks.where((e) => e.isCalendar), isEmpty);
+  });
+
+  test('Şeker Bayramı and Hıdırellez take the week\'s place, then give it back with its count', () {
+    var now = DateTime(2027, 3, 8, 12); // Monday, the eve
+    final s = Settings.memory()..clock = () => now;
+    final week = s.event;
+    expect(week.isCalendar, isFalse);
+    s.addSugarCandies({week.color: 60});
+    expect(s.eventCount, 60);
+    // Şeker Bayramı, 9–11 March 2027: its own event, from zero, smaller steps.
+    now = DateTime(2027, 3, 9, 10);
+    expect(s.event, WeeklyEvent.bayram);
+    expect(WeeklyEvent.daysLeft(now), 3);
+    expect(WeeklyEvent.daysLeft(DateTime(2027, 3, 11, 22)), 1);
+    expect(s.eventCount, 0);
+    s.addSugarCandies({SugarColor.yellow: 300});
+    expect(s.eventPrizesReady, 4, reason: 'the calendar days need fewer sweets');
+    for (var i = 0; i < 4; i++) {
+      s.claimEventPrize();
+    }
+    expect(s.unlocked(Unlock.outfitHalay), isTrue);
+    // After the bayram the week's event is back, its sweets still counted.
+    now = DateTime(2027, 3, 12, 9);
+    expect(s.event, week);
+    expect(s.eventCount, 60);
+    // Hıdırellez: 5 and 6 May, every year.
+    expect(WeeklyEvent.of(DateTime(2027, 5, 5)), WeeklyEvent.hidirellez);
+    expect(WeeklyEvent.of(DateTime(2028, 5, 6, 23)), WeeklyEvent.hidirellez);
+    expect(WeeklyEvent.of(DateTime(2028, 5, 7)).isCalendar, isFalse);
+  });
+
+  test('the week\'s event stays the one its sweets were counted for', () {
+    var now = DateTime(2026, 10, 20, 12);
+    final s = Settings.memory()..clock = () => now;
+    s.addSugarCandies({s.event.color: 10});
+    expect(s.event, WeeklyEvent.simit);
+    // Even if the rotation were to say otherwise later in the week, the
+    // stored event is kept: the next week starts from the rotation again.
+    now = DateTime(2026, 10, 25, 20);
+    expect(s.event, WeeklyEvent.simit);
+    expect(s.eventCount, 10);
+    now = DateTime(2026, 10, 26, 8);
+    expect(s.event, WeeklyEvent.tulip);
+    expect(s.eventCount, 0);
+  });
+
   test('postcards: chapter ends, the event and chests each give their own cards', () {
     final s = at(DateTime(2026, 10, 19));
     // Chapter cards are the city's places, all different.
     expect(Rewards.chapterCards.toSet().length, Rewards.chapterCards.length);
-    final eventCards = [for (final e in WeeklyEvent.values) e.card];
+    // The newer events give boosters for their third prize, not a card.
+    final eventCards = [for (final e in WeeklyEvent.values) ?e.card];
     expect({...Rewards.chapterCards, ...eventCards, ...Rewards.chestCards}.length, Rewards.postcards, reason: 'each card has one way in');
     // The event's third prize is its card.
     expect(s.event.prize(2).card, s.event.card);

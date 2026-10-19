@@ -19,7 +19,8 @@ Future<void> main() async {
     lastTrack: settings.lastTrack,
     onTrackStarted: (t) => settings.lastTrack = t,
   );
-  unawaited(audio.init());
+  // The sounds load once the first frame is up, not while it is drawn.
+  WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(audio.init()));
   final haptics = Haptics();
   unawaited(haptics.init());
   unawaited(WindowMode.setFullScreen(settings.fullScreen));

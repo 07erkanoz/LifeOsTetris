@@ -163,21 +163,22 @@ class AudioService {
     // which is built for game sounds. The default MediaPlayer path costs far
     // more per play and heated phones up during long sessions.
     final lowLatency = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
-    await Future.wait(
-      Sfx.values.map((s) async {
-        final busy = s == Sfx.move || s == Sfx.soft || s == Sfx.rotate || s == Sfx.lock || s == Sfx.bump;
-        try {
-          _channels[s] = await _SfxChannel.create(
-            'audio/sfx/${s.name}.wav',
-            voices: busy ? 3 : 1,
-            lowLatency: lowLatency,
-            context: _sfxContext,
-          );
-        } catch (e) {
-          _report('sfx ${s.name}', e);
-        }
-      }),
-    );
+    // One effect after another, the menu's first: preparing all 42 players
+    // at once kept the platform busy just as the app was opening. An effect
+    // played before its turn is simply not heard.
+    for (final s in [Sfx.click, Sfx.start, ...Sfx.values.where((s) => s != Sfx.click && s != Sfx.start)]) {
+      final busy = s == Sfx.move || s == Sfx.soft || s == Sfx.rotate || s == Sfx.lock || s == Sfx.bump;
+      try {
+        _channels[s] = await _SfxChannel.create(
+          'audio/sfx/${s.name}.wav',
+          voices: busy ? 3 : 1,
+          lowLatency: lowLatency,
+          context: _sfxContext,
+        );
+      } catch (e) {
+        _report('sfx ${s.name}', e);
+      }
+    }
   }
 
   void play(Sfx sfx, {double volume = 1}) {

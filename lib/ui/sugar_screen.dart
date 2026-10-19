@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import '../audio/audio_service.dart';
 import '../audio/haptics.dart';
 import '../core/rewards.dart';
+import '../core/special_days.dart' show LokumProp;
 import '../core/sugar/sugar_game.dart';
 import '../core/sugar/sugar_levels.dart';
 import '../game/sugar/istanbul_art.dart';
@@ -903,7 +904,8 @@ class _WonPanel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            DancingLokum(outfit: c.settings.outfit, size: 70, moving: c.settings.effects),
+            // Lokum offers lemon cologne, as a host does.
+            DancingLokum(outfit: c.settings.outfit, size: 70, moving: c.settings.effects, props: const [LokumProp.cologne]),
             // The end of the story: the book is back.
             FittedBox(
               fit: BoxFit.scaleDown,

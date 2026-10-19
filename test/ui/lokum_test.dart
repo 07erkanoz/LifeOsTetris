@@ -142,4 +142,29 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(settings.lokumOutfit, isNull);
   });
+
+  testWidgets('on 10 Kasım Lokum remembers Atatürk with Turkish players; English players see the usual home', (tester) async {
+    final tr = Settings.memory()
+      ..language = AppLanguage.tr
+      ..clock = () => DateTime(2026, 11, 10, 9, 5);
+    await pumpApp(tester, settings: tr);
+    expect(find.byKey(const ValueKey('tip-day-ataturk')), findsOneWidget);
+    expect(find.textContaining('Atatürk'), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('on Cumhuriyet Bayramı the greeting shows in Turkish only', (tester) async {
+    final tr = Settings.memory()
+      ..language = AppLanguage.tr
+      ..clock = () => DateTime(2026, 10, 29, 10);
+    await pumpApp(tester, settings: tr);
+    expect(find.byKey(const ValueKey('tip-day-cumhuriyet')), findsOneWidget);
+    expect(find.text('Cumhuriyetimizin 103. yılı kutlu olsun!'), findsOneWidget);
+    final en = Settings.memory()
+      ..language = AppLanguage.en
+      ..clock = () => DateTime(2026, 10, 29, 10);
+    await pumpApp(tester, settings: en);
+    expect(find.byKey(const ValueKey('tip-day-cumhuriyet')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }

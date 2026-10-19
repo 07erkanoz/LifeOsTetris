@@ -1,11 +1,11 @@
 {
-    "name": "Lokum: Şeker ve Blok Oyunları",
-    "short_name": "Lokum",
+    "name": "Küpler: Şeker ve Blok Oyunları",
+    "short_name": "Küpler",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#2A2238",
     "theme_color": "#2A2238",
-    "description": "Lokum: Şeker ve Blok Oyunları",
+    "description": "Küpler: Şeker ve Blok Oyunları",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

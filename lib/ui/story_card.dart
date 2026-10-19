@@ -11,7 +11,9 @@ import 'sugar_widgets.dart';
 
 /// The story card that opens a Şeker Küpler chapter, in three taps: what
 /// happened at this place in İstanbul's history, Ekşi Limon's move, and
-/// Lokum's answer. The last tap starts the level.
+/// Lokum's answer. The last tap starts the level. It is played on a
+/// Karagöz screen: a lit curtain in a wooden frame, the two of them cut
+/// from coloured leather.
 class StoryCard extends StatefulWidget {
   const StoryCard({super.key, required this.chapter, required this.outfit, required this.onDone, this.moving = true});
 
@@ -88,9 +90,11 @@ class _StoryCardState extends State<StoryCard> with TickerProviderStateMixin {
                     top: 14,
                     height: panelH - 14,
                     child: Container(
+                      key: const ValueKey('story-karagoz'),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(28),
-                        border: Border.all(color: Colors.white, width: 5),
+                        border: Border.all(color: const Color(0xFF8A4A1A), width: 7),
+                        gradient: const RadialGradient(radius: 0.9, colors: [Color(0xEEFFF4D6), Color(0xDDF2C878), Color(0xCCC08030)], stops: [0, 0.6, 1]),
                       ),
                       padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
                       // Scrolls only when large text needs more room.
@@ -127,7 +131,10 @@ class _StoryCardState extends State<StoryCard> with TickerProviderStateMixin {
                                           child: SizedBox(
                                             width: limon * 1.3,
                                             height: limon * 1.2,
-                                            child: CustomPaint(painter: _LimonPainter(laugh: (t * 2).floor().isEven, pepper: widget.chapter >= SugarLevels.secondSeason)),
+                                            child: ColorFiltered(
+                                              colorFilter: _leather,
+                                              child: CustomPaint(painter: _LimonPainter(laugh: (t * 2).floor().isEven, pepper: widget.chapter >= SugarLevels.secondSeason)),
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -140,7 +147,10 @@ class _StoryCardState extends State<StoryCard> with TickerProviderStateMixin {
                                     child: Row(
                                       crossAxisAlignment: CrossAxisAlignment.end,
                                       children: [
-                                        LokumView(outfit: widget.outfit, pose: _page == 2 ? LokumPose.point : LokumPose.happy, pointLeft: false, size: lokum),
+                                        ColorFiltered(
+                                          colorFilter: _leather,
+                                          child: LokumView(outfit: widget.outfit, pose: _page == 2 ? LokumPose.point : LokumPose.happy, pointLeft: false, size: lokum),
+                                        ),
                                         const SizedBox(width: 4),
                                         Expanded(
                                           child: Padding(
@@ -203,6 +213,15 @@ class _StoryCardState extends State<StoryCard> with TickerProviderStateMixin {
     );
   }
 }
+
+/// Coloured leather lit from behind the Karagöz curtain: the colours come
+/// through, warmed by the lamp.
+const _leather = ColorFilter.matrix([
+  0.55, 0.45, 0.1, 0, 10, //
+  0.3, 0.55, 0.1, 0, 0, //
+  0.15, 0.3, 0.3, 0, 0, //
+  0, 0, 0, 0.92, 0,
+]);
 
 /// The history, on a dark plaque with its year and place.
 class _Plaque extends StatelessWidget {

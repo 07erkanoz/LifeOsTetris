@@ -1047,3 +1047,12 @@ class _GameArtPainter extends CustomPainter {
   @override
   bool shouldRepaint(_GameArtPainter old) => old.game != game || old.offset != offset || old.words != words;
 }
+
+/// A game's scene from the home's cards, still at moment [t], with its name:
+/// for the store graphics, which show every game the way the home does.
+/// [game] is tower, sugar, chain, puzzle, superGame or classic.
+({String title}) paintHomeGameArt(Canvas canvas, Size size, String game, AppStrings s, {double t = 0.6}) {
+  final g = _Game.values.byName(game);
+  _GameArtPainter(game: g, clock: AlwaysStoppedAnimation(t), words: _artWords(s)).paint(canvas, size);
+  return (title: g.title(s));
+}

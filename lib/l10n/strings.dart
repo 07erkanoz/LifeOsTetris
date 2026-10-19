@@ -4,6 +4,7 @@ import '../core/chain/chain_game.dart';
 import '../core/sugar/sugar_game.dart' show SugarCombo;
 import '../core/game_events.dart';
 import '../core/scoring.dart';
+import '../core/special_days.dart';
 import '../theme/palette.dart';
 
 enum AppLanguage { system, tr, en }
@@ -134,7 +135,7 @@ class AppStrings {
   List<String> get aboutStory => isTurkish
       ? const [
           'Hayat, tıpkı yukarıdan kontrolsüzce düşen bloklar gibidir: beklenmedik anlarda üst üste yığılır ve kaos yaratır. '
-              'Hukuk kuralları bu kaosu nasıl bir düzene sokmaya çalışıyorsa, Lokum da size o karmaşanın içinde kendi '
+              'Hukuk kuralları bu kaosu nasıl bir düzene sokmaya çalışıyorsa, Küpler de size o karmaşanın içinde kendi '
               'düzeninizi inşa etme fırsatı sunar.',
           'Bir avukat ve arabulucunun analitik bakış açısıyla tasarlanan bu oyunda amacınız yalnızca blokları yerleştirmek değil; '
               'hayatın hızla üzerinize bıraktığı uyuşmazlıkları ve parçaları doğru açıyla hizalayıp çözmektir. Her satır, çözüme '
@@ -143,7 +144,7 @@ class AppStrings {
         ]
       : const [
           'Life is like blocks falling from above without control: they pile up when you least expect it and create chaos. '
-              'Just as the rules of law try to bring order to that chaos, Lokum gives you the chance to build your own '
+              'Just as the rules of law try to bring order to that chaos, Küpler gives you the chance to build your own '
               'order within it.',
           'Designed with the analytical mind of a lawyer and mediator, this game is not only about placing blocks. It is about '
               'lining up the disputes and pieces life quickly drops on you at the right angle, and resolving them. Every line is a '
@@ -249,6 +250,31 @@ class AppStrings {
   // Gifts: the daily calendar, the sugar jar, star chests, the weekly event.
   String get giftsTitle => _t('HEDİYELER', 'GIFTS');
   String get giftsShort => _t('Hediyeler', 'Gifts');
+  /// The fortune read in the coffee cup when the daily gift opens: [main]
+  /// is the booster there is most of, [big] a day that opens a chest.
+  String coffeeFortune(String main, {required bool big, required int seed}) {
+    if (big) {
+      return _t('Fincanda bir kapı görüyorum: kısmetin büyük, bugün sandık açılıyor!', "I see a door in the cup: big luck today, a chest is opening!");
+    }
+    final lines = switch (main) {
+      'hammer' => [
+        _t('Fincanda bir çekiç görüyorum; önündeki engeller bir bir kırılacak!', 'I see a hammer in the cup; the obstacles ahead will break one by one!'),
+        _t('Telvede sağlam bir el var; bugün kırmadığın buz kalmayacak!', 'There is a strong hand in the grounds; no ice will stand today!'),
+      ],
+      'rainbow' => [
+        _t('Telvede bir gökkuşağı var; bugün renkler senden yana!', 'There is a rainbow in the grounds; the colours are on your side today!'),
+        _t('Fincan rengârenk; bir sürpriz seni bekliyor!', 'The cup is full of colour; a surprise is waiting for you!'),
+      ],
+      'shuffle' => [_t('Fincanda bir rüzgâr var; işler lehine dönecek!', 'There is a wind in the cup; things will turn your way!')],
+      _ => [
+        _t('Yolun açık, üç yıldız görüyorum!', 'Your road is open, I see three stars!'),
+        _t('Fincanda uzun bir yol var; hamlen bol, yolun açık!', 'There is a long road in the cup; plenty of moves, the way is clear!'),
+      ],
+    };
+    return lines[seed % lines.length];
+  }
+
+  String get fortuneTitle => _t('Kahve falın', 'Your coffee fortune');
   String get dailyGiftTitle => _t('Günlük hediye', 'Daily gift');
   String get dailyGiftHint => _t('Her gün bir hediye. Bir gün kaçırırsan kaldığın yerden devam.', 'A gift every day. Miss a day and you carry on where you were.');
   String giftDayLabel(int day) => _t('${day + 1}. gün', 'Day ${day + 1}');
@@ -281,7 +307,23 @@ class AppStrings {
     _ => _t('BRONZ SANDIK!', 'BRONZE CHEST!'),
   };
   String get chestOpen => _t('SANDIĞI AÇ', 'OPEN THE CHEST');
+  /// Lokum's word on a special day (shown to Turkish players): a title and
+  /// a line; [year] counts the Republic's years.
+  ({String title, String line}) specialDay(SpecialDay d, int year) => switch (d) {
+    SpecialDay.yilbasi => (title: _t('Mutlu yıllar!', 'Happy New Year!'), line: _t('Yeni yılın sağlık, mutluluk ve bol yıldız getirsin.', 'May the new year bring health, joy and plenty of stars.')),
+    SpecialDay.cocuk => (title: _t('23 Nisan kutlu olsun!', 'Happy 23 April!'), line: _t('Ulusal Egemenlik ve Çocuk Bayramımız kutlu olsun!', 'Happy National Sovereignty and Children\'s Day!')),
+    SpecialDay.emek => (title: _t('1 Mayıs kutlu olsun!', 'Happy 1 May!'), line: _t('Emek ve Dayanışma Günü kutlu olsun.', 'Happy Labour and Solidarity Day.')),
+    SpecialDay.genclik => (title: _t('19 Mayıs kutlu olsun!', 'Happy 19 May!'), line: _t("Atatürk'ü Anma, Gençlik ve Spor Bayramımız kutlu olsun!", 'Happy Commemoration of Atatürk, Youth and Sports Day!')),
+    SpecialDay.demokrasi => (title: _t('15 Temmuz', '15 July'), line: _t("Demokrasi ve Millî Birlik Günü'nde şehitlerimizi rahmetle anıyoruz.", 'On Democracy and National Unity Day we remember those who lost their lives.')),
+    SpecialDay.zafer => (title: _t('30 Ağustos kutlu olsun!', 'Happy 30 August!'), line: _t('Zafer Bayramımız kutlu olsun!', 'Happy Victory Day!')),
+    SpecialDay.cumhuriyet => (title: _t('Cumhuriyet Bayramımız kutlu olsun!', 'Happy Republic Day!'), line: _t('Cumhuriyetimizin $year. yılı kutlu olsun!', 'Happy ${year}th year of the Republic!')),
+    SpecialDay.ramazan => (title: _t('İyi bayramlar!', 'Happy Eid!'), line: _t('Ramazan Bayramınız mübarek olsun.', 'Happy Eid al-Fitr.')),
+    SpecialDay.kurban => (title: _t('İyi bayramlar!', 'Happy Eid!'), line: _t('Kurban Bayramınız mübarek olsun.', 'Happy Eid al-Adha.')),
+    SpecialDay.hidirellez => (title: _t('Hıdırellez kutlu olsun!', 'Happy Hıdırellez!'), line: _t('Dilekler gül ağacına, bahar gönüllere!', 'Wishes on the rose bush, spring in every heart!')),
+    SpecialDay.ataturk => (title: _t('10 Kasım', '10 November'), line: _t("Ulu Önder Mustafa Kemal Atatürk'ü saygı, sevgi ve özlemle anıyoruz.", 'We remember Mustafa Kemal Atatürk with respect, love and longing.')),
+  };
   String get eventTitle => _t('Haftanın etkinliği', "This week's event");
+  String get eventTitleDay => _t('Özel gün etkinliği', 'Special day event');
   String eventDaysLeft(int n) => n <= 1 ? _t('Bu gece biter', 'Ends tonight') : _t('$n gün kaldı', '$n days left');
   String get eventClaim => _t('ÖDÜLÜ AL', 'TAKE THE PRIZE');
   String eventProgress(int got, int of) => '$got / $of';
@@ -289,12 +331,20 @@ class AppStrings {
     'tulip' => _t('Lale Festivali', 'Tulip Festival'),
     'ferry' => _t('Vapur Haftası', 'Ferry Week'),
     'coffee' => _t('Kahve Haftası', 'Coffee Week'),
+    'hamam' => _t('Hamam Haftası', 'Hamam Week'),
+    'dondurma' => _t('Dondurma Haftası', 'Ice Cream Week'),
+    'mehter' => _t('Mehter Haftası', 'Mehter Week'),
+    'karadeniz' => _t('Karadeniz Haftası', 'Black Sea Week'),
+    'bayram' => _t('Şeker Bayramı', 'Sugar Feast'),
+    'hidirellez' => _t('Hıdırellez', 'Hıdırellez'),
     _ => _t('Simit Haftası', 'Simit Week'),
   };
   String eventGoal(String e) => switch (e) {
-    'tulip' => _t('Herhangi bir seviyede kırmızı kalp patlat', 'Pop red hearts in any level'),
-    'ferry' => _t('Herhangi bir seviyede mavi damla patlat', 'Pop blue drops in any level'),
     'coffee' => _t('Herhangi bir seviyede turuncu girdap patlat', 'Pop orange swirls in any level'),
+    'tulip' || 'mehter' || 'hidirellez' => _t('Herhangi bir seviyede kırmızı kalp patlat', 'Pop red hearts in any level'),
+    'ferry' || 'hamam' => _t('Herhangi bir seviyede mavi damla patlat', 'Pop blue drops in any level'),
+    'dondurma' => _t('Herhangi bir seviyede mor şeker patlat', 'Pop purple sweets in any level'),
+    'karadeniz' => _t('Herhangi bir seviyede yeşil jöle patlat', 'Pop green jellies in any level'),
     _ => _t('Herhangi bir seviyede sarı yıldız patlat', 'Pop yellow stars in any level'),
   };
   ({String when, String fact}) eventFact(String e) => switch (e) {
@@ -305,6 +355,30 @@ class AppStrings {
     'ferry' => (
       when: _t('ŞİRKET-İ HAYRİYE · 1851', 'ŞİRKET-İ HAYRİYE · 1851'),
       fact: _t("Boğaz'da düzenli vapur seferlerini başlatan şirket kuruldu; vapurlar kıyıdaki köyleri şehre bağladı.", 'The company that began regular ferries on the Bosphorus was founded; its boats tied the shore villages to the city.'),
+    ),
+    'hamam' => (
+      when: _t('ÇEMBERLİTAŞ · 1584', 'ÇEMBERLİTAŞ · 1584'),
+      fact: _t("Mimar Sinan'ın yaptığı Çemberlitaş Hamamı açıldı; kurna, kese ve köpük, şehrin yüzyıllardır süren hamam âdetinin parçasıydı.", "The Çemberlitaş bath, built by Mimar Sinan, opened; basin, scrubbing mitt and foam were part of the city's centuries-old bath ritual."),
+    ),
+    'dondurma' => (
+      when: _t('MARAŞ · SALEP VE SAKIZ', 'MARAŞ · SALEP AND MASTIC'),
+      fact: _t('Maraş dondurmasını uzatan, dağ orkidelerinin kökünden yapılan salep ve damla sakızıdır; dondurmacı onu uzun kepçesiyle döndürür.', 'What makes Maraş ice cream stretch is salep, made from the roots of mountain orchids, and mastic; the seller twirls it on his long paddle.'),
+    ),
+    'mehter' => (
+      when: _t('MEHTERHANE · DAVUL VE ZURNA', 'THE MEHTER BAND · DRUM AND ZURNA'),
+      fact: _t('Mehter, bilinen en eski askerî bandolardan biridir; davul, zurna, kös ve zilleriyle orduyu yürüyüşte coştururdu.', 'The mehter is one of the oldest known military bands; with drums, zurnas, kettledrums and cymbals it stirred the army on the march.'),
+    ),
+    'karadeniz' => (
+      when: _t('KARADENİZ · KEMENÇE', 'THE BLACK SEA · KEMENÇE'),
+      fact: _t('Üç telli Karadeniz kemençesi, yaydan çıkan hızlı ezgisiyle horonu ayağa kaldırır.', 'The three-stringed Black Sea kemençe, with its quick bowed tunes, gets everyone up for the horon dance.'),
+    ),
+    'bayram' => (
+      when: _t('RAMAZAN BAYRAMI · ÜÇ GÜN', 'THE FEAST AFTER RAMADAN · THREE DAYS'),
+      fact: _t('Bayramda büyüklerin eli öpülür, çocuklara harçlık ve şeker verilir; misafire lokum ve kolonya ikram edilir.', "At the feast, children kiss their elders' hands and get pocket money and sweets; guests are offered lokum and cologne."),
+    ),
+    'hidirellez' => (
+      when: _t('HIDIRELLEZ · 6 MAYIS', 'HIDIRELLEZ · 6 MAY'),
+      fact: _t('Baharın gelişi kutlanır; dilekler gül ağacına bağlanır, ateşin üstünden atlanır.', "Spring's arrival is celebrated: wishes are tied to a rose bush and people leap over a fire."),
     ),
     'coffee' => (
       when: _t('TAHTAKALE · 1554', 'TAHTAKALE · 1554'),
@@ -337,6 +411,12 @@ class AppStrings {
     'floorMarble' => _t('Mermer katlar', 'Marble floors'),
     'floorGlass' => _t('Cam katlar', 'Glass floors'),
     'floorGold' => _t('Altın katlar', 'Gold floors'),
+    'outfitMehter' => _t('Mehter kıyafeti', 'Mehter outfit'),
+    'outfitKaradeniz' => _t('Karadeniz kukuletesi', 'Black Sea hood'),
+    'outfitHamam' => _t('Hamam takımı', 'Hamam set'),
+    'outfitDondurma' => _t('Dondurmacı yeleği', "Ice-cream seller's vest"),
+    'outfitHalay' => _t('Halay mendili', 'Halay handkerchief'),
+    'outfitYazma' => _t('Oyalı yazma', 'Lace-edged scarf'),
     _ => _t('Simit kolye', 'Simit necklace'),
   };
   String unlockText(String u) => switch (u) {
@@ -429,6 +509,14 @@ class AppStrings {
     'simitNecklace' => _t('Simit kolye', 'Simit necklace'),
     'guide' => _t('Rehber şapkası', "Guide's hat"),
     'lemonCrown' => _t('Altın Limon tacı', 'Golden lemon crown'),
+    'zeybek' => _t('Zeybek börkü', 'Zeybek börk'),
+    'hoca' => _t('Hoca kavuğu', "Nasreddin Hoca's kavuk"),
+    'mehter' => _t('Mehter kıyafeti', 'Mehter outfit'),
+    'karadeniz' => _t('Kukulete ve kemençe', 'Black Sea hood and kemençe'),
+    'hamam' => _t('Hamam takımı', 'Hamam set'),
+    'dondurma' => _t('Maraş dondurmacısı', 'Maraş ice-cream seller'),
+    'halay' => _t('Halay mendili', 'Halay handkerchief'),
+    'yazma' => _t('Oyalı yazma', 'Lace-edged scarf'),
     _ => _t('Kostümsüz', 'No outfit'),
   };
   String outfitUnlocked(String name) => _t('Yeni kostüm: ${outfitName(name)}!', 'New outfit: ${outfitName(name)}!');
@@ -561,8 +649,9 @@ class AppStrings {
 
   // ------------------------------------------------------- zincir küpler
   /// The app's name and what it is.
-  static const String lokumName = 'Lokum';
-  String get appName => lokumName;
+  /// The app's name; the mascot keeps his own, Lokum.
+  static const String appTitle = 'Küpler';
+  String get appName => appTitle;
   String get appTagline => _t('Şeker ve Blok Oyunları', 'Sweets & Block Games');
   String get chainGroup => _t('ZİNCİR', 'CHAIN');
   String get chainTitle => _t('Zincir Küpler', 'Chain Blocks');
@@ -972,30 +1061,30 @@ class AppStrings {
   /// What Lokum, the mascot, says: [key] picks the moment, [i] the line.
   String lokum(String key, int i) {
     final lines = switch (key) {
-      'start' => [_t('Hadi bakalım, başlıyoruz!', 'Here we go!'), _t('Bu seviye bize vız gelir!', 'This one\'s a piece of cake!'), _t('Kolları sıvadım!', 'Sleeves rolled up!'), _t('Hazırım, ya sen?', 'I\'m ready, are you?')],
+      'start' => [_t('Hadi bakalım, başlıyoruz!', 'Here we go!'), _t('Bu seviye bize vız gelir!', 'This one\'s a piece of cake!'), _t('Kolları sıvadım!', 'Sleeves rolled up!'), _t('Hazırım, ya sen?', 'I\'m ready, are you?'), _t('Damlaya damlaya göl olur!', 'Drop by drop, a lake fills!')],
       'nice' => [_t('Oh, güzel!', 'Ooh, nice!'), _t('Tatlı bir hamle!', 'Sweet move!'), _t('Aynen böyle!', 'That\'s the way!'), _t('Bak bu oldu!', 'Now we\'re talking!')],
       'great' => [_t('Vay vay vay!', 'Whoa, whoa, whoa!'), _t('Helal olsun sana!', 'Hats off to you!'), _t('Ağzım açık kaldı!', 'My jaw just dropped!'), _t('Bu ne güzellik böyle!', 'Now that\'s gorgeous!')],
       'rush' => [_t('Şeker yağmuru başladı!', 'It\'s raining sweets!'), _t('Şekerler durmadan patlıyor!', 'They\'re popping on their own!'), _t('Çılgınlık zamanı!', 'Sugar madness!')],
       'lucky' => [_t('Bugün şansımız yaver gidiyor!', 'Luck\'s on our side today!'), _t('Bu da bizden olsun!', 'This one\'s on the house!'), _t('Kısmetimize düştü!', 'What a lucky drop!')],
       'bomb' => [_t('Aman dikkat, bomba var!', 'Careful, a bomb!'), _t('Şu bombayı hemen patlat!', 'Pop that bomb, quick!'), _t('Saat işliyor, acele et!', 'The clock\'s ticking, hurry!')],
-      'last' => [_t('Son birkaç hamle, dikkat!', 'Last few moves, careful!'), _t('Az kaldı, sakin ol!', 'Nearly there, stay calm!'), _t('Bitirmek üzereyiz!', 'We\'re about to finish!')],
+      'last' => [_t('Son birkaç hamle, dikkat!', 'Last few moves, careful!'), _t('Az kaldı, sakin ol!', 'Nearly there, stay calm!'), _t('Bitirmek üzereyiz!', 'We\'re about to finish!'), _t('Acele işe şeytan karışır, sakin!', 'Haste makes waste, steady now!')],
       'goalMet' => [_t('Hedef tamam! Şimdi yıldızlar!', 'Goal met! Now the stars!'), _t('Devam, üç yıldız bizim!', 'Keep going, three stars!')],
       'comboHint' => [_t('Bunları birleştir!', 'Swap these two together!'), _t('İkisini yan yana getir, gör!', 'Put these two together and see!')],
       'gull' => [_t('Martılar şeker kaptı!', 'Gulls took our sweets!'), _t('Kış kış, martı!', 'Shoo, gull, shoo!')],
       'lantern' => [_t('Fener yandı!', 'A lantern is lit!'), _t('Bak nasıl parlıyor!', 'Look how it shines!')],
       'pepper' => [_t('Acı geliyor, eşleştir!', 'Hot ones! Match them!'), _t('Yanmadan eşleştir!', 'Match them before they burn!')],
       'finale' => [_t('Şenlik başlasın!', 'Let the party begin!'), _t('Kalanlar da patlasın!', 'Pop the rest too!'), _t('Bonus zamanı!', 'Bonus time!')],
-      'win' => [_t('Yaşasın, başardık!', 'Hooray, we did it!'), _t('Ellerine sağlık!', 'Well played, you!'), _t('İşte bu be!', 'That\'s how it\'s done!')],
-      'lose' => [_t('Üzülme, bir daha deneriz.', 'Don\'t worry, we\'ll try again.'), _t('Kıl payı kaçtı!', 'So close!'), _t('Olur böyle, hadi bir daha!', 'It happens, one more go!')],
-      'hint' => [_t('Şuna bir bak istersen.', 'Take a look at this one.'), _t('Psst, burada bir şey var!', 'Psst, there\'s something here!'), _t('Bence buradan dene.', 'I\'d try right here.')],
+      'win' => [_t('Yaşasın, başardık!', 'Hooray, we did it!'), _t('Ellerine sağlık!', 'Well played, you!'), _t('İşte bu be!', 'That\'s how it\'s done!'), _t('Tatlı ye, tatlı konuş!', 'Eat sweet, speak sweet!')],
+      'lose' => [_t('Üzülme, bir daha deneriz.', 'Don\'t worry, we\'ll try again.'), _t('Kıl payı kaçtı!', 'So close!'), _t('Olur böyle, hadi bir daha!', 'It happens, one more go!'), _t('Her işte bir hayır vardır.', 'Every cloud has a silver lining.')],
+      'hint' => [_t('Şuna bir bak istersen.', 'Take a look at this one.'), _t('Psst, burada bir şey var!', 'Psst, there\'s something here!'), _t('Bence buradan dene.', 'I\'d try right here.'), _t('Bilmemek ayıp değil, sormamak ayıp!', 'No shame in not knowing, only in not asking!')],
       'sleepy' => [_t('Hıı... Dalmışım biraz.', 'Hmm... I dozed off a bit.'), _t('Uyumadım, gözümü dinlendirdim!', 'I was only resting my eyes!'), _t('Hadi, sıra sende!', 'Come on, your move!')],
-      'chain' => [_t('Zincir!', 'Chain!'), _t('Zincir üstüne zincir!', 'Chain after chain!'), _t('Durma, devam!', 'Don\'t stop now!')],
+      'chain' => [_t('Zincir!', 'Chain!'), _t('Zincir üstüne zincir!', 'Chain after chain!'), _t('Durma, devam!', 'Don\'t stop now!'), _t('Birlikten kuvvet doğar!', 'Together we are strong!')],
       'danger' => [_t('Aman, tavana dayandı!', 'Uh-oh, near the top!'), _t('Yer daralıyor, çabuk!', 'Running out of room, quick!')],
       'quad' => [_t('Dört sıra birden!', 'Four lines at once!'), _t('Dörtlü! Şahane!', 'A quad! Brilliant!')],
       'level' => [_t('Hız arttı, hazır ol!', 'Speeding up, get ready!'), _t('Yeni seviye, kolay gelsin!', 'New level, good luck!')],
-      'over' => [_t('Bir el daha?', 'One more round?'), _t('Az kaldı, bir daha!', 'So close, again!')],
+      'over' => [_t('Bir el daha?', 'One more round?'), _t('Az kaldı, bir daha!', 'So close, again!'), _t('Sabreden derviş muradına ermiş.', 'Patience gets there in the end.')],
       'record' => [_t('Yeni rekor! Helal olsun!', 'New best! Well done!'), _t('Rekor artık senin!', 'The record is yours!')],
-      'pause' => [_t('Mola! Bir çay koyayım mı?', 'Break time! Kettle on?'), _t('Biraz soluklan, buradayım.', 'Catch your breath, I\'m here.'), _t('Acele yok, keyfine bak.', 'No rush, take your time.')],
+      'pause' => [_t('Mola! Bir çay koyayım mı?', 'Break time! Kettle on?'), _t('Biraz soluklan, buradayım.', 'Catch your breath, I\'m here.'), _t('Acele yok, keyfine bak.', 'No rush, take your time.'), _t('Bir fincan kahvenin kırk yıl hatırı vardır.', 'A cup of coffee is remembered for forty years.')],
       'puzzleStuck' => [_t('Baştan alalım, yolu buluruz.', 'Restart, we\'ll find the way.'), _t('Bir geri al, tekrar bak.', 'Undo one and look again.')],
       'attack' => [_t('Al bakalım Limon!', 'Take that, Lemon!'), _t('Limon ne olduğunu anlamadı!', 'Lemon didn\'t see that coming!')],
       'choco' => [_t('Çikolata yayılıyor, yetiş!', 'Chocolate\'s spreading, hurry!'), _t('Şu çikolatayı durduralım!', 'Let\'s stop that chocolate!')],

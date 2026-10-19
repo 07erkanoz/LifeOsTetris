@@ -31,7 +31,7 @@ static void ensure_desktop_entry(const gchar* exe, const gchar* icon) {
   g_autofree gchar* contents = g_strdup_printf(
       "[Desktop Entry]\n"
       "Type=Application\n"
-      "Name=Lokum\n"
+      "Name=Küpler\n"
       "Comment=Bol efektli blok bulmaca oyunu\n"
       "Comment[en]=A block puzzle game packed with effects\n"
       "Exec=\"%s\"\n"
@@ -116,11 +116,11 @@ static void my_application_activate(GApplication* application) {
   if (use_header_bar) {
     GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "Lokum: Şeker ve Blok Oyunları");
+    gtk_header_bar_set_title(header_bar, "Küpler: Şeker ve Blok Oyunları");
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
     gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
   } else {
-    gtk_window_set_title(window, "Lokum: Şeker ve Blok Oyunları");
+    gtk_window_set_title(window, "Küpler: Şeker ve Blok Oyunları");
   }
 
   gtk_window_set_default_size(window, 1280, 720);

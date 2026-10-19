@@ -88,6 +88,10 @@ class Settings extends ChangeNotifier {
   int _jarFills = 0;
   int _chestsOpened = 0;
   int _eventWeek = -1;
+  String? _eventName;
+  int _dayPeriod = -1;
+  int _dayCount = 0;
+  int _dayClaimed = 0;
   int _eventCount = 0;
   int _eventClaimed = 0;
   final Set<String> _unlocks = {};
@@ -186,6 +190,10 @@ class Settings extends ChangeNotifier {
       s._jarFills = prefs.getInt('jarFills') ?? 0;
       s._chestsOpened = prefs.getInt('chestsOpened') ?? 0;
       s._eventWeek = prefs.getInt('eventWeek') ?? -1;
+      s._eventName = prefs.getString('eventName');
+      s._dayPeriod = prefs.getInt('dayEventPeriod') ?? -1;
+      s._dayCount = prefs.getInt('dayEventCount') ?? 0;
+      s._dayClaimed = prefs.getInt('dayEventClaimed') ?? 0;
       s._eventCount = prefs.getInt('eventCount') ?? 0;
       s._eventClaimed = prefs.getInt('eventClaimed') ?? 0;
       s._unlocks.addAll(prefs.getStringList('unlocks') ?? const []);
@@ -399,42 +407,82 @@ class Settings extends ChangeNotifier {
     return gift;
   }
 
-  /// This week's event and the sweets popped for it.
-  WeeklyEvent get event => WeeklyEvent.of(clock());
-  int get eventCount => _eventWeek == WeeklyEvent.weekOf(clock()) ? _eventCount : 0;
-  int get eventClaimed => _eventWeek == WeeklyEvent.weekOf(clock()) ? _eventClaimed : 0;
+  /// This week's event and the sweets popped for it. Once sweets are
+  /// counted, the week's event stays the one they were counted for, whatever
+  /// the rotation says. A day of the calendar (Şeker Bayramı, Hıdırellez)
+  /// takes its place while it lasts, with a count of its own, so the week's
+  /// is still there after it.
+  WeeklyEvent? get _day {
+    final e = WeeklyEvent.of(clock());
+    return e.isCalendar ? e : null;
+  }
+
+  bool get _weekCurrent => _eventWeek == WeeklyEvent.weekOf(clock());
+  bool get _dayCurrent => _dayPeriod == WeeklyEvent.periodOf(clock());
+  WeeklyEvent get event => _day ?? (_weekCurrent ? WeeklyEvent.parse(_eventName) : null) ?? WeeklyEvent.of(clock());
+  int get eventCount => _day != null ? (_dayCurrent ? _dayCount : 0) : (_weekCurrent ? _eventCount : 0);
+  int get eventClaimed => _day != null ? (_dayCurrent ? _dayClaimed : 0) : (_weekCurrent ? _eventClaimed : 0);
 
   /// Prizes earned but not taken.
-  int get eventPrizesReady => WeeklyEvent.tiers.where((t) => eventCount >= t).length - eventClaimed;
+  int get eventPrizesReady => event.tiers.where((t) => eventCount >= t).length - eventClaimed;
 
   Gift? claimEventPrize() {
     if (eventPrizesReady <= 0) return null;
     final gift = event.prize(eventClaimed);
-    _eventClaimed = eventClaimed + 1;
-    _prefs?.setInt('eventClaimed', _eventClaimed);
+    if (_day != null) {
+      _dayClaimed = eventClaimed + 1;
+      _prefs?.setInt('dayEventClaimed', _dayClaimed);
+    } else {
+      _eventClaimed = eventClaimed + 1;
+      _prefs?.setInt('eventClaimed', _eventClaimed);
+    }
     applyGift(gift);
     return gift;
   }
 
-  /// Sweets popped in a Şeker level: into the jar, and this week's colour
+  /// Sweets popped in a Şeker level: into the jar, and the event's colour
   /// into the event.
   void addSugarCandies(Map<SugarColor, int> popped) {
     final total = popped.values.fold(0, (a, b) => a + b);
     if (total == 0) return;
-    final week = WeeklyEvent.weekOf(clock());
-    if (_eventWeek != week) {
-      _eventWeek = week;
-      _eventCount = 0;
-      _eventClaimed = 0;
+    final day = _day;
+    if (day != null) {
+      final period = WeeklyEvent.periodOf(clock());
+      if (_dayPeriod != period) {
+        _dayPeriod = period;
+        _dayCount = 0;
+        _dayClaimed = 0;
+      }
+    } else {
+      final week = WeeklyEvent.weekOf(clock());
+      if (_eventWeek != week) {
+        _eventName = WeeklyEvent.of(clock()).name;
+        _eventWeek = week;
+        _eventCount = 0;
+        _eventClaimed = 0;
+      }
+      _eventName ??= event.name;
     }
+    final color = event.color;
     _set(() {
       _jarCount += total;
-      _eventCount += popped[event.color] ?? 0;
+      if (day != null) {
+        _dayCount += popped[color] ?? 0;
+      } else {
+        _eventCount += popped[color] ?? 0;
+      }
     }, () {
       _prefs?.setInt('jarCount', _jarCount);
-      _prefs?.setInt('eventWeek', _eventWeek);
-      _prefs?.setInt('eventCount', _eventCount);
-      _prefs?.setInt('eventClaimed', _eventClaimed);
+      if (day != null) {
+        _prefs?.setInt('dayEventPeriod', _dayPeriod);
+        _prefs?.setInt('dayEventCount', _dayCount);
+        _prefs?.setInt('dayEventClaimed', _dayClaimed);
+      } else {
+        _prefs?.setInt('eventWeek', _eventWeek);
+        _prefs?.setString('eventName', _eventName!);
+        _prefs?.setInt('eventCount', _eventCount);
+        _prefs?.setInt('eventClaimed', _eventClaimed);
+      }
     });
   }
 

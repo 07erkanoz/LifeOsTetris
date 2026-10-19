@@ -17,6 +17,29 @@ class _HomeLobby extends StatefulWidget {
 
 class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMixin {
   late final AnimationController _clock = AnimationController(vsync: this, duration: const Duration(milliseconds: 2600));
+
+  /// The clocks the games' scenes run on: 52 steps a 2.6 s cycle, about 20
+  /// frames a second. They are small and slow, and redrawing all of them at
+  /// the screen's rate (or twice that at 120 Hz) is what made the home heavy.
+  /// Each has its own phase, so they do not all redraw in the same frame:
+  /// one per game for the tiles, then the showcase and the continue bars.
+  late final List<_SteppedClock> _artClocks = [
+    for (var i = 0; i < _Game.values.length + 2; i++)
+      _SteppedClock(_clock, 52, phase: i / (_Game.values.length + 2), gate: i < _Game.values.length ? () => _turn == i : null),
+  ];
+
+  /// The games' tiles move one at a time, in their order, a cycle each;
+  /// the others hold still where they stopped. Less to watch, less to draw.
+  int _turn = 0;
+  double _lastBeat = 0;
+
+  void _nextTurn() {
+    final v = _clock.value;
+    if (v < _lastBeat) _turn = (_turn + 1) % _Game.values.length;
+    _lastBeat = v;
+  }
+  _SteppedClock get _showcaseClock => _artClocks[_Game.values.length];
+  _SteppedClock get _barClock => _artClocks[_Game.values.length + 1];
   int _tip = 0;
   double _hop = 0;
   final _showcaseKey = GlobalKey();
@@ -31,6 +54,7 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
   void initState() {
     super.initState();
     c.settings.addListener(_syncMotion);
+    _clock.addListener(_nextTurn);
     _syncMotion();
   }
 
@@ -47,6 +71,10 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
   @override
   void dispose() {
     c.settings.removeListener(_syncMotion);
+    for (final clock in _artClocks) {
+      clock.dispose();
+    }
+    _clock.removeListener(_nextTurn);
     _clock.dispose();
     super.dispose();
   }
@@ -79,11 +107,14 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
       onWardrobe: () => showLokumWardrobe(context, c.settings),
     );
     final bars = _continueBars(context);
+    // On a special day Lokum's greeting comes first, where it is seen at
+    // once, rather than under the games.
+    final greeting = tips.first.quiet;
     // The showcase: as tall as its width wants, a little less under a
     // continue bar so the six games still fit on a phone.
     // On a short phone it gives up some height so all six games fit.
     Widget showcase(double width, {bool compact = false}) =>
-        _Showcase(key: _showcaseKey, c: c, clock: _clock, width: width, ratio: compact ? (bars.isEmpty ? 0.6 : 0.5) : (bars.isEmpty ? 0.83 : 0.72));
+        _Showcase(key: _showcaseKey, c: c, clock: _showcaseClock, width: width, ratio: compact ? (bars.isEmpty ? 0.6 : 0.5) : (bars.isEmpty ? 0.83 : 0.72));
     final gamesLabel = Row(
       children: [
         Expanded(
@@ -142,7 +173,7 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
           physics: const NeverScrollableScrollPhysics(),
           padding: const EdgeInsets.only(bottom: 4),
           children: [
-            for (final g in _Game.values) _GameTile(game: g, c: c, clock: _clock, onTap: () => _hasSave(c, g) ? _resume(context, g) : _openGame(context, c, g)),
+            for (final g in _Game.values) _GameTile(game: g, c: c, clock: _artClocks[g.index], onTap: () => _hasSave(c, g) ? _resume(context, g) : _openGame(context, c, g)),
           ],
         );
       },
@@ -194,14 +225,30 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
                                     width: left,
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: [header, const SizedBox(height: 14), ...bars, showcase(left), const SizedBox(height: 16), shortcuts],
+                                      children: [
+                                        header,
+                                        const SizedBox(height: 14),
+                                        if (greeting) ...[lokum, const SizedBox(height: 14)],
+                                        ...bars,
+                                        showcase(left),
+                                        const SizedBox(height: 16),
+                                        shortcuts,
+                                      ],
                                     ),
                                   ),
                                   const SizedBox(width: 28),
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: [const SizedBox(height: 56), gamesLabel, const SizedBox(height: 6), tiles(columns), const SizedBox(height: 18), lokum, const SizedBox(height: 14), daily],
+                                      children: [
+                                        const SizedBox(height: 56),
+                                        gamesLabel,
+                                        const SizedBox(height: 6),
+                                        tiles(columns),
+                                        const SizedBox(height: 18),
+                                        if (!greeting) ...[lokum, const SizedBox(height: 14)],
+                                        daily,
+                                      ],
                                     ),
                                   ),
                                 ],
@@ -225,14 +272,14 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [header, const SizedBox(height: 8), ...bars, showcase(half)],
+                            children: [header, const SizedBox(height: 8), if (greeting) ...[lokum, const SizedBox(height: 8)], ...bars, showcase(half)],
                           ),
                         ),
                         const SizedBox(width: 18),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [gamesLabel, tiles(2), const SizedBox(height: 14), lokum, const SizedBox(height: 12), daily, const SizedBox(height: 12), shortcuts],
+                            children: [gamesLabel, tiles(2), const SizedBox(height: 14), if (!greeting) ...[lokum, const SizedBox(height: 12)], daily, const SizedBox(height: 12), shortcuts],
                           ),
                         ),
                       ],
@@ -257,13 +304,16 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
                         children: [
                           header,
                           const SizedBox(height: 12),
+                          if (greeting) ...[lokum, const SizedBox(height: 12)],
                           ...bars,
                           showcase(width, compact: compact),
                           const SizedBox(height: 6),
                           gamesLabel,
                           tiles(tablet ? 3 : 2, art: compact ? 0.3 : 0.42),
                           const SizedBox(height: 18),
-                          if (tablet)
+                          if (greeting)
+                            daily
+                          else if (tablet)
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
@@ -333,7 +383,7 @@ class _HomeLobbyState extends State<_HomeLobby> with SingleTickerProviderStateMi
       title: title,
       detail: detail,
       button: resume ? s.badgeContinue : s.play,
-      clock: _clock,
+      clock: _barClock,
       onTap: onTap,
     );
     final bars = [
@@ -412,6 +462,54 @@ Widget _shortcutRow(BuildContext context, GameController c) {
 
 // ------------------------------------------------------------- suggestions
 
+/// [parent], changing only [steps] times a cycle while it runs (and
+/// exactly with it while it stands still): what listens repaints at that
+/// rate, not at the screen's. [phase] (0..1 of a step) moves the moments it
+/// changes, so clocks with different phases change in different frames.
+/// While [gate] says no, it holds still where it was.
+class _SteppedClock extends Animation<double> with AnimationLocalListenersMixin, AnimationLocalStatusListenersMixin, AnimationEagerListenerMixin {
+  _SteppedClock(this.parent, this.steps, {this.phase = 0, this.gate}) {
+    _value = _of(parent);
+    parent.addListener(_tick);
+    parent.addStatusListener(notifyStatusListeners);
+  }
+
+  final AnimationController parent;
+  final int steps;
+  final double phase;
+  final bool Function()? gate;
+  late double _value;
+
+  double _of(AnimationController p) => p.isAnimating ? ((p.value * steps + phase).floor() - phase) / steps : p.value;
+
+  void _tick() {
+    if (parent.isAnimating && gate?.call() == false) return;
+    final v = _of(parent);
+    if (v == _value) return;
+    _value = v;
+    notifyListeners();
+  }
+
+  @override
+  double get value => _value;
+
+  @override
+  AnimationStatus get status => parent.status;
+
+  @override
+  void dispose() {
+    parent.removeListener(_tick);
+    parent.removeStatusListener(notifyStatusListeners);
+    clearListeners();
+    clearStatusListeners();
+    super.dispose();
+  }
+}
+
+/// Where Lokum stands on the home: on a coffee saucer, as lokum is served,
+/// in the bayram sweet bowl, or on nothing at all.
+enum _Stage { saucer, bowl, none }
+
 /// What Lokum suggests: a title, a second line, a button and what it does.
 class _LobbyTip {
   const _LobbyTip({
@@ -424,6 +522,9 @@ class _LobbyTip {
     this.gifts = false,
     this.card,
     this.keyName = 'tip',
+    this.props = const [],
+    this.dressed = true,
+    this.stage = _Stage.saucer,
   });
 
   final String title, line, button;
@@ -438,7 +539,18 @@ class _LobbyTip {
   final int? card;
   final String keyName;
 
+  /// What Lokum carries on a special day, and whether he wears his outfit.
+  final List<LokumProp> props;
+  final bool dressed;
+
+  /// What he stands on.
+  final _Stage stage;
+
+  /// A greeting or a remembrance: nothing to press.
+  bool get quiet => button.isEmpty;
+
   void run(BuildContext context, GameController c) {
+    if (quiet) return;
     final postcard = card;
     if (postcard != null) {
       showPostcard(context, postcard);
@@ -503,6 +615,33 @@ int? _savedSugarLevel(Settings s) {
 List<_LobbyTip> _lobbyTips(GameController c, AppStrings s) {
   final settings = c.settings;
   final tips = <_LobbyTip>[];
+  // On a national day, a bayram or 10 Kasım, Lokum greets Turkish players
+  // (or remembers with them) first.
+  final today = settings.clock();
+  final day = s.isTurkish ? SpecialDay.of(today) : null;
+  if (day != null) {
+    final words = s.specialDay(day, today.year - 1923);
+    tips.add(
+      _LobbyTip(
+        title: words.title,
+        line: words.line,
+        button: '',
+        pose: day == SpecialDay.ataturk
+            ? LokumPose.sad
+            : day.solemn
+            ? LokumPose.happy
+            : LokumPose.cheer,
+        props: day.props,
+        dressed: false,
+        stage: switch (day) {
+          SpecialDay.ramazan || SpecialDay.kurban => _Stage.bowl,
+          SpecialDay.ataturk => _Stage.none,
+          _ => _Stage.saucer,
+        },
+        keyName: 'tip-day-${day.name}',
+      ),
+    );
+  }
   final sugarLevel = _savedSugarLevel(settings);
   if (sugarLevel != null) {
     tips.add(
@@ -692,12 +831,13 @@ class _LobbyHero extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             tip.line,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+            // A greeting or a remembrance is shown whole.
+            maxLines: tip.quiet ? null : 2,
+            overflow: tip.quiet ? null : TextOverflow.ellipsis,
             style: TextStyle(color: lineColor, fontSize: _fs(p, 13), height: 1.2, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
-          _TipButton(label: tip.button, onTap: onAction),
+          if (!tip.quiet) _TipButton(label: tip.button, onTap: onAction),
         ],
       ),
     );
@@ -720,14 +860,18 @@ class _LobbyHero extends StatelessWidget {
                     duration: const Duration(milliseconds: 520),
                     curve: Curves.easeOut,
                     onEnd: onHopDone,
-                    builder: (context, jump, _) => CustomPaint(
-                      painter: _LokumPainter(pose: tip.pose, outfit: outfit, palette: p, clock: clock, jump: jump, dpr: MediaQuery.devicePixelRatioOf(context)),
+                    // His own layer: his bob repaints him, not the whole page.
+                    builder: (context, jump, _) => RepaintBoundary(
+                      child: CustomPaint(
+                        painter: _LokumPainter(pose: tip.pose, outfit: tip.dressed ? outfit : LokumOutfit.none, props: tip.props, stage: tip.stage, palette: p, clock: clock, jump: jump, dpr: MediaQuery.devicePixelRatioOf(context)),
+                      ),
                     ),
                   ),
                 ),
               ),
-              // His wardrobe, a tap away.
-              Positioned(left: -2, bottom: 0, child: _WardrobeButton(onTap: onWardrobe)),
+              // His wardrobe, a tap away (not on a special day, when he
+              // goes without it).
+              if (!tip.quiet) Positioned(left: -2, bottom: 0, child: _WardrobeButton(onTap: onWardrobe)),
             ],
           ),
         ),
@@ -1490,10 +1634,12 @@ class _LobbySprites {
 /// on the toy skins, see-through and lit with a neon rim on neon, 8-bit on
 /// pixel. He bobs with the clock and jumps when tapped.
 class _LokumPainter extends CustomPainter {
-  _LokumPainter({required this.pose, required this.outfit, required this.palette, required this.clock, required this.jump, required this.dpr}) : super(repaint: clock);
+  _LokumPainter({required this.pose, required this.outfit, this.props = const [], this.stage = _Stage.saucer, required this.palette, required this.clock, required this.jump, required this.dpr}) : super(repaint: clock);
 
   final LokumPose pose;
   final LokumOutfit outfit;
+  final List<LokumProp> props;
+  final _Stage stage;
   final GamePalette palette;
   final Animation<double> clock;
   final double jump;
@@ -1505,7 +1651,7 @@ class _LokumPainter extends CustomPainter {
     final pixel = palette.skin == GameSkin.pixel;
     final neon = isNeon(palette);
     final key =
-        '$size@$dpr/${pose.name}/${outfit.name}/${pixel
+        '$size@$dpr/${pose.name}/${outfit.name}/${props.map((p) => p.name).join('+')}/${stage.name}/${pixel
             ? 'p'
             : neon
             ? 'n'
@@ -1518,6 +1664,17 @@ class _LokumPainter extends CustomPainter {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder)..scale(scale);
     final c = Offset(w / 2, h * 0.56);
+    // The saucer and its coffee behind him, or the bowl he climbs out of.
+    final bowlRim = c + Offset(0, size * 0.1);
+    switch (stage) {
+      case _Stage.saucer:
+        paintCoffeeCup(canvas, c + Offset(size * 0.52, size * 0.5), size * 0.3, steam: false);
+        paintSaucer(canvas, c + Offset(0, size * 0.55), size * 1.2);
+      case _Stage.bowl:
+        paintSweetBowlBack(canvas, bowlRim, size * 1.2);
+      case _Stage.none:
+        break;
+    }
     if (neon) {
       canvas.drawCircle(
         c,
@@ -1531,7 +1688,7 @@ class _LokumPainter extends CustomPainter {
           ),
       );
       canvas.saveLayer(Offset.zero & Size(w, h), Paint()..color = Colors.white.withValues(alpha: 0.9));
-      paintLokum(canvas, c, size, pose: pose, outfit: outfit);
+      paintLokum(canvas, c, size, pose: pose, outfit: outfit, props: props);
       canvas.drawCircle(
         c + Offset(0, size * 0.12),
         size * 0.4,
@@ -1557,8 +1714,9 @@ class _LokumPainter extends CustomPainter {
           ..color = const Color(0xFFFFB3F2),
       );
     } else {
-      paintLokum(canvas, c, size, pose: pose, outfit: outfit);
+      paintLokum(canvas, c, size, pose: pose, outfit: outfit, props: props);
     }
+    if (stage == _Stage.bowl) paintSweetBowlFront(canvas, bowlRim, size * 1.2);
     final image = recorder.endRecording().toImageSync(max(1, (w * scale).ceil()), max(1, (h * scale).ceil()));
     return _cache[key] = image;
   }
@@ -1579,5 +1737,5 @@ class _LokumPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_LokumPainter old) => old.pose != pose || old.outfit != outfit || old.palette != palette || old.jump != jump || old.dpr != dpr;
+  bool shouldRepaint(_LokumPainter old) => old.pose != pose || old.outfit != outfit || !listEquals(old.props, props) || old.stage != stage || old.palette != palette || old.jump != jump || old.dpr != dpr;
 }

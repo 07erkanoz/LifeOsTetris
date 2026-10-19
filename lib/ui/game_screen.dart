@@ -18,6 +18,7 @@ import '../core/chain/chain_missions.dart';
 import '../core/chain/chain_puzzles.dart';
 import '../core/chain/chain_versus.dart';
 import '../core/rewards.dart';
+import '../core/special_days.dart';
 import '../core/sugar/sugar_game.dart' show SugarColor;
 import '../core/sugar/sugar_levels.dart';
 import '../core/tower/tower_game.dart';
@@ -28,6 +29,7 @@ import '../game/chain/chain_sprites.dart' show chainColors, paintChainCube, pain
 import '../game/game_controller.dart';
 import '../game/motivation.dart';
 import '../game/sugar/istanbul_art.dart' show paintBosphorus, paintDusk, paintEksiLimon, paintSkyline;
+import '../game/sugar/tradition_art.dart' show paintCoffeeCup, paintSaucer, paintSweetBowlBack, paintSweetBowlFront;
 import '../game/sugar/sugar_art.dart' show LokumOutfit, LokumPose, paintCandy, paintGoldStar, paintLokum, paintSparkle, paintStriped, paintSugarLabel, paintWrapped;
 import '../game/tower/landmark_art.dart';
 import '../game/tower/tower_art.dart';

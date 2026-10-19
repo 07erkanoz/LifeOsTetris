@@ -9,6 +9,7 @@ import '../core/sugar/sugar_levels.dart';
 import '../game/chain/chain_sprites.dart' hide paintSparkle;
 import '../game/sugar/istanbul_art.dart';
 import '../game/sugar/sugar_art.dart';
+import '../game/sugar/tradition_art.dart' show paintBayramScene, paintFortuneCup, paintHidirellezScene;
 import '../game/tower/tower_art.dart';
 import '../l10n/strings.dart';
 import '../settings/settings.dart';
@@ -184,7 +185,13 @@ class _Daily extends StatelessWidget {
                 width: double.infinity,
                 onTap: () {
                   final gift = settings.claimDailyGift();
-                  if (gift != null) showGiftPopup(context, settings, gift, title: s.dailyGiftTitle, audio: audio);
+                  if (gift != null) {
+                    // The day's gift comes with a reading of the coffee cup.
+                    final main = gift.boosters.entries.fold<MapEntry<SugarBooster, int>?>(null, (best, e) => best == null || e.value > best.value ? e : best)?.key;
+                    final today = settings.clock();
+                    final fortune = s.coffeeFortune(main?.name ?? 'moves', big: gift.unlock != null || gift.postcard, seed: today.year * 400 + today.month * 31 + today.day);
+                    showGiftPopup(context, settings, gift, title: s.dailyGiftTitle, fortune: fortune, audio: audio);
+                  }
                 },
               ),
             )
@@ -576,15 +583,29 @@ class _Event extends StatelessWidget {
     final got = settings.eventCount;
     final claimed = settings.eventClaimed;
     final ready = settings.eventPrizesReady;
-    const tiers = WeeklyEvent.tiers;
+    final tiers = e.tiers;
     return CandyPanel(
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 14),
       child: Column(
         key: const ValueKey('gift-event-panel'),
         children: [
-          Text(s.upper(s.eventTitle), style: _style(13, _muted)),
+          Text(s.upper(e.isCalendar ? s.eventTitleDay : s.eventTitle), style: _style(13, _muted)),
           CandyText(s.eventName(e.name), size: 26, color: const Color(0xFFD92B4A), stroke: 0),
           Text(s.eventDaysLeft(WeeklyEvent.daysLeft(settings.clock())), style: _style(14, const Color(0xFFE0247A))),
+          // The calendar days have their scene: the hand kissed at the
+          // bayram, the wishes tied at Hıdırellez.
+          if (e.isCalendar)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: ColoredBox(
+                color: const Color(0xFF2A0C56),
+                child: GiftPicture(
+                  key: ValueKey('event-scene-${e.name}'),
+                  size: const Size(260, 120),
+                  paint: (c, size) => e == WeeklyEvent.bayram ? paintBayramScene(c, Offset.zero & size) : paintHidirellezScene(c, Offset.zero & size),
+                ),
+              ),
+            ),
           const SizedBox(height: 8),
           Container(
             width: double.infinity,
@@ -844,7 +865,7 @@ class _Choice extends StatelessWidget {
 
 /// Shows what [gift] held; when it opened something new, says so and
 /// offers to try it.
-Future<void> showGiftPopup(BuildContext context, Settings settings, Gift gift, {required String title, ChestTier? chest, AudioService? audio}) {
+Future<void> showGiftPopup(BuildContext context, Settings settings, Gift gift, {required String title, ChestTier? chest, String? fortune, AudioService? audio}) {
   audio?.play(Sfx.levelup, volume: 0.7);
   return showDialog<void>(
     context: context,
@@ -870,6 +891,12 @@ Future<void> showGiftPopup(BuildContext context, Settings settings, Gift gift, {
                     const SizedBox(height: 6),
                     CandyText(s.unlockName(unlock.name), size: 22, color: _ink, stroke: 0),
                     Text(s.unlockText(unlock.name), textAlign: TextAlign.center, style: _style(14.5, _muted, weight: FontWeight.w700)),
+                  ] else if (fortune != null) ...[
+                    // The daily gift: the cup turned up and its fortune read.
+                    GiftPicture(key: const ValueKey('gift-fortune'), size: const Size(150, 120), paint: (c, size) => paintFortuneCup(c, Offset.zero & size)),
+                    const SizedBox(height: 6),
+                    Text(s.fortuneTitle, style: _style(13, _muted)),
+                    Text(fortune, textAlign: TextAlign.center, style: _style(16, _ink)),
                   ] else
                     _Reveal(chest: chest),
                   const SizedBox(height: 12),
@@ -1031,7 +1058,18 @@ void _tryUnlock(Settings settings, Unlock u) {
       settings.chainCubes = ChainCubeStyle.cini.name;
     case Unlock.sceneGalata || Unlock.sceneSnow || Unlock.sceneIslands || Unlock.sceneCamlica:
       settings.sugarScene = u.name;
-    case Unlock.outfitTulipCrown || Unlock.outfitCaptain || Unlock.outfitApron || Unlock.outfitSimitNecklace || Unlock.outfitGuide || Unlock.outfitLemonCrown:
+    case Unlock.outfitTulipCrown ||
+        Unlock.outfitCaptain ||
+        Unlock.outfitApron ||
+        Unlock.outfitSimitNecklace ||
+        Unlock.outfitGuide ||
+        Unlock.outfitLemonCrown ||
+        Unlock.outfitMehter ||
+        Unlock.outfitKaradeniz ||
+        Unlock.outfitHamam ||
+        Unlock.outfitDondurma ||
+        Unlock.outfitHalay ||
+        Unlock.outfitYazma:
       settings.lokumOutfit = LokumOutfit.values.firstWhere((o) => o.gift == u.name).name;
     case Unlock.floorCini || Unlock.floorMarble || Unlock.floorGlass || Unlock.floorGold:
       settings.towerLook = FloorLook.values.firstWhere((l) => l.unlock == u).name;

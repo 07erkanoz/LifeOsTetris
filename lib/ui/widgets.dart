@@ -170,7 +170,7 @@ class PieceView extends StatelessWidget {
   }
 }
 
-/// The word mark: Lokum's face, "Lokum" and, under it, what the app is.
+/// The word mark: Lokum's face, "Küpler" and, under it, what the app is.
 class LogoTitle extends StatelessWidget {
   const LogoTitle({super.key, this.fontSize = 20});
 
@@ -258,7 +258,7 @@ extension on LogoTitle {
         Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [word(AppStrings.lokumName, p.accent1), tagline],
+          children: [word(AppStrings.appTitle, p.accent1), tagline],
         ),
       ],
     );

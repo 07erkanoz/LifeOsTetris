@@ -41,7 +41,19 @@ enum Unlock {
   floorCini,
   floorMarble,
   floorGlass,
-  floorGold;
+  floorGold,
+
+  /// Outfits from the newer weekly events: the mehter band, the Black Sea,
+  /// the hamam and the Maraş ice-cream seller.
+  outfitMehter,
+  outfitKaradeniz,
+  outfitHamam,
+  outfitDondurma,
+
+  /// The days of the calendar: a halay handkerchief for Şeker Bayramı, an
+  /// oyalı yazma for Hıdırellez.
+  outfitHalay,
+  outfitYazma;
 
   static Unlock? parse(String name) {
     for (final u in values) {
@@ -232,18 +244,31 @@ abstract final class Rewards {
   };
 }
 
-/// The weekly İstanbul events: a sweet to collect in any Şeker level, four
-/// prizes, and an outfit at the end. One a week, Monday to Sunday.
+/// The İstanbul and Anatolian events: a sweet to collect in any Şeker
+/// level, four prizes, and an outfit at the end. One a week, Monday to
+/// Sunday; a day of the calendar (Şeker Bayramı, Hıdırellez) takes the
+/// week's place while it lasts.
 enum WeeklyEvent {
   tulip(SugarColor.red, Unlock.outfitTulipCrown, 12),
   ferry(SugarColor.blue, Unlock.outfitCaptain, 14),
   coffee(SugarColor.orange, Unlock.outfitApron, 7),
-  simit(SugarColor.yellow, Unlock.outfitSimitNecklace, 9);
+  simit(SugarColor.yellow, Unlock.outfitSimitNecklace, 9),
+  hamam(SugarColor.blue, Unlock.outfitHamam),
 
-  const WeeklyEvent(this.color, this.outfit, this.card);
+  /// Purple for the orchids whose root, as salep, makes it stretch.
+  dondurma(SugarColor.purple, Unlock.outfitDondurma),
+  mehter(SugarColor.red, Unlock.outfitMehter),
+  karadeniz(SugarColor.green, Unlock.outfitKaradeniz),
 
-  /// The postcard of the third prize.
-  final int card;
+  /// The days of the calendar. (The national days are greeted, not
+  /// played for: see SpecialDay.)
+  bayram(SugarColor.yellow, Unlock.outfitHalay),
+  hidirellez(SugarColor.red, Unlock.outfitYazma);
+
+  const WeeklyEvent(this.color, this.outfit, [this.card]);
+
+  /// The postcard of the third prize, for the events that have one.
+  final int? card;
 
   /// The sweet to pop.
   final SugarColor color;
@@ -251,8 +276,41 @@ enum WeeklyEvent {
   /// The outfit of the last prize.
   final Unlock outfit;
 
-  /// Sweets needed for each prize.
-  static const List<int> tiers = [50, 150, 300, 500];
+  /// A day of the calendar rather than a week of the rotation.
+  bool get isCalendar => index >= bayram.index;
+
+  /// Sweets needed for each prize: fewer for the short calendar days.
+  List<int> get tiers => isCalendar ? const [30, 90, 180, 300] : const [50, 150, 300, 500];
+
+  /// The weeks' order: the first four alone until [_wideFrom], then all
+  /// eight. That week is a tulip week in both, so nothing jumps.
+  static const List<WeeklyEvent> _first = [tulip, ferry, coffee, simit];
+  static const List<WeeklyEvent> _wide = [tulip, ferry, coffee, simit, hamam, dondurma, mehter, karadeniz];
+
+  /// Monday 21 December 2026.
+  static const int _wideFrom = 2972;
+
+  /// Şeker Bayramı (Ramazan Bayramı), its three days by the Diyanet
+  /// calendar. Each year's dates are added once Diyanet publishes them.
+  static final List<DateTime> bayramStarts = [DateTime.utc(2027, 3, 9)];
+
+  /// The calendar's days: (event, first day, how many days).
+  static Iterable<(WeeklyEvent, DateTime, int)> _calendar(int year) => [
+    for (final d in bayramStarts)
+      if (d.year == year) (bayram, d, 3),
+    // Hıdırellez: the eve of 6 May and the day itself.
+    (hidirellez, DateTime.utc(year, 5, 5), 2),
+  ];
+
+  /// The calendar day [d] falls in, if any: (event, its first day, days).
+  static (WeeklyEvent, DateTime, int)? _calendarAt(DateTime d) {
+    final day = DateTime.utc(d.year, d.month, d.day);
+    for (final c in _calendar(d.year)) {
+      final (_, start, days) = c;
+      if (!day.isBefore(start) && day.isBefore(start.add(Duration(days: days)))) return c;
+    }
+    return null;
+  }
 
   /// Days since Monday 5 January 1970.
   static int _days(DateTime d) => DateTime.utc(d.year, d.month, d.day).difference(DateTime.utc(1970, 1, 5)).inDays;
@@ -260,10 +318,34 @@ enum WeeklyEvent {
   /// The week number of [d] (weeks start on Monday).
   static int weekOf(DateTime d) => _days(d) ~/ 7;
 
-  static WeeklyEvent of(DateTime d) => values[weekOf(d) % values.length];
+  /// The stretch of time an event's sweets are counted for: the week, or
+  /// for a day of the calendar a number of its own, past any week's.
+  static int periodOf(DateTime d) {
+    final c = _calendarAt(d);
+    return c == null ? weekOf(d) : 1000000 + _days(c.$2);
+  }
 
-  /// Days left this week, today included.
-  static int daysLeft(DateTime d) => 7 - _days(d) % 7;
+  static WeeklyEvent of(DateTime d) {
+    final c = _calendarAt(d);
+    if (c != null) return c.$1;
+    final week = weekOf(d);
+    return week < _wideFrom ? _first[week % _first.length] : _wide[(week - _wideFrom) % _wide.length];
+  }
+
+  /// Days left of the event, today included.
+  static int daysLeft(DateTime d) {
+    final c = _calendarAt(d);
+    if (c == null) return 7 - _days(d) % 7;
+    final (_, start, days) = c;
+    return days - DateTime.utc(d.year, d.month, d.day).difference(start).inDays;
+  }
+
+  static WeeklyEvent? parse(String? name) {
+    for (final e in values) {
+      if (e.name == name) return e;
+    }
+    return null;
+  }
 
   /// Prize [i] (0-based).
   Gift prize(int i) => switch (i) {
