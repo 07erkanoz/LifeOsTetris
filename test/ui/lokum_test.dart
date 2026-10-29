@@ -13,6 +13,8 @@ import 'package:lifeos_kupler/ui/chain_screen.dart';
 import 'package:lifeos_kupler/ui/game_screen.dart';
 import 'package:lifeos_kupler/ui/lokum_wardrobe.dart';
 
+import 'ordinary_day.dart';
+
 Future<void> pumpFor(WidgetTester tester, int frames, [int ms = 33]) async {
   for (var i = 0; i < frames; i++) {
     await tester.pump(Duration(milliseconds: ms));
@@ -23,7 +25,7 @@ Future<Settings> pumpApp(WidgetTester tester, {Size size = const Size(390, 844),
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  settings ??= Settings.memory()..language = AppLanguage.tr;
+  settings = ordinaryDay(settings ?? (Settings.memory()..language = AppLanguage.tr));
   await tester.pumpWidget(KuplerApp(settings: settings, audio: AudioService(enabled: false)));
   await pumpFor(tester, 6);
   return settings;

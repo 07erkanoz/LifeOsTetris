@@ -14,6 +14,8 @@ import 'package:lifeos_kupler/ui/sugar_map_screen.dart';
 import 'package:lifeos_kupler/ui/tower_screen.dart';
 import 'package:lifeos_kupler/ui/sugar_screen.dart';
 
+import 'ordinary_day.dart';
+
 Future<void> pumpFor(WidgetTester tester, int frames, [int ms = 33]) async {
   for (var i = 0; i < frames; i++) {
     await tester.pump(Duration(milliseconds: ms));
@@ -26,7 +28,7 @@ Future<Settings> pumpLobby(WidgetTester tester, {Size size = const Size(390, 844
   tester.platformDispatcher.textScaleFactorTestValue = text;
   addTearDown(tester.view.reset);
   addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-  settings ??= Settings.memory()..language = AppLanguage.tr;
+  settings = ordinaryDay(settings ?? (Settings.memory()..language = AppLanguage.tr));
   await tester.pumpWidget(KuplerApp(settings: settings, audio: AudioService(enabled: false)));
   await pumpFor(tester, 6);
   return settings;
