@@ -84,7 +84,10 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final GameController controller = GameController(settings: widget.settings, audio: widget.audio, haptics: widget.haptics);
-  late final Ticker _ticker = createTicker(controller.tick);
+  late final Ticker _ticker = createTicker((elapsed) {
+    controller.tick(elapsed);
+    _keepFocus();
+  });
   final FocusNode _focus = FocusNode(debugLabel: 'game');
 
   /// Set by a back press on the home screen: a second one soon after
@@ -128,6 +131,18 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     _focus.dispose();
     controller.dispose();
     super.dispose();
+  }
+
+  /// Keeps the keyboard on the game, checked every frame. Focus can leave
+  /// [_focus] without anything telling the game: Tab or a click puts it on a
+  /// slider or button of the HUD (which then eats the arrows and the space
+  /// bar), or a closing layer leaves it on the screen's scope, where no key
+  /// reaches [_onKey]. A running game always takes it back; the menus only
+  /// when nothing else holds it. A dialog or page on top keeps its own.
+  void _keepFocus() {
+    if (!mounted || _focus.hasPrimaryFocus || !(ModalRoute.of(context)?.isCurrent ?? true)) return;
+    final held = FocusManager.instance.primaryFocus;
+    if (controller.game.isRunning || held == null || held is FocusScopeNode) _focus.requestFocus();
   }
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
@@ -251,9 +266,14 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
       child: Scaffold(
       backgroundColor: palette.background.first,
       body: Listener(
-        // Browsers allow sound only after a gesture: the first touch on the
-        // home screen starts the music there.
-        onPointerDown: kIsWeb ? (_) => widget.audio.startMusic() : null,
+        onPointerDown: (_) {
+          // Browsers allow sound only after a gesture: the first touch on the
+          // home screen starts the music there.
+          if (kIsWeb) widget.audio.startMusic();
+          // A click on the board (or anywhere on the screen) gives the
+          // keyboard back to the game.
+          _focus.requestFocus();
+        },
         child: Focus(
           focusNode: _focus,
           autofocus: true,

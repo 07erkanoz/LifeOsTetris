@@ -57,6 +57,19 @@ Future<void> startMode(WidgetTester tester, String name) async {
   }
 }
 
+/// The arrow keys move the falling piece of the running game left and right.
+Future<void> expectArrowsMove(WidgetTester tester) async {
+  final game = ((tester.state(find.byType(GameScreen)) as dynamic).controller as GameController).game;
+  final x = game.active!.x;
+  await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+  await tester.pump(const Duration(milliseconds: 16));
+  expect(game.active!.x, x - 1);
+  await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+  await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+  await tester.pump(const Duration(milliseconds: 16));
+  expect(game.active!.x, x + 1);
+}
+
 void main() {
   Future<void> pumpApp(WidgetTester tester, Size size, {AppLanguage language = AppLanguage.tr}) async {
     tester.view.physicalSize = size;
@@ -77,6 +90,7 @@ void main() {
       }
       expect(find.byKey(const ValueKey('start')), findsNothing);
       expect(tester.takeException(), isNull);
+      await expectArrowsMove(tester);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.space);
       await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
@@ -329,25 +343,65 @@ void main() {
     expect((state.controller as GameController).game.held, isNotNull);
   });
 
-  testWidgets('Süper Küpler shows the power bar and uses powers with number keys', (tester) async {
-    await pumpApp(tester, const Size(390, 844));
+  for (final (name, size) in [('phone', const Size(390, 844)), ('desktop', const Size(1440, 900))]) {
+    testWidgets('$name: Süper Küpler shows the power bar and is played with the keyboard', (tester) async {
+      await pumpApp(tester, size);
+      await startMode(tester, 'superMode');
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 33));
+      }
+      expect(find.byType(PowerBar), findsOneWidget);
+      await expectArrowsMove(tester);
+
+      final state = tester.state(find.byType(GameScreen)) as dynamic;
+      final game = (state.controller as GameController).game;
+      game.debugGivePowers([PowerType.bomb]);
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
+      await tester.pump(const Duration(milliseconds: 33));
+      expect(game.active!.type, PieceType.bomb);
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 33));
+      }
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('the keyboard stays with a running game, also after it lost focus', (tester) async {
+    await pumpApp(tester, const Size(1440, 900));
     await startMode(tester, 'superMode');
     for (var i = 0; i < 10; i++) {
       await tester.pump(const Duration(milliseconds: 33));
     }
-    expect(find.byType(PowerBar), findsOneWidget);
+    final c = (tester.state(find.byType(GameScreen)) as dynamic).controller as GameController;
 
-    final state = tester.state(find.byType(GameScreen)) as dynamic;
-    final game = (state.controller as GameController).game;
-    game.debugGivePowers([PowerType.bomb]);
+    // Tab moves focus to a control of the HUD (a slider, a button) ...
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump(const Duration(milliseconds: 33));
+    expect(FocusManager.instance.primaryFocus?.debugLabel, 'game');
+    await expectArrowsMove(tester);
+
+    // ... and a closing layer can leave it on the screen's scope.
+    FocusManager.instance.primaryFocus!.unfocus();
+    await tester.pump(const Duration(milliseconds: 33));
+    await expectArrowsMove(tester);
+
+    // A game continued from the home screen starts paused; P goes on.
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyP);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Menü'));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(const ValueKey('resume-game')));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(c.game.paused, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyP);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(c.game.paused, isFalse);
+    await expectArrowsMove(tester);
+    c.game.debugGivePowers([PowerType.bomb]);
     await tester.sendKeyEvent(LogicalKeyboardKey.digit1);
     await tester.pump(const Duration(milliseconds: 33));
-    expect(game.active!.type, PieceType.bomb);
-    await tester.sendKeyEvent(LogicalKeyboardKey.space);
-    for (var i = 0; i < 20; i++) {
-      await tester.pump(const Duration(milliseconds: 33));
-    }
-    expect(tester.takeException(), isNull);
+    expect(c.game.active!.type, PieceType.bomb);
   });
 
   Future<BlocksController> openBlocks(WidgetTester tester, Settings settings) async {

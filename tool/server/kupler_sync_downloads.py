@@ -45,6 +45,9 @@ PUBLIC = '/kupler/indir/'
 TOKEN_FILE = pathlib.Path.home() / '.config/kupler-sync/token'
 MANIFEST = DEST / 'latest.json'
 WEB_ASSET = 'LifeOS-Kupler-Web.zip'
+# Written by CI beside the downloads: the version, address and SHA-256 of
+# each platform's file, as Gate, TV and AnyWhere have it.
+VERSION_FILES = {'version.json'}
 WEB_DEST = pathlib.Path(os.environ.get('KUPLER_WEB_DEST', DEST.parent / 'oyna'))
 WEB_PUBLIC = '/kupler/oyna/'
 # Builds kept in oyna/ besides the live one, for pages opened earlier.
@@ -235,7 +238,8 @@ def main(force=False):
                 continue
             # Every build is saved under its own name, so no cache (phone,
             # browser, Cloudflare) can hand out an older file in its place.
-            file = versioned(a['name'], version)
+            # version.json (for LifeOS's package) is read at its fixed name.
+            file = a['name'] if a['name'] in VERSION_FILES else versioned(a['name'], version)
             target = DEST / file
             prev = old.get(a['name'])
             if not force and prev and prev.get('id') == a['id'] and prev.get('updated_at') == a['updated_at'] and prev.get('file') == file and target.exists():

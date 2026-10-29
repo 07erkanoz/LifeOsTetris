@@ -204,12 +204,36 @@ jobs:
           Linux: LifeOS-Kupler-Linux-x64.tar.gz dosyasını açıp LifeOS-Kupler/lifeos_kupler dosyasını çalıştırın (gtk3 ve GStreamer gerekir). Arch Linux için depodaki packaging/arch/PKGBUILD ile: makepkg -si
           Tarayıcı: https://lifeos.com.tr/kupler/oyna/ adresinde kurulumsuz oynanır; LifeOS-Kupler-Web.zip o sayfanın dosyalarıdır.
           Bu derlemeler test içindir; mağazaya yüklenemez. Sürüm: $VERSION (${GITHUB_SHA::7})"
+          # version.json, as Gate, TV and AnyWhere have it: LifeOS's
+          # lifeos-kupler package follows new releases with it. The sync
+          # script mirrors it to lifeos.com.tr/kupler/indir/version.json and
+          # the files under the names it gives them (versioned()), which the
+          # addresses here already use. "latest" is the version with dots
+          # (1.0.0.72), as a pacman pkgver.
+          python3 - "$VERSION" > version.json <<'EOF'
+          import hashlib, json, os, sys, time
+          version = sys.argv[1]
+          site = 'https://lifeos.com.tr/kupler/indir/'
+          files, downloads = {}, {}
+          for platform, name in (('linux', 'LifeOS-Kupler-Linux-x64.tar.gz'), ('windows', 'LifeOS-Kupler-Windows.zip'),
+                                 ('android', 'LifeOS-Kupler.apk'), ('android-arm64', 'LifeOS-Kupler-arm64.apk')):
+              stem, ext = (name[:-7], '.tar.gz') if name.endswith('.tar.gz') else os.path.splitext(name)
+              file = f'{stem}-{version}{ext}'
+              with open(name, 'rb') as f:
+                  sha = hashlib.file_digest(f, 'sha256').hexdigest()
+              files[platform] = {'name': file, 'size': os.path.getsize(name), 'sha256': sha}
+              downloads[platform] = site + file
+          print(json.dumps({'latest': version.replace('-', '.'), 'build': int(version.rsplit('-', 1)[1]),
+                            'releasedAt': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), 'page': 'https://lifeos.com.tr/kupler/',
+                            'downloads': downloads, 'files': files}, ensure_ascii=False, indent=2))
+          EOF
+          cat version.json
           # Update the existing release in place instead of deleting and
           # recreating it (recreating moves the tag, which GitHub can refuse).
           if gh release view test-build >/dev/null 2>&1; then
-            gh release upload test-build LifeOS-Kupler.apk LifeOS-Kupler-arm64.apk LifeOS-Kupler-Windows.zip LifeOS-Kupler-Linux-x64.tar.gz LifeOS-Kupler-Web.zip --clobber
+            gh release upload test-build LifeOS-Kupler.apk LifeOS-Kupler-arm64.apk LifeOS-Kupler-Windows.zip LifeOS-Kupler-Linux-x64.tar.gz LifeOS-Kupler-Web.zip version.json --clobber
             gh release edit test-build --title "Test sürümü $VERSION (${GITHUB_SHA::7})" --notes "$NOTES" --prerelease
           else
-            gh release create test-build LifeOS-Kupler.apk LifeOS-Kupler-arm64.apk LifeOS-Kupler-Windows.zip LifeOS-Kupler-Linux-x64.tar.gz LifeOS-Kupler-Web.zip \
+            gh release create test-build LifeOS-Kupler.apk LifeOS-Kupler-arm64.apk LifeOS-Kupler-Windows.zip LifeOS-Kupler-Linux-x64.tar.gz LifeOS-Kupler-Web.zip version.json \
               --target "$GITHUB_SHA" --prerelease --title "Test sürümü $VERSION (${GITHUB_SHA::7})" --notes "$NOTES"
           fi

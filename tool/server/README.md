@@ -20,7 +20,7 @@ install -o lifeos -g psaserv -m 644 oyna.htaccess /var/www/vhosts/lifeos.com.tr/
 ```
 
 `indir.htaccess` keeps the script's lock and half-downloaded files private
-and stops browsers from caching `latest.json`.
+and stops browsers from caching `latest.json` and `version.json`.
 
 ## Browser version (`oyna/`)
 
@@ -58,6 +58,13 @@ The folder per build does not depend on any of this; a browser that keeps an
 old `index.html` for a while still finds that build's folder.
 
 `latest.json` in `indir/` records the live build under `web`.
+
+`version.json` in `indir/` is written by CI and comes with the release like
+the downloads: `latest` (the version with dots, `1.0.0.72`), and for each
+platform its address under `downloads` and `name`, `size` and `sha256` under
+`files`, the shape of Gate's, TV's and AnyWhere's. LifeOS's `lifeos-kupler`
+package follows new releases with it. It keeps its name (older copies of
+this script saved it as `version.json-<version>` too, beside the link).
 
 If the repository becomes private, create a fine-grained GitHub token with
 read-only *Contents* access to this repository and save it as

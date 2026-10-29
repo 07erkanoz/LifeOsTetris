@@ -2,12 +2,13 @@
 <FilesMatch "^\.">
   Require all denied
 </FilesMatch>
-# latest.json changes with every build: browsers must ask again.
-<Files "latest.json">
+# latest.json and version.json change with every build: browsers must ask
+# again.
+<FilesMatch "^(latest|version)\.json$">
   <IfModule mod_headers.c>
     Header set Cache-Control "no-cache"
   </IfModule>
-</Files>
+</FilesMatch>
 # The downloads keep their names from build to build: caches may keep them
 # five minutes at most.
 <FilesMatch "\.(apk|zip|gz)$">
